@@ -1,5 +1,6 @@
 const connection = require("../model/connection");
 const axios = require("axios");
+const path = require('path');
 const crypto = require("crypto");
 const languageMessage = require("./languageMessage");
 const CommonModel = require("../model/commonModal");
@@ -1171,17 +1172,18 @@ const AddCategory = async (request, response) => {
           key: "categoryExists",
         });
       }
-      const image = request.file ? request.file.filename : "";
+      const imageKey = request.file ? request.file.key : null;
+      const imageName = imageKey ? path.basename(imageKey) : null;
       let Insert =
         "INSERT INTO categories_master(name, type_name,category_type, createtime";
       let values = [name, type_name];
       // Check if image exists
-      if (image) {
+      if (imageName) {
         Insert += ", image"; // Add image column to the query
-        values.push(image); // Add image value to the parameters
+        values.push(imageName); // Add image value to the parameters
       }
       Insert += ") VALUES (?,?,3, NOW()";
-      if (image) {
+      if (imageName) {
         Insert += ", ?"; // Add placeholder for image value
       }
       Insert += ")"; // Closing the VALUES clause
@@ -1316,8 +1318,10 @@ const UpdateCategory = (req, res) => {
       // Check if an image was uploaded
       if (req.file) {
         // Include image update in the query
+        const imageKey = req.file ? req.file.key : null;
+    const imageName = imageKey ? path.basename(imageKey) : null;
         updateQuery += ", image = ?";
-        queryValues.push(req.file.filename);
+        queryValues.push(imageName);
       }
       updateQuery += " WHERE category_id = ?";
       queryValues.push(category_id);
@@ -2054,10 +2058,12 @@ const UpdateAdminProfile = async (req, res) => {
       let updateQuery =
         "UPDATE user_master SET name = ?, email = ?, mobile = ?";
       let queryValues = [name, email, mobile];
-      if (req.file && req.file.filename) {
+      if (req.file) {
+        const imageKey = req.file ? req.file.key : null;
+    const imageName = imageKey ? path.basename(imageKey) : null;
         // Include image update in the query if file is provided
         updateQuery += ", image = ?";
-        queryValues.push(req.file.filename);
+        queryValues.push(imageName);
       }
       updateQuery += " WHERE user_type = ? AND user_id = ? AND delete_flag = 0";
       queryValues.push(user_type, user_id);
@@ -4071,17 +4077,18 @@ const AddSubCategory = async (request, response) => {
           key: "categoryExists",
         });
       }
-      const image = request.file ? request.file.filename : "";
+      const imageKey = request.file ? request.file.key : null;
+    const imageName = imageKey ? path.basename(imageKey) : null;
       let Insert =
         "INSERT INTO sub_categories_master(sub_category_name, category_id, createtime";
       let values = [name, category_id];
       // Check if image exists
-      if (image) {
+      if (imageName) {
         Insert += ", image"; // Add image column to the query
-        values.push(image); // Add image value to the parameters
+        values.push(imageName); // Add image value to the parameters
       }
       Insert += ") VALUES (?,?, NOW()";
-      if (image) {
+      if (imageName) {
         Insert += ", ?"; // Add placeholder for image value
       }
       Insert += ")"; // Closing the VALUES clause
@@ -4168,8 +4175,10 @@ const UpdateSubCategory = (req, res) => {
       // Check if an image was uploaded
       if (req.file) {
         // Include image update in the query
+        const imageKey = req.file ? req.file.key : null;
+    const imageName = imageKey ? path.basename(imageKey) : null;
         updateQuery += ", image = ?";
-        queryValues.push(req.file.filename);
+        queryValues.push(imageName);
       }
       updateQuery += " WHERE sub_category_id = ?";
       queryValues.push(subcategory_id);
@@ -4872,6 +4881,7 @@ const AddSubLevelCategory = async (request, response) => {
           });
         }
         const image = request.file ? request.file.filename : "";
+        
         let Insert =
           "INSERT INTO sub_level_categories_master(sub_level_category_name,sub_two_level_category_name,sub_three_level_category_name, sub_category_id, createtime) VALUES (?,?,?,?, NOW())";
         let values = [name, nametwo, namethree, subcategory_id];
@@ -8926,11 +8936,13 @@ const AddSubAdmin = async (request, response) => {
           key: "Exists",
         });
       }
+      const imageKey = request.file ? request.file.key : null;
+    const imageName = imageKey ? path.basename(imageKey) : null;
       let image;
       if (!request.file) {
         image = "";
       } else {
-        image = request.file.filename;
+        image = imageName;
       }
       // Insert new sub-admin
       const Insert =
@@ -9089,8 +9101,10 @@ const EditSubAdmin = async (request, response) => {
         "UPDATE user_master SET name = ?, email = ?, previlages  = ?, updatetime = NOW()";
       let queryValues = [name, email, privileges];
       if (request.file) {
+        const imageKey = request.file ? request.file.key : null;
+    const imageName = imageKey ? path.basename(imageKey) : null;
         updateQuery += ", image = ?";
-        queryValues.push(request.file.filename);
+        queryValues.push(imageName);
       }
       if (password) {
         updateQuery += ", password = ?";
