@@ -2034,9 +2034,6 @@ const UpdateAdminProfile = async (req, res) => {
     });
   }
 
-return response.json({
-  key:req.file
-})
 
   console.log("Mobile:", mobile);
   // Check if email already exists
