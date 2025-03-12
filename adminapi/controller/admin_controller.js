@@ -31,6 +31,7 @@ const BroadcastMail = require("./BroadcastMail");
 const { hashPassword, getUserData } = require("./function");
 const rs = require("randomstring");
 const jwt = require("jsonwebtoken");
+const { response } = require("express");
 const FetchUser = async (request, response) => {
   try {
     const fetchDetails =
@@ -2032,6 +2033,11 @@ const UpdateAdminProfile = async (req, res) => {
       msg: "Missing required parameters.",
     });
   }
+
+return response.json({
+  key:req.file
+})
+
   console.log("Mobile:", mobile);
   // Check if email already exists
   const CheckUser =
