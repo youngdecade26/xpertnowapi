@@ -9,7 +9,7 @@ connection.connect((err) => {
   if (err) {
     console.log("error in connection database...!!");
   } else {
-    console.log("database Connected successfully..!!");
+    console.log("database Connected successfully..!!!");
   }
 });
 module.exports = connection;
