@@ -2061,12 +2061,10 @@ const UpdateAdminProfile = async (req, res) => {
       let updateQuery =
         "UPDATE user_master SET name = ?, email = ?, mobile = ?";
       let queryValues = [name, email, mobile];
-      if (req.file) {
-        const imageKey = req.file ? req.file.key : null;
-    const imageName = imageKey ? path.basename(imageKey) : null;
+      if (image) {
         // Include image update in the query if file is provided
         updateQuery += ", image = ?";
-        queryValues.push(imageName);
+        queryValues.push(image);
       }
       updateQuery += " WHERE user_type = ? AND user_id = ? AND delete_flag = 0";
       queryValues.push(user_type, user_id);
