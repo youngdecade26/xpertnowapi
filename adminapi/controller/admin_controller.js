@@ -2104,6 +2104,116 @@ const UpdateAdminProfile = async (req, res) => {
     }
   });
 };
+
+// new API
+const updateAdminDetails = async (request, response) => {
+
+  const { name, email, mobile, image, user_type } = request.body;
+
+
+
+  try {
+    if (!name || !email || !mobile || !user_type) {
+      return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: '1' })
+    }
+
+    const checkUser = 'SELECT user_id, active_flag , image FROM  user_master WHERE  user_type = ? AND delete_flag =0 ';
+
+    connection.query(checkUser, [user_type], async (error, result) => {
+
+      if (error) {
+
+        return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: error.message });
+
+      }
+
+
+
+      if (result.length == 0) {
+
+        return response.status(200).json({ success: false, msg: languageMessage.msgUserNotFound });
+
+      }
+
+
+
+
+
+
+
+      let checkMobile = "SELECT email FROM user_master WHERE email = ? AND user_type !=? AND delete_flag = 0";
+
+      connection.query(checkMobile, [email, user_type], async (err, res) => {
+
+        if (err) {
+
+          return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err.message });
+
+        }
+
+
+
+        if (res.length > 0) {
+
+          return response.status(200).json({ success: false, msg: languageMessage.EmailExist });
+
+        }
+
+
+
+        // if (!image) {
+
+        //     return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'image' });
+
+        // }
+
+
+
+        const updateDetails = 'UPDATE user_master SET  name = ?, email = ?,mobile = ?,  image = ?, updatetime = NOW() WHERE  user_type = ? AND delete_flag = 0';
+
+        connection.query(updateDetails, [name, email, mobile, (image ? image : result[0].image), user_type], async (error1, result1) => {
+
+          if (error1) {
+
+            return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: error1.message });
+
+          }
+
+
+
+          if (result1.affectedRows == 0) {
+
+            return response.status(200).json({ success: false, msg: languageMessage.ErrorUpdatingdetails });
+
+          }
+
+
+
+          if (result1.affectedRows > 0) {
+
+            return response.status(200).json({ success: true, msg: languageMessage.AdminProfileUpdated || 'updated' });
+
+          }
+
+        });
+
+      });
+
+    });
+
+  }
+
+  catch (error) {
+
+    return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: error.message });
+
+  }
+
+}
+
+
+
+
 const UpdateAdminPassword = async (request, response) => {
   const {user_id,user_type, oldPassword, newPassword } = request.body;
   
@@ -9548,5 +9658,6 @@ getActiveUserTabularReport,
   AddSubAdmin,
   EditSubAdmin,
   FetchInactiveExpert,
-  FetchInactiveUser
+  FetchInactiveUser,
+  updateAdminDetails
 };

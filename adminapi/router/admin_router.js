@@ -149,7 +149,8 @@ const {
   sendInactiveMailController,
   AddSubAdmin,
   FetchInactiveExpert,
-  FetchInactiveUser
+  FetchInactiveUser,
+  updateAdminDetails
 } = require("../controller/admin_controller");
 router.post("/send_notification", upload.none(), send_notification);
 router.get("/get_manage_inactive_users", upload.none(), FetchInactiveUser);
@@ -188,6 +189,7 @@ router.post("/updateStatus", upload.none(), updateStatus);
 router.post("/ViewReplymsg", upload.none(), ViewReplymsg);
 router.post("/BroadcastAll", upload.none(), BroadcastAll);
 router.post("/get_admin_details", upload.none(), AdminData);
+router.post("/update_admin_profile", updateAdminDetails);
 router.post("/UpdateAdminProfile", UpdateAdminProfile);
 router.post("/UpdateAdminPassword", upload.none(), UpdateAdminPassword);
 router.get("/fetchSubscriptionById/:user_id", fetchSubscriptionById);
