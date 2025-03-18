@@ -1,6 +1,5 @@
 const connection = require("../model/connection");
 const axios = require("axios");
-const path = require('path');
 const crypto = require("crypto");
 const languageMessage = require("./languageMessage");
 const CommonModel = require("../model/commonModal");
@@ -9,9 +8,10 @@ const { decode } = require("base-64");
 const moment = require("moment-timezone");
 let createtime = moment().tz("Asia/kolkata").format("YYYY-MM-DD HH:mm:ss");
 let updatetime = moment().tz("Asia/kolkata").format("YYYY-MM-DD HH:mm:ss");
+const path = require("path");
 const uniqid = require("uniqid");
 require('dotenv').config();
-const {app_name,app_logo,base_admin_url,currentTime} = require("../site_config");
+const { app_name, app_logo, base_admin_url, currentTime } = require("../site_config");
 const {
   mailBodyContactUs,
   mailBodyAdmin,
@@ -31,7 +31,6 @@ const BroadcastMail = require("./BroadcastMail");
 const { hashPassword, getUserData } = require("./function");
 const rs = require("randomstring");
 const jwt = require("jsonwebtoken");
-const { response } = require("express");
 const FetchUser = async (request, response) => {
   try {
     const fetchDetails =
@@ -369,7 +368,7 @@ const fetchuserDate = async (request, response) => {
       .json({ success: false, msg: languageMessage.msg_empty_param });
   }
   try {
-    
+
     const adjustedToDate = new Date(toDate);
     adjustedToDate.setUTCHours(23, 59, 59, 999);
     const formattedToDate = adjustedToDate.toISOString();
@@ -751,7 +750,7 @@ const FetchDeleteUser = async (request, response) => {
 //Fetch Delete  Experts
 const FetchDeleteExperts = async (request, response) => {
   try {
-      const fetchDetails =
+    const fetchDetails =
       `SELECT 
     um.user_id, 
     um.f_name, 
@@ -1143,17 +1142,13 @@ const AddCategory = async (request, response) => {
       .status(400)
       .json({ success: false, msg: languageMessage.msg_empty_param, key: "1" });
   }
-  let { action, name, type_name } = request.body;
-  if (!action && action == "add_category") {
-    return response
-      .status(200)
-      .json({ success: false, msg: languageMessage.msg_empty_param, key: "2" });
-  }
-  if (!name) {
-    return response
-      .status(200)
-      .json({ success: false, msg: languageMessage.msg_empty_param, key: "2" });
-  }
+  let { action, name, type_name, image } = request.body;
+
+  // if (!name) {
+  //   return response
+  //     .status(200)
+  //     .json({ success: false, msg: languageMessage.msg_empty_param, key: "23" });
+  // }
   let CheckCategory = "";
   try {
     CheckCategory =
@@ -1173,18 +1168,17 @@ const AddCategory = async (request, response) => {
           key: "categoryExists",
         });
       }
-      const imageKey = request.file ? request.file.key : null;
-      const imageName = imageKey ? path.basename(imageKey) : null;
+
       let Insert =
         "INSERT INTO categories_master(name, type_name,category_type, createtime";
       let values = [name, type_name];
       // Check if image exists
-      if (imageName) {
+      if (image) {
         Insert += ", image"; // Add image column to the query
-        values.push(imageName); // Add image value to the parameters
+        values.push(image); // Add image value to the parameters
       }
       Insert += ") VALUES (?,?,3, NOW()";
-      if (imageName) {
+      if (image) {
         Insert += ", ?"; // Add placeholder for image value
       }
       Insert += ")"; // Closing the VALUES clause
@@ -1274,7 +1268,7 @@ const UpdateCategory = (req, res) => {
         .status(400)
         .json({ success: false, msg: languageMessage.msg_empty_param });
     }
-    let { category_id, action, name, type_name } = req.body;
+    let { category_id, action, name, type_name, image } = req.body;
     if (!action && action == "edit_category") {
       return res.status(200).json({
         success: false,
@@ -1297,7 +1291,7 @@ const UpdateCategory = (req, res) => {
     const updatetime = moment().format("YYYY-MM-DD HH:mm:ss");
     let CheckCategory = "";
     CheckCategory =
-      "SELECT name FROM categories_master WHERE name = ? AND category_type=3  AND category_id != ? AND delete_flag = 0 ";
+      "SELECT name, image  FROM categories_master WHERE name = ? AND category_type=3  AND category_id != ? AND delete_flag = 0 ";
     connection.query(CheckCategory, [name, category_id], (err, result) => {
       if (err) {
         return res.status(200).json({
@@ -1314,15 +1308,15 @@ const UpdateCategory = (req, res) => {
         });
       }
       // Proceed to update brand detailsconst { blog_id, action, category_id, title, description }
-      let updateQuery = "UPDATE categories_master SET name = ?, updatetime = ?";
-      let queryValues = [name, updatetime];
+      let updateQuery = "UPDATE categories_master SET name = ?,  updatetime = ?";
+      let queryValues = [name,  updatetime];
       // Check if an image was uploaded
-      if (req.file) {
-        // Include image update in the query
-        const imageKey = req.file ? req.file.key : null;
-    const imageName = imageKey ? path.basename(imageKey) : null;
+      if (image) {
+      //   // Include image update in the query
+      //   let imageKey = req.file.key;
+      //   const imageName = imageKey ? path.basename(imageKey) : null;
         updateQuery += ", image = ?";
-        queryValues.push(imageName);
+        queryValues.push(image);
       }
       updateQuery += " WHERE category_id = ?";
       queryValues.push(category_id);
@@ -1354,6 +1348,8 @@ const UpdateCategory = (req, res) => {
       .json({ success: false, msg: languageMessage.internalServerError });
   }
 };
+
+
 // Fetch All Subscriptions
 const FetchAllSubscriptions = async (request, response) => {
   try {
@@ -1407,7 +1403,7 @@ const FetchSubscribedUsers = async (request, response) => {
           .json({ success: false, msg: languageMessage.msgUserNotFound });
       }
       if (res.length > 0) {
-       
+
         const MultiData = [];
         let completedRequests = 0;
         for (let i = 0; i < res.length; i++) {
@@ -1605,7 +1601,7 @@ const EditReportedContent = async (request, response) => {
 // Fetch About Content
 const fetchaboutcontent = async (request, response) => {
   const { contentType } = request.query;
-  
+
   if (!contentType) {
     return response
       .status(200)
@@ -1942,7 +1938,7 @@ const FetchSubscribedUsersByDate = async (request, response) => {
           .json({ success: false, msg: languageMessage.msgUserNotFound });
       }
       if (res.length > 0) {
-        
+
         const MultiData = [];
         let completedRequests = 0;
         for (let i = 0; i < res.length; i++) {
@@ -2024,88 +2020,221 @@ const AdminData = async (request, response) => {
   }
 };
 // Edit Admin Profile
-const UpdateAdminProfile = async (req, res) => {
-  console.log("Inside UpdateAdminProfile");
-  const { user_id, user_type, name, email, mobile } = req.body;
-  if (!user_id || !user_type || !name || !email) {
-    return res.status(400).json({
-      success: false,
-      msg: "Missing required parameters.",
+// const UpdateAdminProfile = async (req, res) => {
+
+//   const { user_id, user_type, name, email, mobile, image } = req.body;
+//   // if (!user_id || !name || !email) {
+//   //   return res.status(400).json({
+//   //     success: false,
+//   //     msg: "Missing required parameters.",
+//   //   });
+//   // }
+
+//   return res.json(req.body)
+
+//   let checkUser = await new Promise((resolve, reject) => {
+//     let query = "SELECT user_id , name, email , image FROM user_master WHERE user_type = 0";
+//     connection.query(query, (err, result) => {
+//       if (err) {
+//         reject(err)
+//       }
+//       else {
+//         resolve(result)
+//       }
+//     })
+//   })
+
+
+
+//   const CheckUser =
+//     "SELECT email FROM user_master WHERE  user_type != ? AND delete_flag = 0";
+//   const checkValues = [user_type];
+//   connection.query(CheckUser, checkValues, (err, checkResult) => {
+//     if (err) {
+//       console.error("Error checking email existence:", err);
+//       return res.status(500).json({
+//         success: false,
+//         msg: languageMessage?.internalServerError || "Internal server error.",
+//         error: err,
+//       });
+//     }
+//     if (checkResult.length > 0) {
+//       return res.status(200).json({
+//         success: true,
+//         msg: languageMessage?.msgEmailExist || "Email already exists.",
+//         key: "Exists",
+//       });
+//     }
+//     // Proceed with profile update only if email does not exist
+//     try {
+
+
+//       let updateQuery = "UPDATE user_master SET name = ?, email = ? , mobile = ? , image = ? WHERE user_type = 0 AND delete_flag = 0";
+//       let params = [name, email, mobile, image ? image : checkUser[0].image]
+
+//       connection.query(updateQuery, params, (err, result) => {
+//         if (err) {
+//           console.error("Error updating profile:", err);
+//           return res.status(500).json({
+//             success: false,
+//             msg:
+//               languageMessage?.internalServerError || "Internal server error.",
+//           });
+//         }
+//         console.log("Update Result:", result);
+//         if (result.affectedRows > 0) {
+//           return res.status(200).json({
+//             success: true,
+//             msg:
+//               languageMessage?.AdminProfileUpdated ||
+//               "Profile updated successfully.",
+//             key: '2'
+//           });
+//         } else {
+//           return res.status(404).json({
+//             success: false,
+//             msg:
+//               languageMessage?.NotFound ||
+//               "Profile not found or already deleted.",
+//           });
+//         }
+//       });
+//     } catch (error) {
+//       console.error("Exception during profile update:", error);
+//       return res.status(500).json({
+//         success: false,
+//         msg: "Internal server error.",
+//       });
+//     }
+//   });
+// };
+const UpdateAdminProfile = async (request, response) => {
+
+  const { name, email, mobile, image, user_type } = request.body;
+
+
+
+  try {
+
+
+    return response.json(request.body)
+
+
+    const checkUser = 'SELECT user_id, active_flag , image FROM  user_master WHERE  user_id = ? AND delete_flag =0 AND user_type = 1';
+
+    connection.query(checkUser, [user_id], async (error, result) => {
+
+      if (error) {
+
+        return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: error.message });
+
+      }
+
+
+
+      if (result.length == 0) {
+
+        return response.status(200).json({ success: false, msg: languageMessage.msgUserNotFound });
+
+      }
+
+
+
+      if (result[0].active_flag == 0) {
+
+        return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_flag: 0 });
+
+      }
+
+
+
+
+
+      let checkMobile = "SELECT email FROM user_master WHERE email = ? AND user_id !=? AND delete_flag = 0";
+
+      connection.query(checkMobile, [email, user_id], async (err, res) => {
+
+        if (err) {
+
+          return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err.message });
+
+        }
+
+
+
+        if (res.length > 0) {
+
+          return response.status(200).json({ success: false, msg: languageMessage.EmailExist });
+
+        }
+
+        var image = '';
+
+        if (!request.file) {
+
+          image = result[0].image;
+
+        } else {
+
+          image = request.file.filename;
+
+        }
+
+
+
+        // if (!image) {
+
+        //     return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'image' });
+
+        // }
+
+
+
+        const updateDetails = 'UPDATE user_master SET f_name = ?, l_name = ?, name = ?, bio = ?, email = ?,  image = ?, updatetime = ?, dob = ? WHERE  user_id = ? AND delete_flag = 0';
+
+        connection.query(updateDetails, [f_name, l_name, (f_name + ' ' + l_name), bio, email, image, updatetime, dob, user_id], async (error1, result1) => {
+
+          if (error1) {
+
+            return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: error1.message });
+
+          }
+
+
+
+          if (result1.affectedRows == 0) {
+
+            return response.status(200).json({ success: false, msg: languageMessage.ErrorUpdatingdetails });
+
+          }
+
+
+
+          if (result1.affectedRows > 0) {
+
+            const userDataArray = await getUserData(user_id)
+
+            return response.status(200).json({ success: true, msg: languageMessage.profileUpdateSuccessfully, userDataArray: userDataArray });
+
+          }
+
+        });
+
+      });
+
     });
+
   }
 
+  catch (error) {
 
-  console.log("Mobile:", mobile);
-  // Check if email already exists
-  const CheckUser =
-    "SELECT email FROM user_master WHERE LOWER(TRIM(email)) = LOWER(TRIM(?)) AND user_id != ? AND delete_flag = 0";
-  const checkValues = [email, user_id];
-  connection.query(CheckUser, checkValues, (err, checkResult) => {
-    if (err) {
-      console.error("Error checking email existence:", err);
-      return res.status(500).json({
-        success: false,
-        msg: languageMessage?.internalServerError || "Internal server error.",
-        error: err,
-      });
-    }
-    if (checkResult.length > 0) {
-      return res.status(200).json({
-        success: true,
-        msg: languageMessage?.msgEmailExist || "Email already exists.",
-        key: "Exists",
-      });
-    }
-    // Proceed with profile update only if email does not exist
-    try {
-      let updateQuery =
-        "UPDATE user_master SET name = ?, email = ?, mobile = ?";
-      let queryValues = [name, email, mobile];
-      if (image) {
-        // Include image update in the query if file is provided
-        updateQuery += ", image = ?";
-        queryValues.push(image);
-      }
-      updateQuery += " WHERE user_type = ? AND user_id = ? AND delete_flag = 0";
-      queryValues.push(user_type, user_id);
-      // Execute the update query
-      connection.query(updateQuery, queryValues, (err, result) => {
-        if (err) {
-          console.error("Error updating profile:", err);
-          return res.status(500).json({
-            success: false,
-            msg:
-              languageMessage?.internalServerError || "Internal server error.",
-          });
-        }
-        console.log("Update Result:", result);
-        if (result.affectedRows > 0) {
-          return res.status(200).json({
-            success: true,
-            msg:
-              languageMessage?.AdminProfileUpdated ||
-              "Profile updated successfully.",
-          });
-        } else {
-          return res.status(404).json({
-            success: false,
-            msg:
-              languageMessage?.NotFound ||
-              "Profile not found or already deleted.",
-          });
-        }
-      });
-    } catch (error) {
-      console.error("Exception during profile update:", error);
-      return res.status(500).json({
-        success: false,
-        msg: "Internal server error.",
-      });
-    }
-  });
-};
+    return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: error.message });
 
-// new API
+  }
+
+}
+
+
 const updateAdminDetails = async (request, response) => {
 
   const { name, email, mobile, image, user_type } = request.body;
@@ -2210,15 +2339,11 @@ const updateAdminDetails = async (request, response) => {
   }
 
 }
-
-
-
-
 const UpdateAdminPassword = async (request, response) => {
-  const {user_id,user_type, oldPassword, newPassword } = request.body;
-  
+  const { user_id, user_type, oldPassword, newPassword } = request.body;
+
   try {
-      if (!oldPassword) {
+    if (!oldPassword) {
       return response.status(200).json({
         success: false,
         msg: languageMessage.msg_empty_param,
@@ -2229,7 +2354,7 @@ const UpdateAdminPassword = async (request, response) => {
       return response.status(200).json({
         success: false,
         msg: languageMessage.msg_empty_param,
-    
+
       });
     }
     if (!newPassword) {
@@ -2241,7 +2366,7 @@ const UpdateAdminPassword = async (request, response) => {
     }
     var sql =
       "SELECT user_id ,active_flag,name,email FROM user_master WHERE user_type = ? and user_id=? and delete_flag = 0";
-    connection.query(sql,[user_type,user_id], async (err, info) => {
+    connection.query(sql, [user_type, user_id], async (err, info) => {
       if (err) {
         return response
           .status(200)
@@ -2275,7 +2400,7 @@ const UpdateAdminPassword = async (request, response) => {
           var password = data[0].password;
           console.log(password);
           const old_password_hash = await hashPassword(oldPassword);
-          
+
           if (password === old_password_hash) {
             const new_pass = await hashPassword(newPassword);
             var updateSql =
@@ -2794,7 +2919,7 @@ const getCount = async (request, response) => {
         jobpostCount: jobpostCount,
         totalearning: totalearning,
         totalsubscribed: totalsubscribed,
-        totalsubadmin:subadminCount
+        totalsubadmin: subadminCount
       },
     });
   } catch (error) {
@@ -3111,7 +3236,7 @@ const send_notification = async (req, res) => {
     let successArr = [];
     let failedArr = [];
     console.log("user_arr borad", user_arr);
-   
+
     // Iterate over the users and process notifications
     for (let user of user_arr) {
       try {
@@ -3148,13 +3273,13 @@ const send_notification = async (req, res) => {
           let notstatus = "";
           // Send notification based on user_type
           if (notificationArr.length > 0) {
-             
-                notstatus = await oneSignalNotificationSendCall(
-                  notificationArr
-                );
-                 
-                successArr.push(notstatus);
-              
+
+            notstatus = await oneSignalNotificationSendCall(
+              notificationArr
+            );
+
+            successArr.push(notstatus);
+
             // Check if notstatus is successful and push it to successArr
             if (notstatus && notstatus.success) {
               successArr.push({ user_id, status: "success" });
@@ -3226,19 +3351,19 @@ async function getNotificationArrSingle(
       send_message[0]
     );
     if (insertStatus === "yes") {
-   
+
       const notificationStatus = await getNotificationStatus(other_user_id);
       if (notificationStatus === "yes") {
         const player_id = await getUserPlayerId(other_user_id);
         if (player_id != "no") {
-          
+
           return {
             player_id: player_id,
-            title:  subject[0],
+            title: subject[0],
             message: send_message[0],
             action_json: action_data,
           };
-        } 
+        }
       }
     }
     return "NA";
@@ -3265,9 +3390,9 @@ async function InsertNotification(
   try {
     const read_status = 0;
     const delete_flag = 0;
- 
-  
-    const query ="INSERT INTO user_notification_message (user_id, other_user_id, action, action_id, action_json, title,title_2,title_3,title_4, message,message_2,message_3,message_4, read_status, delete_flag, createtime, updatetime) VALUES (?,?,?,?,?, ?, ?, ?, ?, ?, ?,?,?,?, ?, now(), now())";
+
+
+    const query = "INSERT INTO user_notification_message (user_id, other_user_id, action, action_id, action_json, title,title_2,title_3,title_4, message,message_2,message_3,message_4, read_status, delete_flag, createtime, updatetime) VALUES (?,?,?,?,?, ?, ?, ?, ?, ?, ?,?,?,?, ?, now(), now())";
     const values = [
       user_id,
       other_user_id,
@@ -3349,7 +3474,7 @@ const getNotification = (request, response) => {
             err,
           });
         }
-       
+
         try {
           const dateFormatter = new Intl.DateTimeFormat("en-US", {
             day: "2-digit",
@@ -3364,9 +3489,9 @@ const getNotification = (request, response) => {
           let notification_arr = await Promise.all(
             info.map(async (row) => {
               try {
-               
+
                 let date_time = calculateTimeElapsed(row.createtime);
-                
+
                 const date = new Date(row.createtime);
                 const formattedDate = dateFormatter.format(date);
                 const formattedTime = timeFormatter.format(date);
@@ -3399,7 +3524,7 @@ const getNotification = (request, response) => {
           connection.query(
             updateRead,
             [updatetime, user_id],
-            (updateError, updateReadResult) => {}
+            (updateError, updateReadResult) => { }
           );
           //update read status end
           if (notification_arr.length <= 0) {
@@ -3673,10 +3798,10 @@ async function oneSignalNotificationSend(
 ) {
   //return title;
   const axios = require("axios");
-  
+
   var oneSignalAppId = "c3a25067-c262-4916-8db6-56f2598bba14";
   var oneSignalAuthorization = "os_v2_app_yorfaz6cmjerndnwk3zftc52crzlq6ahr6yu2g5wiumvu47icqtjghyky6idkqi5aziuqlo3z43p6nvdmuu6u3pqxrisl5omi7u3dyi";
- 
+
   // Define notification fields
   let fields;
   if (languageId === 0) {
@@ -3723,7 +3848,7 @@ async function oneSignalNotificationSend(
       return response.data;
     }
   } catch (error) {
-    
+
     return error.message;
   }
 }
@@ -4153,12 +4278,14 @@ const AddSubCategory = async (request, response) => {
       .status(400)
       .json({ success: false, msg: languageMessage.msg_empty_param, key: "1" });
   }
-  let { action, name, category_id } = request.body;
-  if (!action && action == "add_subcategory") {
-    return response
-      .status(200)
-      .json({ success: false, msg: languageMessage.msg_empty_param, key: "2" });
-  }
+
+
+  let { action, name, category_id, image } = request.body;
+  // if (!action && action == "add_subcategory") {
+  //   return response
+  //     .status(200)
+  //     .json({ success: false, msg: languageMessage.msg_empty_param, key: "2" });
+  // }
   if (!name) {
     return response
       .status(200)
@@ -4188,18 +4315,17 @@ const AddSubCategory = async (request, response) => {
           key: "categoryExists",
         });
       }
-      const imageKey = request.file ? request.file.key : null;
-    const imageName = imageKey ? path.basename(imageKey) : null;
+      // const image = request.file ? request.file.filename : "";
       let Insert =
         "INSERT INTO sub_categories_master(sub_category_name, category_id, createtime";
       let values = [name, category_id];
       // Check if image exists
-      if (imageName) {
+      if (image) {
         Insert += ", image"; // Add image column to the query
-        values.push(imageName); // Add image value to the parameters
+        values.push(image); // Add image value to the parameters
       }
       Insert += ") VALUES (?,?, NOW()";
-      if (imageName) {
+      if (image) {
         Insert += ", ?"; // Add placeholder for image value
       }
       Insert += ")"; // Closing the VALUES clause
@@ -4235,7 +4361,7 @@ const UpdateSubCategory = (req, res) => {
         .status(400)
         .json({ success: false, msg: languageMessage.msg_empty_param });
     }
-    let { subcategory_id, action, name, category_id } = req.body;
+    let { subcategory_id, action, name, category_id, image } = req.body;
     if (!action && action == "edit_subcategory") {
       return res.status(200).json({
         success: false,
@@ -4263,7 +4389,7 @@ const UpdateSubCategory = (req, res) => {
     const updatetime = moment().format("YYYY-MM-DD HH:mm:ss");
     let CheckCategory = "";
     CheckCategory =
-      "SELECT sub_category_name FROM sub_categories_master WHERE LOWER(sub_category_name) = LOWER(?)  AND sub_category_id != ? AND delete_flag = 0 ";
+      "SELECT sub_category_name  FROM sub_categories_master WHERE LOWER(sub_category_name) = LOWER(?)  AND sub_category_id != ? AND delete_flag = 0 ";
     connection.query(CheckCategory, [name, subcategory_id], (err, result) => {
       if (err) {
         return res.status(200).json({
@@ -4284,12 +4410,10 @@ const UpdateSubCategory = (req, res) => {
         "UPDATE sub_categories_master SET sub_category_name = ?,category_id=?, updatetime = ?";
       let queryValues = [name, category_id, updatetime];
       // Check if an image was uploaded
-      if (req.file) {
+      if (image) {
         // Include image update in the query
-        const imageKey = req.file ? req.file.key : null;
-    const imageName = imageKey ? path.basename(imageKey) : null;
         updateQuery += ", image = ?";
-        queryValues.push(imageName);
+        queryValues.push(image);
       }
       updateQuery += " WHERE sub_category_id = ?";
       queryValues.push(subcategory_id);
@@ -4789,7 +4913,7 @@ const UpdateSubTwoLevelCategory = (req, res) => {
       "SELECT sub_two_level_category_id FROM sub_two_level_categories_master WHERE LOWER(sub_two_level_category_name) = LOWER(?) AND  sub_one_level_category_id=? AND sub_two_level_category_id != ? AND delete_flag = 0";
     connection.query(
       CheckCategory,
-       [name,sub_one_category_id,sub_two_level_category_id],
+      [name, sub_one_category_id, sub_two_level_category_id],
       (err, result) => {
         if (err) {
           return res.status(200).json({
@@ -4890,7 +5014,7 @@ const UpdateSubThreeLevelCategory = (req, res) => {
       "SELECT sub_three_level_category_id FROM sub_three_level_categories_master WHERE LOWER(sub_three_level_category_name) = LOWER(?) AND  sub_two_level_category_id=? AND sub_three_level_category_id != ? AND delete_flag = 0";
     connection.query(
       CheckCategory,
-       [name,sub_two_category_id,sub_three_level_category_id],
+      [name, sub_two_category_id, sub_three_level_category_id],
       (err, result) => {
         if (err) {
           return res.status(200).json({
@@ -4959,7 +5083,7 @@ const AddSubLevelCategory = async (request, response) => {
       .status(200)
       .json({ success: false, msg: languageMessage.msg_empty_param, key: "2" });
   }
-  if (!name ) {
+  if (!name) {
     return response
       .status(200)
       .json({ success: false, msg: languageMessage.msg_empty_param, key: "2" });
@@ -4992,7 +5116,6 @@ const AddSubLevelCategory = async (request, response) => {
           });
         }
         const image = request.file ? request.file.filename : "";
-        
         let Insert =
           "INSERT INTO sub_level_categories_master(sub_level_category_name,sub_two_level_category_name,sub_three_level_category_name, sub_category_id, createtime) VALUES (?,?,?,?, NOW())";
         let values = [name, nametwo, namethree, subcategory_id];
@@ -5034,7 +5157,7 @@ const AddSubTwoLevelCategory = async (request, response) => {
       .status(200)
       .json({ success: false, msg: languageMessage.msg_empty_param, key: "2" });
   }
-  if (!name ) {
+  if (!name) {
     return response
       .status(200)
       .json({ success: false, msg: languageMessage.msg_empty_param, key: "2" });
@@ -5050,7 +5173,7 @@ const AddSubTwoLevelCategory = async (request, response) => {
       "SELECT sub_two_level_category_id FROM sub_two_level_categories_master WHERE LOWER(sub_two_level_category_name) = LOWER(?) AND  sub_one_level_category_id=? AND delete_flag = 0";
     connection.query(
       CheckCategory,
-      [name,  sub_one_category_id],
+      [name, sub_one_category_id],
       (err, res) => {
         if (err) {
           return response.status(200).json({
@@ -5107,7 +5230,7 @@ const AddSubThreeLevelCategory = async (request, response) => {
       .status(200)
       .json({ success: false, msg: languageMessage.msg_empty_param, key: "2" });
   }
-  if (!name ) {
+  if (!name) {
     return response
       .status(200)
       .json({ success: false, msg: languageMessage.msg_empty_param, key: "2" });
@@ -7035,7 +7158,7 @@ const getWithdrawalRequestById = async (request, response) => {
 };
 const FetchSubscribedExpert = async (request, response) => {
   try {
-    
+
     const fetchDetails =
       "SELECT sm.subscription_id, sm.plan_type, sm.amount AS subscription_amount, sm.description, sm.duration AS subscription_duration, sm.delete_flag AS subscription_delete_flag, sm.createtime AS subscription_createtime, sm.updatetime AS subscription_updatetime, esm.expert_subscription_id, esm.expert_id, esm.subscription_id AS esm_subscription_id, esm.amount AS expert_subscription_amount, esm.start_date, esm.end_date, esm.transaction_id, esm.status, esm.duration AS expert_subscription_duration, esm.plan_name, esm.delete_flag AS expert_subscription_delete_flag, esm.createtime AS expert_subscription_createtime, esm.updatetime AS expert_subscription_updatetime, esm.mysqltime AS expert_subscription_mysqltime,um.email,um.name,um.mobile FROM subscription_master sm JOIN expert_subscription_master esm ON sm.subscription_id = esm.subscription_id JOIN user_master um ON expert_id=um.user_id   WHERE um.user_type=2 and sm.delete_flag = 0 AND esm.delete_flag = 0";
     connection.query(fetchDetails, (err, res) => {
@@ -7809,14 +7932,14 @@ const getInactiveUserTabularReport = async (req, res) => {
     }
     const fetchWalletQuery = `SELECT GROUP_CONCAT(DISTINCT wm.user_id SEPARATOR ',') as user_ids FROM wallet_master wm WHERE wm.delete_flag = 0 AND wm.createtime BETWEEN ? AND ?
     `;
-    connection.query(fetchWalletQuery, [fromDate, toDate], async(err, result) => {
+    connection.query(fetchWalletQuery, [fromDate, toDate], async (err, result) => {
       if (err) {
         return res
           .status(500)
           .json({ success: false, msg: languageMessage.internalServerError });
       }
       if (result.length > 0) {
-       const fetchUsersQuery = `
+        const fetchUsersQuery = `
       SELECT 
       user_id, f_name, l_name, name, image, email, mobile, dob, address, bio, gender, createtime, active_flag, gst_number, adhar_number, pan_number, phone_code, delete_flag, delete_reason,inactive_customer,inactive_date_time,bank_user_name,bank_name,bank_account_no,bank_branch,ifsc_code,last_login_date_time
       FROM 
@@ -7829,24 +7952,24 @@ const getInactiveUserTabularReport = async (req, res) => {
       ORDER BY 
         createtime ASC
     `;
-     const userIds = result[0]?.user_ids || "0";
-    await connection.query(fetchUsersQuery, [userIds], (err, resultget) => {
-      if (err) {
-        return res
-          .status(500)
-          .json({ success: false, msg: languageMessage.internalServerError });
-      }
-      if (resultget.length === 0) {
-        return res
-          .status(200)
-          .json({ success: false, msg: languageMessage.msgDataNotFound });
-      }
-      return res.status(200).json({
-        success: true,
-        msg: languageMessage.msgDataFound,
-        user_arr: resultget,
-      });
-    });
+        const userIds = result[0]?.user_ids || "0";
+        await connection.query(fetchUsersQuery, [userIds], (err, resultget) => {
+          if (err) {
+            return res
+              .status(500)
+              .json({ success: false, msg: languageMessage.internalServerError });
+          }
+          if (resultget.length === 0) {
+            return res
+              .status(200)
+              .json({ success: false, msg: languageMessage.msgDataNotFound });
+          }
+          return res.status(200).json({
+            success: true,
+            msg: languageMessage.msgDataFound,
+            user_arr: resultget,
+          });
+        });
       }
     });
   } catch (error) {
@@ -8126,7 +8249,7 @@ const getEarningTabularReport = async (request, response) => {
       msg: languageMessage.msg_empty_param,
     });
   }
-  
+
   const Fetchpost = `SELECT em.expert_earning_id, em.type,em.subscription_type, em.user_id,um.name, em.expert_id, em.milestone_id, em.total_amount, em.commission_percentage, em.admin_commission_amount, em.expert_earning, em.transition_id, em.invoice_url, em.delete_flag, em.createtime,ms.milestone_number,ms.price as milestone_price,ms.duration,ms.status,ms.description,ms.release_status, ms.released_date_time, ms.file, jps.job_post_id ,jps.user_id as job_post_user_id, jps.assign_expert_id as job_post_expert_id,   jps.status as job_post_status, jps.title as job_post_title,  jps.max_price, jps.min_price, jps.duration as job_post_duration, jps.description as job_post_description, jps.file as job_post_file, jps.nda_status, jps.project_cost,em.gst_per,em.tds_per,em.tcs_per FROM expert_earning_master as em JOIN user_master um ON em.user_id= um.user_id join milestone_master ms ON ms.milestone_id=em.milestone_id join job_post_master jps ON jps.job_post_id = ms.job_post_id  WHERE em.delete_flag = 0 AND em.createtime BETWEEN ? AND ?  order by em.expert_earning_id desc`;
   try {
     connection.query(Fetchpost, [fromDate, toDate], async (err, posts) => {
@@ -8144,7 +8267,7 @@ const getEarningTabularReport = async (request, response) => {
           res: [],
         });
       }
-   if (posts.length > 0) {
+      if (posts.length > 0) {
         const enrichedPosts = await Promise.all(
           posts.map(async (post) => {
             // Fetch Expert Name
@@ -8167,12 +8290,12 @@ const getEarningTabularReport = async (request, response) => {
             return post;
           })
         );
-    
-      return response.status(200).json({
-        success: true,
-        msg: languageMessage.msgDataFound,
-        res: enrichedPosts,
-      });
+
+        return response.status(200).json({
+          success: true,
+          msg: languageMessage.msgDataFound,
+          res: enrichedPosts,
+        });
       }
     });
   } catch (error) {
@@ -8184,7 +8307,7 @@ const getEarningTabularReport = async (request, response) => {
   }
 };
 const ManageEarnings = async (request, response) => {
-  
+
   var Fetchpost =
     "SELECT em.expert_earning_id, em.type,em.subscription_type, em.user_id,um.name, em.expert_id, em.milestone_id, em.total_amount, em.commission_percentage, em.admin_commission_amount, em.expert_earning, em.transition_id, em.invoice_url, em.delete_flag, em.createtime,ms.milestone_number,ms.price as milestone_price,ms.duration,ms.status,ms.description,ms.release_status, ms.released_date_time, ms.file, jps.job_post_id ,jps.user_id as job_post_user_id, jps.assign_expert_id as job_post_expert_id,   jps.status as job_post_status, jps.title as job_post_title,  jps.max_price, jps.min_price, jps.duration as job_post_duration, jps.description as job_post_description, jps.file as job_post_file, jps.nda_status, jps.project_cost,em.gst_per,em.tds_per,em.tcs_per,em.expert_type,em.gst_amt,em.tds_amt,em.tcs_amt,em.grand_total_expert_earning,em.platform_fees_gst_amt,em.platform_fees,em.	net_expert_earning FROM expert_earning_master as em JOIN user_master um ON em.user_id= um.user_id join milestone_master ms ON ms.milestone_id=em.milestone_id join job_post_master jps ON jps.job_post_id = ms.job_post_id  WHERE em.delete_flag = 0 order by em.expert_earning_id desc";
   try {
@@ -8243,7 +8366,7 @@ const ManageEarnings = async (request, response) => {
 };
 const getEarningDetailsById = async (request, response) => {
   var { expert_earning_id } = request.params;
-  
+
   var Fetchpost =
     "SELECT em.expert_earning_id, em.type,em.subscription_type, em.user_id,um.name, em.expert_id, em.milestone_id, em.total_amount, em.commission_percentage, em.admin_commission_amount, em.expert_earning, em.transition_id, em.invoice_url, em.delete_flag, em.createtime,ms.milestone_number,ms.price as milestone_price,ms.duration,ms.status,ms.description,ms.release_status, ms.released_date_time, ms.file, jps.job_post_id,jps.category,jps.sub_category ,jps.user_id as job_post_user_id, jps.assign_expert_id as job_post_expert_id,   jps.status as job_post_status, jps.title as job_post_title,  jps.max_price, jps.min_price, jps.duration as job_post_duration, jps.description as job_post_description, jps.file as job_post_file, jps.nda_status, jps.project_cost,em.gst_per,em.tds_per,em.tcs_per FROM expert_earning_master as em JOIN user_master um ON em.user_id= um.user_id join milestone_master ms ON ms.milestone_id=em.milestone_id join job_post_master jps ON jps.job_post_id = ms.job_post_id  WHERE em.delete_flag = 0 and em.expert_earning_id=? order by em.expert_earning_id desc";
   try {
@@ -8741,7 +8864,7 @@ const sendReplyController = (req, res) => {
       });
     }
     // Send email notification
-    
+
     const subject = "Contact Us Reply";
     const newMsg = message;
     const app_name = "xpert now";
@@ -9008,11 +9131,12 @@ const AddSubAdmin = async (request, response) => {
       .status(400)
       .json({ success: false, msg: languageMessage.msg_empty_param, key: "1" });
   }
-  let { action, name, email, password, privileges } = request.body;
+  let { action, name, email, password, privileges, image } = request.body;
   if (
     !action ||
     action !== "add_subadmin" ||
     !name ||
+
     !email ||
     !password ||
     !privileges
@@ -9025,6 +9149,8 @@ const AddSubAdmin = async (request, response) => {
   const delete_flag = 0;
   const active_flag = 1;
   const user_type = 3;
+
+
   try {
     // Hash the password
     const hash_password = await hashPassword(password);
@@ -9047,15 +9173,14 @@ const AddSubAdmin = async (request, response) => {
           key: "Exists",
         });
       }
-      const imageKey = request.file ? request.file.key : null;
-    const imageName = imageKey ? path.basename(imageKey) : null;
-      let image;
-      if (!request.file) {
-        image = "";
-      } else {
-        image = imageName;
-      }
+      // let image;
+      // if (!request.file) {
+      //   image = "";
+      // } else {
+      //   image = request.file.filename;
+      // }
       // Insert new sub-admin
+      const privilegeString = privileges.join(",");
       const Insert =
         "INSERT INTO user_master (name, email, user_type, profile_completed, delete_flag, active_flag, previlages, password,image, createtime, updatetime) VALUES (?, ?, ?, ?, ?, ?, ?, ?,?, NOW(), NOW())";
       const values = [
@@ -9065,7 +9190,7 @@ const AddSubAdmin = async (request, response) => {
         profile_completed,
         delete_flag,
         active_flag,
-        privileges,
+        privilegeString,
         hash_password,
         image,
       ];
@@ -9168,7 +9293,7 @@ const EditSubAdmin = async (request, response) => {
       key: "1",
     });
   }
-  let { user_id, action, name, email, password, privileges } = request.body;
+  let { user_id, action, name, email, password, privileges, image } = request.body;
   if (
     !user_id ||
     !action ||
@@ -9207,15 +9332,14 @@ const EditSubAdmin = async (request, response) => {
           key: "Exists",
         });
       }
+      const privilegeString = privileges.join(",");
       // Update sub-admin details
       let updateQuery =
-        "UPDATE user_master SET name = ?, email = ?, previlages  = ?, updatetime = NOW()";
-      let queryValues = [name, email, privileges];
-      if (request.file) {
-        const imageKey = request.file ? request.file.key : null;
-    const imageName = imageKey ? path.basename(imageKey) : null;
+        "UPDATE user_master SET name = ?, email = ?, previlages = ?, updatetime = NOW()";
+      let queryValues = [name, email, privilegeString];
+      if (image) {
         updateQuery += ", image = ?";
-        queryValues.push(imageName);
+        queryValues.push(image);
       }
       if (password) {
         updateQuery += ", password = ?";
@@ -9276,7 +9400,7 @@ const ViewSubAdminUser = async (request, response) => {
           .json({ success: false, msg: languageMessage.internalServerError });
       }
       if (res.length > 0) {
-        
+
         return response.status(200).json({
           success: true,
           msg: languageMessage.msgDataFound,
@@ -9344,7 +9468,7 @@ const EditTax = async (request, response) => {
 };
 const sendInactiveMailController = async (req, res) => {
   try {
-    const { user_emails, message, title,type } = req.body;
+    const { user_emails, message, title, type } = req.body;
     if (!user_emails || !message || !title) {
       return res.status(400).json({
         success: false,
@@ -9357,8 +9481,8 @@ const sendInactiveMailController = async (req, res) => {
     const app_name = "xpert now";
     // const app_logo = "https://youngdecade.org/2024/xpert/admin/xpertlog.png";
     const app_logo = process.env.LOGO_URL;
-    const user_name = type=='expert'? 'Expert':'Customer';
-  
+    const user_name = type == 'expert' ? 'Expert' : 'Customer';
+
     const emailResults = await Promise.all(
       user_emails.map(async (user_email) => {
         try {
@@ -9514,7 +9638,7 @@ module.exports = {
   FetchUser,
   FetchDeactiveUser,
   FetchExpert,
-FetchDeactiveExpert,
+  FetchDeactiveExpert,
   fetchuserDate,
   FetchSubscribedUsersByDate,
   ViewUser,
@@ -9631,7 +9755,7 @@ FetchDeactiveExpert,
   EditNdaPrice,
   getUserTabularReport,
   getInactiveUserTabularReport,
-getActiveUserTabularReport,
+  getActiveUserTabularReport,
   getExpertTabularReport,
   getJobPostTabularReport,
   getInactiveExpertTabularReport,

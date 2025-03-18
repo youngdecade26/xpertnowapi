@@ -97,7 +97,7 @@ const {
   EditCallCharge,
   FetchCommission,
   EditExpertCallCharge,
-  EditCommission,EditTax,
+  EditCommission, EditTax,
   EditMiniWithdrawalAmt,
   ManagePost,
   ViewPostById,
@@ -177,7 +177,7 @@ router.get("/fetchpostdetails", upload.none(), FetchPostDetails);
 router.get("/viewpost", ViewPost);
 router.post("/deletepost", upload.none(), DeletePost);
 router.post("/deletecategory", upload.none(), DeleteCategory);
-router.post("/editCategory", upload.single("image"), UpdateCategory);
+router.post("/editCategory", upload.none(), UpdateCategory);
 router.get("/getAllSubscription", upload.none(), FetchAllSubscriptions);
 router.get("/FetchSubscribedUsers", upload.none(), FetchSubscribedUsers);
 router.get("/FetchReportedContent", upload.none(), FetchReportedContent);
@@ -189,8 +189,8 @@ router.post("/updateStatus", upload.none(), updateStatus);
 router.post("/ViewReplymsg", upload.none(), ViewReplymsg);
 router.post("/BroadcastAll", upload.none(), BroadcastAll);
 router.post("/get_admin_details", upload.none(), AdminData);
-router.post("/update_admin_profile", updateAdminDetails);
 router.post("/UpdateAdminProfile", UpdateAdminProfile);
+router.post("/update_admin_profile", updateAdminDetails);
 router.post("/UpdateAdminPassword", upload.none(), UpdateAdminPassword);
 router.get("/fetchSubscriptionById/:user_id", fetchSubscriptionById);
 router.get("/fetchpostdetailsById/:user_id", fetchpostdetailsById);
@@ -213,13 +213,13 @@ router.get("/getContactCount", upload.none(), getContactCount);
 router.get("/postAnalyticalreport", upload.none(), postAnalyticalreport);
 router.get("/get_export_By_Id/:expert_id", getExportDetails);
 //Add category
-router.post("/add_category", upload.single("image"), AddCategory);
+router.post("/add_category", AddCategory);
 router.get("/manage_category", upload.none(), FetchCategory);
 router.get("/manage_subcategory", upload.none(), FetchSubCategory);
 router.post("/deletesubcategory", upload.none(), DeleteSubCategory);
 router.get("/fetch_category_all", getCatgoryAll);
-router.post("/add_subcategory", upload.single("image"), AddSubCategory);
-router.post("/editSubCategory", upload.single("image"), UpdateSubCategory);
+router.post("/add_subcategory", upload.none(), AddSubCategory);
+router.post("/editSubCategory", upload.none(), UpdateSubCategory);
 router.get("/manage_sublevelcategory", upload.none(), FetchSubLevelCategory);
 router.post("/deletesublevelcategory", upload.none(), DeleteSubLevelCategory);
 router.get("/fetch_subcategory_all", getSubCatgoryAll);
@@ -266,10 +266,10 @@ router.get("/view_subscription/:subscription_id", ViewSubscription);
 router.post("/edit_subscription", upload.none(), EditSubscription);
 // subadmin
 router.get("/manage_subadmin", upload.none(), ManageSubAdmin);
-router.post("/add_subadmin", upload.single("image"), AddSubAdmin);
+router.post("/add_subadmin", upload.none(),  AddSubAdmin);
 router.post("/delete_subadmin", upload.none(), DeleteSubAdmin);
 router.get("/get_subadmin_data_by_id/:user_id", GetSubadminData);
-router.post("/edit_subadmin", upload.single("image"), EditSubAdmin);
+router.post("/edit_subadmin", upload.none(),  EditSubAdmin);
 router.get("/viewsubadminuser/:user_id", ViewSubAdminUser);
 //fetch faq
 router.get("/manage_faq", FetchFAQ);
