@@ -1171,18 +1171,18 @@ const AddCategory = async (request, response) => {
       }
 
       let Insert =
-        "INSERT INTO categories_master(name, type_name,category_type, createtime";
-      let values = [name, type_name];
+        "INSERT INTO categories_master(name, type_name,category_type, image, createtime) VALUES(?, ?, ?, ?, now())";
+      let values = [name, type_name, 3, image ];
       // Check if image exists
-      if (image) {
-        Insert += ", image"; // Add image column to the query
-        values.push(image); // Add image value to the parameters
-      }
-      Insert += ") VALUES (?,?,3, NOW()";
-      if (image) {
-        Insert += ", ?"; // Add placeholder for image value
-      }
-      Insert += ")"; // Closing the VALUES clause
+      // if (image) {
+      //   Insert += ", image"; // Add image column to the query
+      //   values.push(image); // Add image value to the parameters
+      // }
+      // Insert += ") VALUES (?,?,3, NOW()";
+      // if (image) {
+      //   Insert += ", ?"; // Add placeholder for image value
+      // }
+      // Insert += ")"; // Closing the VALUES clause
       connection.query(Insert, values, (err) => {
         if (err) {
           return response.status(200).json({
