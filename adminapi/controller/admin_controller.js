@@ -2116,14 +2116,13 @@ const UpdateAdminProfile = async (request, response) => {
 
 
   try {
+    if (!name || !email || !mobile || !user_type) {
+      return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: '1' })
+    }
 
+    const checkUser = 'SELECT user_id, active_flag , image FROM  user_master WHERE  user_type = ? AND delete_flag =0 ';
 
-    return response.json(request.body)
-
-
-    const checkUser = 'SELECT user_id, active_flag , image FROM  user_master WHERE  user_id = ? AND delete_flag =0 AND user_type = 1';
-
-    connection.query(checkUser, [user_id], async (error, result) => {
+    connection.query(checkUser, [user_type], async (error, result) => {
 
       if (error) {
 
@@ -2141,19 +2140,13 @@ const UpdateAdminProfile = async (request, response) => {
 
 
 
-      if (result[0].active_flag == 0) {
-
-        return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_flag: 0 });
-
-      }
 
 
 
 
+      let checkMobile = "SELECT email FROM user_master WHERE email = ? AND user_type !=? AND delete_flag = 0";
 
-      let checkMobile = "SELECT email FROM user_master WHERE email = ? AND user_id !=? AND delete_flag = 0";
-
-      connection.query(checkMobile, [email, user_id], async (err, res) => {
+      connection.query(checkMobile, [email, user_type], async (err, res) => {
 
         if (err) {
 
@@ -2169,18 +2162,6 @@ const UpdateAdminProfile = async (request, response) => {
 
         }
 
-        var image = '';
-
-        if (!request.file) {
-
-          image = result[0].image;
-
-        } else {
-
-          image = request.file.filename;
-
-        }
-
 
 
         // if (!image) {
@@ -2191,9 +2172,9 @@ const UpdateAdminProfile = async (request, response) => {
 
 
 
-        const updateDetails = 'UPDATE user_master SET f_name = ?, l_name = ?, name = ?, bio = ?, email = ?,  image = ?, updatetime = ?, dob = ? WHERE  user_id = ? AND delete_flag = 0';
+        const updateDetails = 'UPDATE user_master SET  name = ?, email = ?,mobile = ?,  image = ?, updatetime = NOW() WHERE  user_type = ? AND delete_flag = 0';
 
-        connection.query(updateDetails, [f_name, l_name, (f_name + ' ' + l_name), bio, email, image, updatetime, dob, user_id], async (error1, result1) => {
+        connection.query(updateDetails, [name, email, mobile, (image ? image : result[0].image), user_type], async (error1, result1) => {
 
           if (error1) {
 
@@ -2213,9 +2194,7 @@ const UpdateAdminProfile = async (request, response) => {
 
           if (result1.affectedRows > 0) {
 
-            const userDataArray = await getUserData(user_id)
-
-            return response.status(200).json({ success: true, msg: languageMessage.profileUpdateSuccessfully, userDataArray: userDataArray });
+            return response.status(200).json({ success: true, msg: languageMessage.AdminProfileUpdated || 'updated' });
 
           }
 
@@ -2236,6 +2215,8 @@ const UpdateAdminProfile = async (request, response) => {
 }
 
 
+
+//new
 const updateAdminDetails = async (request, response) => {
 
   const { name, email, mobile, image, user_type } = request.body;
