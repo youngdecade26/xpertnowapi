@@ -190,7 +190,7 @@ router.post("/ViewReplymsg", upload.none(), ViewReplymsg);
 router.post("/BroadcastAll", upload.none(), BroadcastAll);
 router.post("/get_admin_details", upload.none(), AdminData);
 router.post("/UpdateAdminProfile", UpdateAdminProfile);
-router.post("/update_admin_profile", updateAdminDetails);
+router.post("/update_admin_profile", upload.none(), updateAdminDetails);
 router.post("/UpdateAdminPassword", upload.none(), UpdateAdminPassword);
 router.get("/fetchSubscriptionById/:user_id", fetchSubscriptionById);
 router.get("/fetchpostdetailsById/:user_id", fetchpostdetailsById);
