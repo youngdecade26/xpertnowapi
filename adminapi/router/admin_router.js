@@ -150,7 +150,8 @@ const {
   AddSubAdmin,
   FetchInactiveExpert,
   FetchInactiveUser,
-  updateAdminDetails
+  updateAdminDetails,
+  adminDetails
 } = require("../controller/admin_controller");
 router.post("/send_notification", upload.none(), send_notification);
 router.get("/get_manage_inactive_users", upload.none(), FetchInactiveUser);
@@ -338,4 +339,5 @@ router.get(
   "/get_refund_request_by_id/:milestone_id",
   getRefundRequestById
 );
+router.get('/get_admin_details', adminDetails);
 module.exports = router;

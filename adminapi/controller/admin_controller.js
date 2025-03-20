@@ -31,6 +31,7 @@ const BroadcastMail = require("./BroadcastMail");
 const { hashPassword, getUserData } = require("./function");
 const rs = require("randomstring");
 const jwt = require("jsonwebtoken");
+const { request } = require("http");
 const FetchUser = async (request, response) => {
   try {
     const fetchDetails =
@@ -9608,6 +9609,31 @@ ORDER BY
       .json({ success: false, msg: languageMessage.internalServerError });
   }
 };
+
+
+//adin details 
+const adminDetails = async( request, response) =>{
+   const { user_id} = request.query;
+   if(!user_id){
+    return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param });
+   }
+
+   const checkUser = 'SELECT user_id, active_flag FROM user_master WHERE user_id = ? AND deltete_flag = 0';
+    connection.query(checkUser, [user_id], async(err, result) => {
+      if(err){
+        return response.status(200).json({ success: false, msg: languageMessage.internalServerError });
+      }
+      if(result.length == 0){
+        return response.status(200).json({ success: false, msg: languageMessage.msgUserNotFound });
+      }
+      if(result[0].active_flag == 0){
+        return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated});
+      }
+
+      return response.status(200).json({ success: true, msg: languageMessage.msgDataFound, data: result})
+    })
+
+}
 module.exports = {
   EditTax,
   getNotificationArrSingle,
@@ -9765,5 +9791,6 @@ module.exports = {
   EditSubAdmin,
   FetchInactiveExpert,
   FetchInactiveUser,
-  updateAdminDetails
+  updateAdminDetails,
+  adminDetails
 };
