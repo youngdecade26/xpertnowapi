@@ -1143,6 +1143,7 @@ const AddCategory = async (request, response) => {
       .json({ success: false, msg: languageMessage.msg_empty_param, key: "1" });
   }
   let { action, name, type_name, image } = request.body;
+  console.log("image:", image);
 
   // if (!name) {
   //   return response
