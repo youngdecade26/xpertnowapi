@@ -1069,7 +1069,7 @@ const DeletePost = async (request, response) => {
           const userName = res1[0].name;
           const user_email = res1[0].email;
           const subject = "Account Information";
-          const app_name = "iliovacinema";
+          const app_name = "Xpertnow";
           // const app_logo = "https://youngdecade.org/2024/xpert/admin/xpertlog.png";
           const app_logo = process.env.LOGO_URL;
           const mailBody = mailBodyDeletePost({
