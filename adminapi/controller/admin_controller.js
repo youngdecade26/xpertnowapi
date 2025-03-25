@@ -9618,7 +9618,7 @@ const adminDetails = async( request, response) =>{
     return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param });
    }
 
-   const checkUser = 'SELECT user_id, active_flag FROM user_master WHERE user_id = ? AND deltete_flag = 0';
+   const checkUser = 'SELECT user_id, active_flag FROM user_master WHERE user_id = ? AND delete_flag = 0';
     connection.query(checkUser, [user_id], async(err, result) => {
       if(err){
         return response.status(200).json({ success: false, msg: languageMessage.internalServerError });
@@ -9632,8 +9632,8 @@ const adminDetails = async( request, response) =>{
 
       return response.status(200).json({ success: true, msg: languageMessage.msgDataFound, data: result})
     })
-
 }
+
 module.exports = {
   EditTax,
   getNotificationArrSingle,
@@ -9792,5 +9792,5 @@ module.exports = {
   FetchInactiveExpert,
   FetchInactiveUser,
   updateAdminDetails,
-  adminDetails
+  adminDetails,
 };
