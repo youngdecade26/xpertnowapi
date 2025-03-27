@@ -8,7 +8,7 @@ reviewReply,rateExpert,CustomerCallHistory,ExpertCallHistory,ExpertBidJob,getExp
 const {generateVideocallToken,VideoVoiceCallStart,VideoVoiceCallJoin,generateTokenByChannelName,VideoVoiceCallEnd,VideoVoiceCallReject,generatecallResourceId,startRecording,endRecording,getRecordingDetails,checkRecordingStatus} = require('../controller/call_controller');
 const router = express.Router();
 
-//Starting customer routes
+//Starting customer routes  
 router.post('/sign_up_1', upload.none(), usersignUp_1);
 router.post('/verifyotp',async (req, res, next) => {
   await authenticateToken(req, res, next);
@@ -453,6 +453,10 @@ router.get('/check_wallet_amount',async (req, res, next) => {
 router.post('/debit_wallet_amount', async (req, res, next) => {
   await authenticateToken(req, res, next);
 }, upload.none(), debitWalletAmount);
+
+
+
+
 
 //end
 module.exports = router;
