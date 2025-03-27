@@ -256,58 +256,60 @@ const userResendOtp = async (request, response) => {
 //end
 //customer Sign Up step 2
 const usersignUp_2 = async (request, response) => {
-    let { user_id, name, email, dob, gender, pan_number, adhar_number, gst_number } = request.body;
+    let { user_id, name, email, dob, gender, pan_number, adhar_number, gst_number, pancard_front_image, pancard_back_image, adharcard_front_image, adharcard_back_image, gst_image, image } = request.body;
     if (!user_id) {
         return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param });
     }
-    let fileIds;
-    if (request.files && request.files['image']) {
-        const filePromises = request.files['image'].map((f) => {
-            return new Promise((resolve, reject) => {
-                const fileInsertQuery = `INSERT INTO file_master (file_name, delete_flag, createtime, updatetime,user_id ) VALUES (?, 0, NOW(), NOW(),?)`;
-                connection.query(fileInsertQuery, [f.filename,user_id], (err, result) => {
-                    if (err) {
-                        reject(err);
-                    } else {
-                        resolve(f.filename);
-                    }
-                });
-            });
-        });
-        try {
-            fileIds = await Promise.all(filePromises);
-        } catch (err) {
-            return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
-        }
-    }
-    let fileIdsJson;
-    if (fileIds) {
-        fileIdsJson = fileIds.toString();
-    }
-    let pancard_front_image;
-    let pancard_back_image;
-    let adharcard_front_image;
-    let adharcard_back_image;
-    let gst_image;
-    if (request.files && request.files['pancard_front_image']){
-        pancard_front_image = request.files['pancard_front_image'][0].filename;
-    }
+    // let fileIds;
+    // if (request.files && request.files['image']) {
+    //     const filePromises = request.files['image'].map((f) => {
+    //         return new Promise((resolve, reject) => {
+    //             const fileInsertQuery = `INSERT INTO file_master(file_name, delete_flag, createtime, updatetime,user_id ) VALUES (?, 0, NOW(), NOW(),?)`;
+    //             connection.query(fileInsertQuery, [f.filename,user_id], (err, result) => {
+    //                 if (err) {
+    //                     reject(err);
+    //                 } else {
+    //                     resolve(f.filename);
+    //                 }
+    //             });
+    //         });
+    //     });
+    //     try {
+    //         fileIds = await Promise.all(filePromises);
+    //     } catch (err) {
+    //         return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
+    //     }
+    // }
+    // let fileIdsJson;
+    // if (fileIds) {
+    //     fileIdsJson = fileIds.toString();
+    // }
+
+    // return response.status(200).json({ "fileIdsJson" :fileIdsJson })
+    // let pancard_front_image;
+    // let pancard_back_image;
+    // let adharcard_front_image;
+    // let adharcard_back_image;
+    // let gst_image;
+    // if (request.files && request.files['pancard_front_image']){
+    //     pancard_front_image = request.files['pancard_front_image'][0].filename;
+    // }
     
-    if (request.files && request.files['pancard_back_image']) {
-        pancard_back_image = request.files['pancard_back_image'][0].filename;
-    }
+    // if (request.files && request.files['pancard_back_image']) {
+    //     pancard_back_image = request.files['pancard_back_image'][0].filename;
+    // }
     
-    if (request.files && request.files['adharcard_front_image']) {
-        adharcard_front_image = request.files['adharcard_front_image'][0].filename;
-    }
-    if (request.files && request.files['adharcard_back_image']) {
-        adharcard_back_image = request.files['adharcard_back_image'][0].filename;
-    }
-    if (request.files && request.files['gst_image']) {
-        gst_image = request.files['gst_image'][0].filename;
-    }
+    // if (request.files && request.files['adharcard_front_image']) {
+    //     adharcard_front_image = request.files['adharcard_front_image'][0].filename;
+    // }
+    // if (request.files && request.files['adharcard_back_image']) {
+    //     adharcard_back_image = request.files['adharcard_back_image'][0].filename;
+    // }
+    // if (request.files && request.files['gst_image']) {
+    //     gst_image = request.files['gst_image'][0].filename;
+    // }
     try {
-        const query1 = "SELECT mobile, active_flag,email FROM user_master WHERE user_id = ? AND delete_flag=0";
+        const query1 = "SELECT mobile, active_flag, email FROM user_master WHERE user_id = ? AND delete_flag=0";
         const values1 = [user_id];
         connection.query(query1, values1, async (err, result) => {
             if (err) {
@@ -319,7 +321,7 @@ const usersignUp_2 = async (request, response) => {
             if (result[0]?.active_flag === 0) {
                 return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated ,active_status:0});
             }
-            if(name || email || dob || gender || pan_number || adhar_number || gst_number || fileIdsJson){
+            if(name || email || dob || gender || pan_number || adhar_number || gst_number || image){
                 let updateQuery = `UPDATE user_master SET profile_completed=1, updatetime = NOW() `;
                 let updateValues = [];
                 if(name) {
@@ -338,9 +340,9 @@ const usersignUp_2 = async (request, response) => {
                     updateQuery += `, gender = ?`;
                     updateValues.push(gender);
                 }
-                if(fileIdsJson) {
+                if(image) {
                     updateQuery += `, image = ?`;
-                    updateValues.push(fileIdsJson);
+                    updateValues.push(image);
                 }
                 if(pan_number) {
                     updateQuery += `, pan_number = ?`;
@@ -635,37 +637,64 @@ const deleteAccount = async (request, response) => {
 //end
 //user edit profile 
 const editProfile = async (request, response) => {
-    let { user_id, name, email, dob, gender, pan_number, adhar_number, gst_number } = request.body;
-    if (!user_id || !name || !email || !dob || !gender || !pan_number || !adhar_number) {
-        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param });
+    let { user_id, name, email, dob, gender, pan_number, adhar_number, gst_number,  pancard_front_image, pancard_back_image, adharcard_front_image, adharcard_back_image,  gst_image, image } = request.body;
+    //    return response.status(200).json( request.body);
+    if(!user_id){
+        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key:'user_id' });
+    }
+
+    if(!name){
+        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key:'name' });
+    }
+    if(!email){
+        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key:'email' });
+    }
+    if(!dob){
+        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key:'dob' });
+    }
+    if(!gender){
+        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key:'gender' });
+    }
+    if(!pan_number){
+        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key:'pan_number' });
+    }
+    if(!adhar_number){
+        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key:'adhar_number' });
     }
     
-    let image = null;
-    let pancard_front_image;
-    let pancard_back_image;
-    let adharcard_front_image;
-    let adharcard_back_image;
-    let gst_image;
-    if (request.files && request.files['pancard_front_image']) {
-        pancard_front_image = request.files['pancard_front_image'][0].filename;
-    }
+    // if(!adhar_number){
+    //     return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key:'adhar_number' });
+    // }
     
-    if (request.files && request.files['pancard_back_image']) {
-        pancard_back_image = request.files['pancard_back_image'][0].filename;
-    }
     
-    if (request.files && request.files['adharcard_front_image']) {
-        adharcard_front_image = request.files['adharcard_front_image'][0].filename;
-    }
-    if (request.files && request.files['adharcard_back_image']) {
-        adharcard_back_image = request.files['adharcard_back_image'][0].filename;
-    }
-    if (request.files && request.files['gst_image']) {
-        gst_image = request.files['gst_image'][0].filename;
-    }
-    if (request.files && request.files['image']) {
-        image = request.files['image'][0].filename;
-    }
+    
+    // let image = null;
+    // let pancard_front_image;
+    // let pancard_back_image;
+    // let adharcard_front_image;
+    // let adharcard_back_image;
+    // let gst_image;
+
+    // if (request.files && request.files['pancard_front_image']) {
+    //     pancard_front_image = request.files['pancard_front_image'][0].filename;
+    // }
+    
+    // if (request.files && request.files['pancard_back_image']) {
+    //     pancard_back_image = request.files['pancard_back_image'][0].filename;
+    // }
+    
+    // if (request.files && request.files['adharcard_front_image']) {
+    //     adharcard_front_image = request.files['adharcard_front_image'][0].filename;
+    // }
+    // if (request.files && request.files['adharcard_back_image']) {
+    //     adharcard_back_image = request.files['adharcard_back_image'][0].filename;
+    // }
+    // if (request.files && request.files['gst_image']) {
+    //     gst_image = request.files['gst_image'][0].filename;
+    // }
+    // if (request.files && request.files['image']) {
+    //     image = request.files['image'][0].filename;
+    // }
     try {
         const query1 = "SELECT mobile, active_flag FROM user_master WHERE user_id = ? AND delete_flag=0 AND user_type=1";
         const values1 = [user_id];
@@ -723,6 +752,7 @@ const editProfile = async (request, response) => {
         return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
     }
 };
+
 //end
 //get notification 
 const getUserNotification = async (request, response) => {
@@ -831,7 +861,7 @@ const signUp_1 = async (request, response) => {
                 return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
             }
             if (result.length > 0) {
-                if (result[0].user_type === 1) {
+                if (result[0].user_type === 1){
                     return response.status(200).json({ success: false, msg: languageMessage.alreadyUseNum });
                 }
                 const user_id_get=result[0].user_id;
@@ -1219,74 +1249,76 @@ const getExpertLanguages = async (request, response) => {
 //end
 //Expert Sign Up step 2
 const signUp_2 = async (request, response) => {
-    let { user_id, name, email, dob, gender, state, city, address, degree, language, licence_number, referral_number, category, sub_category, sub_category_level, experience, about, pan_number, adhar_number, gst_number, call_charge,industry_name,institute_name,sub_two_level_category_id,sub_three_level_category_id} = request.body;
+    let { user_id, name, email, dob, gender, state, city, address, degree, language, licence_number, referral_number, category, sub_category, sub_category_level, experience, about, pan_number, adhar_number, gst_number, call_charge,industry_name,institute_name,sub_two_level_category_id, sub_three_level_category_id, file, degree_file, image, pancard_front_image, pancard_back_image, adharcard_front_image, adharcard_back_image, gst_image} = request.body;
     
-    let image = null;
-    
+    // let image = null;
     let fileIds;
-    if(request.files && request.files['file']) {
-        const filePromises = request.files['file'].map((f) => {
+    if(file) {
+        let images = file.split( ",")
+        const filePromises = images.map((data) => {
             return new Promise((resolve, reject) => {
                 const fileInsertQuery = `INSERT INTO file_master (file_name,user_id, delete_flag, createtime, updatetime) VALUES (?,?, 0, NOW(), NOW())`;
-                connection.query(fileInsertQuery, [f.filename,user_id], (err, result) => {
+                connection.query(fileInsertQuery, [data,user_id], (err, result) => {
                     if (err) {
                         reject(err);
                     } else {
-                        resolve(result.insertId);
+                        resolve(data);
                     }
                 });
             });
         });
         try{
             fileIds = await Promise.all(filePromises);
+            
         } catch (err){
             return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
         }
     }
-    if(request.files && request.files['degree_file']) {
-        const filePromises = request.files['degree_file'].map((f) => {
+    if(degree_file) {
+        let degree_image = degree_file.split( ",");
+        const degreeFilePromises = degree_image.map((degree_data) => {
             return new Promise((resolve, reject) => {
-                const fileInsertQuery = `INSERT INTO user_degree_master (document_file,user_id, delete_flag, createtime, updatetime) VALUES (?,?, 0, NOW(), NOW())`;
-                connection.query(fileInsertQuery, [f.filename,user_id], (err, result) => {
+                const fileInsertQuery = `INSERT INTO user_degree_master (document_file, user_id, delete_flag, createtime, updatetime) VALUES (?,?, 0, NOW(), NOW())`;
+                connection.query(fileInsertQuery, [degree_data,user_id], (err, result) => {
                     if (err) {
                         reject(err);
                     } else {
-                        resolve(result.insertId);
+                        resolve(degree_data);
                     }
                 });
             });
         });
         try{
-            fileIds = await Promise.all(filePromises);
+            fileIds = await Promise.all(degreeFilePromises);
         } catch (err){
             return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
         }
     }
-    if(request.files && request.files['image']){
-        image = request.files['image'][0].filename;
-    }
-    let pancard_front_image;
-    let pancard_back_image;
-    let adharcard_front_image;
-    let adharcard_back_image;
-    let gst_image;
-    if (request.files && request.files['pancard_front_image']) {
-        pancard_front_image = request.files['pancard_front_image'][0].filename;
-    }
+    // if(request.files && request.files['image']){
+    //     image = request.files['image'][0].filename;
+    // }
+    // let pancard_front_image;
+    // let pancard_back_image;
+    // let adharcard_front_image;
+    // let adharcard_back_image;
+    // let gst_image;
+    // if (request.files && request.files['pancard_front_image']) {
+    //     pancard_front_image = request.files['pancard_front_image'][0].filename;
+    // }
     
-    if (request.files && request.files['pancard_back_image']) {
-        pancard_back_image = request.files['pancard_back_image'][0].filename;
-    }
+    // if (request.files && request.files['pancard_back_image']) {
+    //     pancard_back_image = request.files['pancard_back_image'][0].filename;
+    // }
     
-    if (request.files && request.files['adharcard_front_image']) {
-        adharcard_front_image = request.files['adharcard_front_image'][0].filename;
-    }
-    if (request.files && request.files['adharcard_back_image']) {
-        adharcard_back_image = request.files['adharcard_back_image'][0].filename;
-    }
-    if (request.files && request.files['gst_image']) {
-        gst_image = request.files['gst_image'][0].filename;
-    }
+    // if (request.files && request.files['adharcard_front_image']) {
+    //     adharcard_front_image = request.files['adharcard_front_image'][0].filename;
+    // }
+    // if (request.files && request.files['adharcard_back_image']) {
+    //     adharcard_back_image = request.files['adharcard_back_image'][0].filename;
+    // }
+    // if (request.files && request.files['gst_image']) {
+    //     gst_image = request.files['gst_image'][0].filename;
+    // }
     try {
         const query1 = "SELECT mobile, active_flag FROM user_master WHERE user_id = ? AND delete_flag=0";
         const values1 = [user_id];
@@ -1306,13 +1338,15 @@ const signUp_2 = async (request, response) => {
             }
             const degreeJson = degree.toString();
             const languageJson = language.toString();
+
             let fileIdsJson;
             if (fileIds) {
                 fileIdsJson = fileIds.toString();
             }
+            // return response.status(200).json({"res": fileIdsJson})
             if(name){
                 let updateQuery = `UPDATE user_master SET name = ?, email = ?, dob = ?, gender = ?, state = ?, city = ?, address = ?,degree = ?, language = ?,image = ?, licence_number = ?, referral_number = ?,category = ?, sub_category = ?, sub_category_level = ?, experience = ?,about = ?, pan_number = ?, adhar_number = ?, gst_number = ?, call_charge = ?,industry_name=?,institute_name=?,sub_two_level_category_id=?,sub_three_level_category_id=?,profile_completed=1,updatetime = NOW() `;
-                let updateValues = [name, email, dob, gender, state, city, address, degreeJson, languageJson, image,licence_number, referral_number, category, sub_category, subCategoryLevelJson,experience, about, pan_number, adhar_number, gst_number, call_charge,industry_name,institute_name,sub_two_level_category_id,sub_three_level_category_id];
+                let updateValues = [name, email, dob, gender, state, city, address, degreeJson, languageJson, image,licence_number, referral_number, category, sub_category, subCategoryLevelJson,experience, about, pan_number, adhar_number, gst_number, call_charge,industry_name,institute_name, sub_two_level_category_id, sub_three_level_category_id];
                 if(pancard_front_image) {
                     updateQuery += `, pancard_front_image = ?`;
                     updateValues.push(pancard_front_image);
@@ -1410,6 +1444,11 @@ const signUp_2 = async (request, response) => {
     }
 };
 //end
+
+
+
+
+
 //Expert Update Bank Details
 const updateBankDetails = async (request, response) => {
     let { user_id, bank_user_name, bank_name, bank_account_no, bank_branch, ifsc_code } = request.body;
@@ -1545,19 +1584,20 @@ const editExpertiseAndExperience = async (request, response) => {
 //end
 //edit professional details
 const editProfessionalDetails = async (request, response) => {
-    let { user_id, degree, language, licence_number, referral_number,industry_name,institute_name } = request.body;
+    let { user_id, degree, language, licence_number, referral_number,industry_name,institute_name, file, degree_file } = request.body;
     // Check required fields
     if (!user_id || !degree || !language) {
         return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param });
     }
     let fileIds;
-    if (request.files && request.files['file']) {
-        const filePromises = request.files['file'].map((f) => {
+    if (file) {
+        let files = file.split(",");
+        const filePromises = files.map((data) => {
             return new Promise((resolve, reject) => {
                 const fileDeleteQuery = `DELETE FROM file_master WHERE user_id=?`;
                 connection.query(fileDeleteQuery, [user_id], (err, result) => {
                     const fileInsertQuery = `INSERT INTO file_master (file_name, delete_flag, createtime, updatetime,user_id) VALUES (?, 0, NOW(), NOW(),?)`;
-                    connection.query(fileInsertQuery, [f.filename,user_id], (err, result) => {
+                    connection.query(fileInsertQuery, [data,user_id], (err, result) => {
                         if (err) {
                             reject(err);
                         } else {
@@ -1573,13 +1613,15 @@ const editProfessionalDetails = async (request, response) => {
             return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
         }
     }
-    if (request.files && request.files['degree_file']) {
-        const filePromises = request.files['degree_file'].map((f) => {
+
+    if (degree_file) {
+        let degrees = degree_file.split(",")
+        const filePromises = degrees.map((data) => {
             return new Promise((resolve, reject) => {
                 const fileDeleteQuery = `DELETE FROM user_degree_master WHERE user_id=?`;
                 connection.query(fileDeleteQuery, [user_id], (err, result) => {
                     const fileInsertQuery = `INSERT INTO user_degree_master (document_file, delete_flag, createtime, updatetime,user_id) VALUES (?, 0, NOW(), NOW(),?)`;
-                    connection.query(fileInsertQuery, [f.filename,user_id], (err, result) => {
+                    connection.query(fileInsertQuery, [data,user_id], (err, result) => {
                         if (err) {
                             reject(err);
                         } else {
@@ -1587,6 +1629,7 @@ const editProfessionalDetails = async (request, response) => {
                         }
                     });
                 });
+                
             });
         });
     }
@@ -1650,30 +1693,30 @@ const editProfessionalDetails = async (request, response) => {
 //end
 //edit document number
 const editDocNumber = async (request, response) => {
-    let { user_id, pan_number, adhar_number, gst_number } = request.body;
+    let { user_id, pan_number, adhar_number, gst_number, pancard_front_image, pancard_back_image, adharcard_front_image, adharcard_back_image, gst_image  } = request.body;
     if (!user_id || !pan_number || !adhar_number) {
         return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param });
     }
-    let pancard_front_image;
-    let pancard_back_image;
-    let adharcard_front_image;
-    let adharcard_back_image;
-    let gst_image;
-    if (request.files && request.files['pancard_front_image']) {
-        pancard_front_image = request.files['pancard_front_image'][0].filename;
-    }
-    if (request.files && request.files['pancard_back_image']) {
-        pancard_back_image = request.files['pancard_back_image'][0].filename;
-    }
-    if (request.files && request.files['adharcard_front_image']) {
-        adharcard_front_image = request.files['adharcard_front_image'][0].filename;
-    }
-    if (request.files && request.files['adharcard_back_image']) {
-        adharcard_back_image = request.files['adharcard_back_image'][0].filename;
-    }
-    if (request.files && request.files['gst_image']) {
-        gst_image = request.files['gst_image'][0].filename;
-    }
+    // let pancard_front_image;
+    // let pancard_back_image;
+    // let adharcard_front_image;
+    // let adharcard_back_image;
+    // // let gst_image;
+    // if (request.files && request.files['pancard_front_image']) {
+    //     pancard_front_image = request.files['pancard_front_image'][0].filename;
+    // }
+    // if (request.files && request.files['pancard_back_image']) {
+    //     pancard_back_image = request.files['pancard_back_image'][0].filename;
+    // }
+    // if (request.files && request.files['adharcard_front_image']) {
+    //     adharcard_front_image = request.files['adharcard_front_image'][0].filename;
+    // }
+    // if (request.files && request.files['adharcard_back_image']) {
+    //     adharcard_back_image = request.files['adharcard_back_image'][0].filename;
+    // }
+    // if (request.files && request.files['gst_image']) {
+    //     gst_image = request.files['gst_image'][0].filename;
+    // }
     try {
         const query1 = "SELECT mobile, active_flag FROM user_master WHERE user_id = ? AND delete_flag=0 AND user_type=2";
         const values1 = [user_id];
@@ -1730,20 +1773,21 @@ const editDocNumber = async (request, response) => {
 //end
 //edit profile details
 const editProfileDetails = async (request, response) => {
-    let { user_id, name, email, dob, gender, state, city, address } = request.body;
-    if (!user_id || !name || !email || !dob || !gender || !state || !city || !address) {
+    let { user_id, name, email, dob, gender, state, city, address, image } = request.body;
+    if (!user_id || !name || !email || !dob || !gender || !state || !city || !address ) {
         return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param });
     }
     let fileIds;
-    if (request.files && request.files['image']) {
-        const filePromises = request.files['image'].map((f) => {
+    if (image) {
+        let images = image.split(",");
+        const filePromises =images.map((data) => {
             return new Promise((resolve, reject) => {
                 const fileInsertQuery = `INSERT INTO file_master (file_name, delete_flag, createtime, updatetime,user_id) VALUES (?, 0, NOW(), NOW(),?)`;
-                connection.query(fileInsertQuery, [f.filename,user_id], (err, result) => {
+                connection.query(fileInsertQuery, [data,user_id], (err, result) => {
                     if (err) {
                         reject(err);
                     } else {
-                        resolve(f.filename);
+                        resolve(data);
                     }
                 });
             });

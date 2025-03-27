@@ -21,9 +21,9 @@ const authenticateToken = (req, res, next) => {
             // return res.status(200).json({ success: false, msg: "Invalid token" });
             return res.status(200).json({ success: false, msg: languageMessage.checkToken,active_status:0});
         }
-        console.log("Decoded Token:", decoded);  // 🔥 Debugging: Check what’s inside the token
-        const userId = decoded.user_id_get; // ✅ Extract user_id
-        const deviceId = decoded.device_id; // ✅ Extract device_id
+        console.log("Decoded Token:", decoded);  //Debugging: Check what’s inside the token
+        const userId = decoded.user_id_get; //Extract user_id
+        const deviceId = decoded.device_id; //Extract device_id
         if (!userId || !deviceId) {
             // return res.status(200).json({ success: false, msg: "Invalid token data" });
             return res.status(200).json({ success: false, msg: languageMessage.checkInvalidToken,active_status:0});
@@ -814,24 +814,8 @@ async function getUserDetails(user_id){
     
     async function getHomeExpertJob(user_id) {
       return new Promise((resolve, reject) => {
-          const query = `
-              SELECT 
-                  job_post_id, 
-                  user_id,
-                  assign_expert_id, 
-                  title, 
-                  category, 
-                  sub_category, 
-                  max_price, 
-                  min_price, 
-                  duration, 
-                  status, 
-                  createtime,
-                  duration_type
-              FROM job_post_master 
-              WHERE assign_expert_id = ? And status=2 AND delete_flag = 0 order by job_post_id desc`;
-  
-          connection.query(query, [user_id], async (err, jobPosts) => {
+        const query = `SELECT job_post_id,user_id,assign_expert_id,title,category,sub_category,max_price,min_price,duration,status,createtime,duration_type FROM job_post_master WHERE assign_expert_id = ? And status=2 AND delete_flag = 0 order by job_post_id desc`;
+        connection.query(query, [user_id], async (err, jobPosts) => {
               if (err) {
                   return reject({ success: false, msg: "Internal Server Error", key: err.message });
               }
@@ -876,6 +860,19 @@ async function getUserDetails(user_id){
                                     }
                                 });
                             });
+
+                            // Fetch document
+                            let jobdocument = [];
+                            const jobDocQuery = "SELECT file_name FROM job_file_master WHERE job_id = ? AND delete_flag = 0";
+                            jobdocument = await new Promise((resolve) => {
+                                connection.query(jobDocQuery, [job.job_post_id], (err, fileresult) => {
+                                    if (err || !fileresult || fileresult.length === 0) {
+                                        resolve('NA'); // Return an empty array if no files are found
+                                    } else {
+                                        resolve(fileresult.map(row => row.file_name)); // Return an array of file names
+                                    }
+                                });
+                            });
   
                           // Return enriched job details
                           return {
@@ -889,6 +886,7 @@ async function getUserDetails(user_id){
                               duration_type_labe:'1=days,2=month,3=year',
                               user_name: userDetails.name,
                               user_image: userDetails.image,
+                              file_name: jobdocument,
                           };
                       })
                   );
@@ -1198,7 +1196,7 @@ async function getExpertJobFilter(user_id,category,sub_category) {
 }
 async function getJobWorkSpace(job_post_id) {
     return new Promise((resolve, reject) => {
-        const query = `SELECT milestone_id,price,duration,description,title,file,createtime,milestone_status FROM milestone_master WHERE delete_flag = 0 and job_post_id=? and milestone_status=0 order by job_post_id desc`;
+        const query = `SELECT milestone_id,price,duration,description,title,file,createtime,milestone_status,duration_type FROM milestone_master WHERE delete_flag = 0 and job_post_id=? order by job_post_id desc`;
   
         connection.query(query,[job_post_id],async (err, jobPosts) => {
             if (err) {
@@ -1219,7 +1217,8 @@ async function getJobWorkSpace(job_post_id) {
                             ...job,
                             task_no:task,
                             posted_time : moment(job.createtime).format("MMM DD YYYY hh:mm A"),
-                            status_label: '0=pending,1=accept,2=reject,3=milestone request send,4=release milestone,5=dispute,6=cancel',
+                            status_label: '0=pending,1=accept,2=reject,3=milestone request send,4=release milestone,5=dispute,6=cancel,7=convert milestone',
+                            duration_type_label: '1=days,2=month,3=year',
                         };
                     })
                 );
@@ -1231,20 +1230,17 @@ async function getJobWorkSpace(job_post_id) {
         });
     });
   }
-  async function getJobMilestone(job_post_id) {
-    return new Promise((resolve, reject) => {
-        const query = `SELECT milestone_id,price,duration,description,title,file,createtime,milestone_status FROM milestone_master WHERE delete_flag = 0 and job_post_id=? and milestone_status!=0 order by job_post_id desc`;
-  
-        connection.query(query,[job_post_id],async (err, jobPosts) => {
-            if (err) {
+  async function getJobMilestone(job_post_id){
+    return new Promise((resolve, reject) =>{
+        const query = `SELECT milestone_id,price,duration,description,title,file,createtime,milestone_status,duration_type FROM milestone_master WHERE delete_flag = 0 and job_post_id=? and milestone_status!=0 order by job_post_id desc`;
+        connection.query(query,[job_post_id],async (err, jobPosts)=>{
+            if(err){
                 return reject({ success: false, msg: "Internal Server Error", key: err.message });
             }
-  
-            if (!jobPosts || jobPosts.length === 0) {
+            if(!jobPosts || jobPosts.length === 0){
                 return resolve('NA');
             }
-  
-            try {
+            try{
                 let task = 0;
                 const jobPostDetails = await Promise.all(
                     jobPosts.map(async (job) => {
@@ -1254,7 +1250,8 @@ async function getJobWorkSpace(job_post_id) {
                             ...job,
                             milestone_no:task,
                             posted_time : moment(job.createtime).format("MMM DD YYYY hh:mm A"),
-                            status_label: '0=pending,1=accept,2=reject,3=milestone request send,4=release milestone,5=dispute,6=cancel',
+                            status_label: '0=pending,1=accept,2=reject,3=milestone request send,4=release milestone,5=dispute,6=cancel,7=convert milestone',
+                            duration_type_label: '1=days,2=month,3=year',
                         };
                     })
                 );

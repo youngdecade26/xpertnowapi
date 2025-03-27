@@ -1,8 +1,11 @@
 //call_controller.js
+const axios = require('axios');
+const crypto = require('crypto');
 const connection = require('../connection')
 const jwt = require('jsonwebtoken');
-const { generateToken,generateTokenByChannel } = require('../shared functions/common_call_function');
+const { generateToken,generateTokenByChannel,generateResourceId,getResourceId } = require('../shared functions/common_call_function');
 const languageMessage = require('../shared functions/languageMessage');
+const agoraCon = require('../shared functions/agora_confiq');
 const {getNotificationArrSingle,oneSignalNotificationSendCall} = require('./notification');
 //generate token
 const generateVideocallToken = async (request, response) => {
@@ -14,6 +17,21 @@ const generateVideocallToken = async (request, response) => {
         
         const token=await generateToken(user_id);
         return response.status(200).json({ success: true, msg: languageMessage.tokenGenerateSuccess,token:token});
+            
+        }catch(err){
+            return response.status(200).json({ success: false, msg: languageMessage.replySentUnsuccess, key: err.message });
+        }
+    } 
+//end
+//generate ResourceId
+const generatecallResourceId = async (request, response) => {
+    let {user_id} = request.body;
+    if (!user_id){
+        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param,key:'user_id'});
+    }
+    try {
+        const resourceId=await generateResourceId(user_id);
+        return response.status(200).json({ success: true, msg: languageMessage.tokenGenerateSuccess,resourceId:resourceId});
             
         }catch(err){
             return response.status(200).json({ success: false, msg: languageMessage.replySentUnsuccess, key: err.message });
@@ -198,7 +216,7 @@ const VideoVoiceCallJoin = async (request, response) => {
 //end
 //end call
 const VideoVoiceCallEnd = async (request, response) => {
-    let {user_id,video_call_id,duration,type} = request.body;
+    let {user_id,video_call_id,duration,type,call_Charges} = request.body;
     if (!user_id){
         return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param,key:'user_id'});
     }
@@ -206,7 +224,10 @@ const VideoVoiceCallEnd = async (request, response) => {
         return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param,key:'video_call_id'});
     }
     if (!duration){
-        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param,key:'video_call_id'});
+        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param,key:'duration'});
+    }
+    if (!call_Charges){
+        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param,key:'call_Charges'});
     }
     
     try {
@@ -240,8 +261,8 @@ const VideoVoiceCallEnd = async (request, response) => {
                 }
                
                 const minutes = Math.ceil(duration / 60);
-                const updateQuery = `UPDATE video_call_master SET status  = 2,duration=?,updatetime=now() WHERE video_call_id = ?`;
-                    connection.query(updateQuery, [minutes,video_call_id], async (err, videoresult) => {
+                const updateQuery = `UPDATE video_call_master SET status  = 2,duration=?,price=?,updatetime=now() WHERE video_call_id = ?`;
+                    connection.query(updateQuery, [minutes,call_Charges,video_call_id], async (err, videoresult) => {
                         if (err) {
                             return response.status(200).json({ success: false, msg: languageMessage.videocallEndUnsuccess, key: err });
                         }
@@ -287,7 +308,7 @@ const VideoVoiceCallEnd = async (request, response) => {
                                 message_3 = "Voice calling ended...";
                                 message_4 = "Voice calling ended...";
                             }
-                            const action_data = {user_id: user_id_notification,other_user_id: other_user_id_notification,action_id: action_id,action: action,user_type:other_user_type,duration:duration};
+                            const action_data = {user_id: user_id_notification,other_user_id: other_user_id_notification,action_id: action_id,action: action,user_type:other_user_type,duration:duration,call_Charges:call_Charges};
                             await getNotificationArrSingle(user_id_notification,other_user_id_notification,action,action_id,title,title_2,title_3,title_4,messages,message_2,message_3,message_4,action_data, async (notification_arr_check) => {
                                 let notification_arr_check_new = [notification_arr_check];
                                 
@@ -414,4 +435,227 @@ const VideoVoiceCallReject = async (request, response) => {
     
     } 
 //end
-module.exports = {generateVideocallToken,VideoVoiceCallStart,VideoVoiceCallJoin,VideoVoiceCallEnd,VideoVoiceCallReject,generateTokenByChannelName}
+// Middleware to log requests & responses
+axios.interceptors.request.use(request => {
+    console.log("Starting Request:", request);
+    return request;
+});
+
+axios.interceptors.response.use(response => {
+    console.log("Response:", response.data);
+    return response;
+});
+
+// Start Agora Recording API
+const startRecording = async (request, response) => {
+    try {
+        const { user_id, token, resourceId, channelName } = request.body;
+
+        if (!user_id) {
+            return response.status(400).json({ success: false, msg: "Missing user_id" });
+        }
+        if (!token) {
+            return response.status(400).json({ success: false, msg: "Missing token" });
+        }
+        if (!resourceId) {
+            return response.status(400).json({ success: false, msg: "Missing resourceId" });
+        }
+        if (!channelName) {
+            return response.status(400).json({ success: false, msg: "Missing channelName" });
+        }
+
+        const uid = `${user_id}`;
+
+        // Start Recording Request
+        const startResponse = await axios.post(
+            `https://api.agora.io/v1/apps/${agoraCon.AGORA_APP_ID}/cloud_recording/resourceid/${resourceId}/mode/individual/start`,
+            {
+                cname: channelName,
+                uid: uid,
+                clientRequest: {
+                    recordingConfig: {
+                        maxIdleTime: 30,
+                        streamTypes: 2,
+                        channelType: 1,
+                        videoStreamType: 0,
+                        subscribeUidGroup: 1 // ✅ Fix: Add subscribeUidGroup for single mode
+                    },
+                    storageConfig: {
+                        vendor: 1, // Amazon S3
+                        region: agoraCon.REGION,
+                        bucket: agoraCon.BUCKET_NAME,
+                        accessKey: agoraCon.accessKey,
+                        secretKey: agoraCon.secretKey,
+                        fileNamePrefix: ["uploads"]
+                    }
+                }
+            },
+            {
+                auth: {
+                    username: agoraCon.CUSTOMER_ID,
+                    password: agoraCon.CUSTOMER_SECRET
+                },
+                headers: {
+                    "Content-Type": "application/json"
+                }
+            }
+        );
+
+        // If Agora API response is missing `sid`, return an error
+        if (!startResponse.data.sid) {
+            return response.status(500).json({ success: false, msg: "Failed to start recording, no session ID received." });
+        }
+
+        return response.status(200).json({
+            success: true,
+            message: "Recording started successfully",
+            resourceId,
+            sid: startResponse.data.sid,
+            token,
+            channelName,
+            uid,
+        });
+
+    } catch (error) {
+        console.error("Error starting recording:", error.response ? error.response.data : error.message);
+        return response.status(500).json({ success: false, message: "Failed to start recording", error: error.response?.data || error.message });
+    }
+};
+
+//end
+const endRecording = async (request, response) => {
+    try {
+        const { user_id, sid, resourceId, channelName } = request.body;
+
+        if (!user_id || !sid || !resourceId ||!channelName) {
+            return response.status(400).json({ success: false, msg: "Missing required parameters" });
+        }
+        const uid = `${user_id}`;
+
+        // Stop Recording Request
+        const stopResponse = await axios.post(
+            `https://api.agora.io/v1/apps/${agoraCon.AGORA_APP_ID}/cloud_recording/resourceid/${resourceId}/sid/${sid}/mode/individual/stop`,
+            {
+                cname: channelName,
+                uid: uid,
+                clientRequest: {
+                    // ✅ Include extra parameters to avoid "worker not found" error
+                    async_stop: false,
+                    mediaStop: true
+                }
+            },
+            {
+                auth: {
+                    username: agoraCon.CUSTOMER_ID,
+                    password: agoraCon.CUSTOMER_SECRET
+                },
+                headers: {
+                    "Content-Type": "application/json"
+                }
+            }
+        );
+
+        if (!stopResponse.data.serverResponse) {
+            return response.status(500).json({ success: false, msg: "Failed to stop recording, no response received." });
+        }
+
+        return response.status(200).json({
+            success: true,
+            message: "Recording stopped successfully",
+            resourceId,
+            sid,
+            uid,
+            fileList: stopResponse.data.serverResponse.fileList || []
+        });
+    } catch (error) {
+        console.error("Error stopping recording:", error.response ? error.response.data : error.message);
+        return response.status(500).json({ success: false, message: "Failed to stop recording", error: error.response?.data || error.message });
+    }
+};
+
+const getRecordingDetails = async (request, response) => {
+    try {
+        const { user_id, sid, resourceId, channelName } = request.body;
+
+        if (!user_id || !sid || !resourceId || !channelName) {
+            return response.status(400).json({ success: false, msg: "Missing required parameters" });
+        }
+
+        console.log(`Fetching recording details - Resource ID: ${resourceId}, SID: ${sid}, Channel: ${channelName}`);
+
+        // Get Recording Details from Agora
+        const recordingResponse = await axios.get(
+            `https://api.agora.io/v1/apps/${agoraCon.AGORA_APP_ID}/cloud_recording/resourceid/${resourceId}/sid/${sid}/mode/individual/query`,
+            {
+                auth: {
+                    username: agoraCon.CUSTOMER_ID,
+                    password: agoraCon.CUSTOMER_SECRET
+                },
+                headers: {
+                    "Content-Type": "application/json"
+                }
+            }
+        );
+
+        if (!recordingResponse.data || !recordingResponse.data.serverResponse) {
+            return response.status(500).json({ success: false, msg: "Failed to fetch recording details, no response received." });
+        }
+
+        return response.status(200).json({
+            success: true,
+            message: "Recording details fetched successfully",
+            resourceId,
+            sid,
+            user_id,
+            recordingDetails: recordingResponse.data.serverResponse
+        });
+
+    } catch (error) {
+        console.error("Error fetching recording details:", error.response ? error.response.data : error.message);
+        return response.status(500).json({ success: false, message: "Failed to fetch recording details", error: error.response?.data || error.message });
+    }
+};
+
+const checkRecordingStatus = async (request, response) => {
+    try {
+        const { resourceId, sid, channelName } = request.body;
+
+        if (!resourceId) {
+            return response.status(400).json({ success: false, msg: "Missing resourceId" });
+        }
+        if (!sid) {
+            return response.status(400).json({ success: false, msg: "Missing sid" });
+        }
+        if (!channelName) {
+            return response.status(400).json({ success: false, msg: "Missing channelName" });
+        }
+
+        // Check Recording Status Request
+        const statusResponse = await axios.get(
+            `https://api.agora.io/v1/apps/${agoraCon.AGORA_APP_ID}/cloud_recording/resourceid/${resourceId}/sid/${sid}/mode/individual/query`,
+            {
+                auth: {
+                    username: agoraCon.CUSTOMER_ID,
+                    password: agoraCon.CUSTOMER_SECRET
+                },
+                headers: {
+                    "Content-Type": "application/json"
+                }
+            }
+        );
+
+        return response.status(200).json({
+            success: true,
+            message: "Recording status retrieved successfully",
+            data: statusResponse.data
+        });
+    } catch (error) {
+        console.error("Error checking recording status:", error.response ? error.response.data : error.message);
+        return response.status(500).json({ success: false, message: "Failed to retrieve recording status", error: error.response?.data || error.message });
+    }
+};
+
+
+
+
+module.exports = {generateVideocallToken,VideoVoiceCallStart,VideoVoiceCallJoin,VideoVoiceCallEnd,VideoVoiceCallReject,generateTokenByChannelName,generatecallResourceId,startRecording,endRecording,getRecordingDetails,checkRecordingStatus}

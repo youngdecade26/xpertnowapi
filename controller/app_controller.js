@@ -1,10 +1,10 @@
 const connection = require('../connection');
 const moment = require("moment");
 const jwt = require('jsonwebtoken');
-const { generateOTP, hashPassword,getUserDetails,getUserDocument,getRelativeTime,getRatingBarAvg,getCategoryName,getHomeExpertJob,getHomeExpertUserJob,getHomeUserJobCount,getCustomerJobFilter,getAvgRating,getExpertJobFilter,getJobMilestone,getJobWorkSpace,getHomeExpertCompletedJob,authenticateToken } = require('../shared functions/functions');
+const { generateOTP, hashPassword,getUserDetails,getUserDocument,getRelativeTime,getRatingBarAvg,getCategoryName,getHomeExpertJob,getHomeExpertUserJob,getHomeUserJobCount,getCustomerJobFilter,getAvgRating,getExpertJobFilter,getJobMilestone,getJobWorkSpace,getHomeExpertCompletedJob,authenticateToken,getUserTotalWallet } = require('../shared functions/functions');
 const languageMessage = require('../shared functions/languageMessage');
 const {getNotificationArrSingle,oneSignalNotificationSendCall} = require('./notification');
-const twilio = require('twilio');
+// const twilio = require('twilio');
 const util = require("util");
 // Get Expert Details By category
 const getExpertDetails = async (request, response) => {
@@ -231,50 +231,71 @@ const getJobPostDetails = async (request, response) => {
                 const jobPostDetails = await Promise.all(
                     jobPosts.map(async (job) => {
                         // Fetch subcategory name
+                        let subCategory = 'NA';
                         const subCategoryQuery = "SELECT sub_category_name FROM sub_categories_master WHERE sub_category_id = ? AND delete_flag = 0";
-                        const subCategory = await new Promise((resolve) => {
-                            connection.query(subCategoryQuery, [job.sub_category], (err, result) => {
-                                resolve(err ? null : result[0]?.sub_category_name);
+                        subCategory = await new Promise((resolve) => {
+                            connection.query(subCategoryQuery, [job.sub_category], (err, subresult) => {
+                                if (err || !subresult || subresult.length === 0) {
+                                    resolve('NA');
+                                } else {
+                                    resolve(subresult[0].sub_category_name);
+                                }
                             });
                         });
                         // Fetch category name
                         const categoryQuery = "SELECT name FROM categories_master WHERE category_id = ? AND delete_flag = 0";
                         const category = await new Promise((resolve) => {
-                            connection.query(categoryQuery, [job.category], (err, result) => {
-                                resolve(err ? null : result[0]?.name);
+                            connection.query(categoryQuery, [job.category], (err, catresult) => {
+                                resolve(err ? null : catresult[0]?.name);
                             });
                         });
                         // Fetch city name
-                        const cityQuery = "SELECT sub_category_name FROM sub_categories_master WHERE sub_category_id = ? AND delete_flag = 0";
+                        const cityQuery = "SELECT city_name FROM city_master WHERE city_id = ? AND delete_flag = 0";
                         const city = await new Promise((resolve) => {
-                            connection.query(cityQuery, [job.city], (err, result) => {
-                                resolve(err ? null : result[0]?.sub_category_name);
+                            connection.query(cityQuery, [job.city], (err, cityresult) => {
+                                resolve(err ? null : cityresult[0]?.city_name);
                             });
                         });
                         // Fetch user name
                         const userNameQuery = "SELECT name FROM user_master WHERE user_id = ? AND delete_flag = 0";
                         const userName = await new Promise((resolve) => {
-                            connection.query(userNameQuery, [job.user_id], (err, result) => {
-                                resolve(err ? null : result[0]?.name);
+                            connection.query(userNameQuery, [job.user_id], (err, nameresult) => {
+                                resolve(err ? null : nameresult[0]?.name);
                             });
                         });
                         // Fetch user image
                         const userImageQuery = "SELECT image FROM user_master WHERE user_id = ? AND delete_flag = 0";
                         const userimage = await new Promise((resolve) => {
-                            connection.query(userImageQuery, [job.user_id], (err, result) => {
-                                resolve(err ? null : result[0]?.image);
+                            connection.query(userImageQuery, [job.user_id], (err, imageresult) => {
+                                resolve(err ? null : imageresult[0]?.image);
                             });
                         });
+                        // Fetch document
+                        let jobdocument = [];
+                        const jobDocQuery = "SELECT file_name FROM job_file_master WHERE job_id = ? AND delete_flag = 0";
+                        jobdocument = await new Promise((resolve) => {
+                            connection.query(jobDocQuery, [job_post_id], (err, fileresult) => {
+                                if (err || !fileresult || fileresult.length === 0) {
+                                    resolve('NA'); // Return an empty array if no files are found
+                                } else {
+                                    resolve(fileresult.map(row => row.file_name)); // Return an array of file names
+                                }
+                            });
+                        });
+                        
                         check_hire_expert_id=job.assign_expert_id;
                         return {
                             ...job,
-                            sub_category: subCategory,
+                           
                             category: category,
                             city: city,
                             userName: userName,
                             userimage: userimage,
                             posted_time: getRelativeTime(job.createtime),
                             duration_type_labe:'1=days,2=month,3=year',
+                            status_label:'0=pending,1=hired,2=inprogress,3=completed',
+                            file_name:jobdocument,
+                            sub_category: subCategory,
                             
                         };
                     })
@@ -339,13 +360,11 @@ const getJobPostDetails = async (request, response) => {
 //end
 //Create job post
 const createJobPost = async (request, response) => {
-    let { user_id, title, category, sub_category, max_price, min_price, duration, description,duration_type,nda_status } = request.body;
+    let { user_id, title, category, sub_category, max_price, min_price, duration, description,duration_type,nda_status, file } = request.body;
+   
     if (!user_id || !title || !category || !sub_category || !max_price || !min_price || !duration || !description || !duration_type) {
         return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param });
     }
-    
-    
-    
     try {
         const query1 = "SELECT mobile, active_flag FROM user_master WHERE user_id = ? AND delete_flag = 0 AND user_type=1";
         const values1 = [user_id];
@@ -367,39 +386,44 @@ const createJobPost = async (request, response) => {
                 if (err) {
                     return response.status(200).json({ success: false, msg: languageMessage.jobPostCreatedError, key: err });
                 }
-                if (request.files && request.files['file']) {
-                    const filePromises = request.files['file'].map((f) => {
-            
+                // if (request.files && request.files['file']) {
+                 // const filePromises = request.files['file'].map((f) => {
+                if (file) {
+                    // Ensure file is an array by splitting it if it's a comma-separated string
+                    const fileArray = Array.isArray(file) ? file : file.split(",");
+                    const filePromises = fileArray.map((fileName) => {
                         return new Promise((resolve, reject) => {
-            
-                            const fileInsertQuery = `INSERT INTO job_file_master(file_name,delete_flag,createtime,updatetime,job_id) VALUES (?, 0, NOW(), NOW(),?)`;
-            
-                            connection.query(fileInsertQuery, [f.filename,result.insertId], (err, result) => {
-            
+                            const fileInsertQuery = `
+                                INSERT INTO job_file_master (file_name, delete_flag, createtime, updatetime, job_id) 
+                                VALUES (?, 0, NOW(), NOW(), ?)
+                            `;
+                
+                            connection.query(fileInsertQuery, [fileName.trim(), result.insertId], (err, res) => {
                                 if (err) {
-            
                                     reject(err);
-            
                                 } else {
-            
-                                    resolve(f.filename);
-            
+                                    resolve(fileName.trim());
                                 }
-            
                             });
-            
                         });
-            
                     });
-            
+                
+                    Promise.all(filePromises)
+                    .then((insertedFiles) => {
+                        console.log("Inserted Files:", insertedFiles);
+                    })
+                    .catch((error) => {
+                        console.error("Error inserting files:", error);
+                    });
                 }
+                    
                 const query1 = "SELECT job_post_id, title, category, sub_category, max_price, min_price, duration, description, file,duration_type,nda_status, createtime FROM job_post_master WHERE job_post_id = ? AND delete_flag=0";
                 const values1 = [result.insertId];
-                connection.query(query1, values1, async (err, result) => {
+                connection.query(query1, values1, async (err, result1) => {
                     if (err) {
                         return response.status(200).json({ success: false, msg: languageMessage.dataNotFound, key: err.message });
                     }
-                    return response.status(200).json({ success: true, msg: languageMessage.jobPostCreated, jobPostDataArray: result[0] });
+                    return response.status(200).json({ success: true, msg: languageMessage.jobPostCreated, jobPostDataArray: result1[0] });
                 });
             });
         });
@@ -1334,7 +1358,6 @@ const createProjectCost = async (request, response) => {
 const getMilestones = async (request, response) => {
     let { } = request.body;
 }
-
 // Get expert's earning 
 const getExpertEarning = async (request, response) => {
     let { user_id } = request.query;
@@ -1868,11 +1891,7 @@ const getReviewsOfExpert = (request, response) => {
         let total_review_count = 0;
         let avg_rating = 0;
         let reply_arr = "NA";
-        const query1 = `
-            SELECT mobile, active_flag, image 
-            FROM user_master 
-            WHERE user_id = ? AND delete_flag = 0 AND user_type = 2
-        `;
+        const query1 = `SELECT mobile, active_flag, image FROM user_master WHERE user_id = ? AND delete_flag = 0 AND user_type = 2`;
         const values1 = [user_id];
         connection.query(query1, values1, async (err, result) => {
             if (err) {
@@ -1886,11 +1905,7 @@ const getReviewsOfExpert = (request, response) => {
             }
             const expert_image = result[0].image ? result[0].image : "NA";
             const rating_bar = await getRatingBarAvg(user_id);
-            const query2 = `
-                SELECT rating_id, user_id, rating, review, createtime
-                FROM rating_master
-                WHERE expert_id = ? AND delete_flag = 0
-            `;
+            const query2 = `SELECT rating_id, user_id, rating, review, createtime FROM rating_master WHERE expert_id = ? AND delete_flag = 0`;
             connection.query(query2, [user_id], (err, historyPosts) => {
                 if (err) {
                     return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
@@ -1956,7 +1971,7 @@ const getReviewsOfExpert = (request, response) => {
                                     if (err || results.length === 0) {
                                         return resolve("NA");
                                     }
-                                    resolve(results[0]); // Return the first reply
+                                    resolve(results); // Return the first reply
                                 });
                             });
                             
@@ -2163,7 +2178,7 @@ const reviewReply = async (request, response) => {
     }
     
     try {
-        const query1 = "SELECT mobile, active_flag FROM user_master WHERE user_id = ? AND delete_flag = 0 AND user_type=2";
+        const query1 = "SELECT mobile, active_flag FROM user_master WHERE user_id = ? AND delete_flag = 0";
         const values1 = [user_id];
         connection.query(query1, values1, async (err, result) => {
             if (err) {
@@ -2175,10 +2190,10 @@ const reviewReply = async (request, response) => {
             if (result[0]?.active_flag === 0) {
                 return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated ,active_status:0});
             }
-            const newUserQuery = `INSERT INTO rating_reply_master (expert_id, rating_id, reply_message,createtime,updatetime)
+            const newUserQuery = `INSERT INTO rating_reply_master (expert_id,rating_id,reply_message,createtime,updatetime)
             VALUES (?, ?, ?, now(),now())`;
             const values = [user_id, rating_id, message]
-            connection.query(newUserQuery, values, async (err, result) => {
+            connection.query(newUserQuery, values, async (err, result) =>{
                 if (err) {
                     return response.status(200).json({ success: false, msg: languageMessage.replySentUnsuccess, key: err });
                 }
@@ -2424,7 +2439,7 @@ const ExpertCallHistory = async (request, response) => {
 //end
 // exper bid on job
 const ExpertBidJob = async (request, response) => {
-    let {user_id,job_post_id,duration,price,duration_type} = request.body;
+    let {user_id,job_post_id,duration,price,duration_type, pdf_file, nda_file} = request.body;
     if (!user_id){
         return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param,key:'user_id'});
     }
@@ -2440,14 +2455,14 @@ const ExpertBidJob = async (request, response) => {
     if (!duration_type){
         return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param,key:'duration_type'});
     }
-    let pdf_file = null;
-    let nda_file = null;
-    if (request.files && request.files['pdf_file']) {
-        pdf_file = request.files['pdf_file'][0].filename;
-    }
-    if (request.files && request.files['nda_file']) {
-        nda_file = request.files['nda_file'][0].filename;
-    }
+    // let pdf_file = null;
+    // let nda_file = null;
+    // if (request.files && request.files['pdf_file']) {
+    //     pdf_file = request.files['pdf_file'][0].filename;
+    // }
+    // if (request.files && request.files['nda_file']) {
+    //     nda_file = request.files['nda_file'][0].filename;
+    // }
     
     try {
         
@@ -2606,7 +2621,7 @@ const bookMarkJob = async (request, response) => {
 }
 //report on job
 const reportOnJob = async (request, response) => {
-    let {user_id, job_post_id,reason} = request.body;
+    let {user_id,job_post_id,reason} = request.body;
     if (!user_id || !job_post_id ||!reason) {
         return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param });
     }
@@ -2751,14 +2766,13 @@ const createJobCost = async (request, response) => {
 }
 //create Job milestone
 const createJobMilestone = async (request, response) => {
-    let {user_id, job_post_id,title,amount,duration,description,duration_type} = request.body;
+    let {user_id, job_post_id,title,amount,duration,description,duration_type, pdf_file} = request.body;
+    // return response.status(200).json({ "check": request.body})
     if (!user_id || !job_post_id || !title ||!description ||!amount ||!duration ||!duration_type) {
         return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param });
     }
-    let pdf_file = null;
-    if (request.files && request.files['pdf_file']) {
-        pdf_file = request.files['pdf_file'][0].filename;
-    }
+    
+   
     try {
         const query1 = "SELECT name,mobile, active_flag, wallet_balance FROM user_master WHERE user_id = ? AND delete_flag = 0";
         const values1 = [user_id];
@@ -2979,7 +2993,7 @@ const sentMilestoneRequest = async (request, response) => {
                 return response.status(403).json({ success: false, msg: languageMessage.accountdeactivated ,active_status:0});
             }
             const user_name=userResult[0].name;
-            const checkMilestone = "SELECT job_post_id FROM milestone_master WHERE delete_flag = 0 AND milestone_id=? and milestone_status=1";
+            const checkMilestone = "SELECT job_post_id FROM milestone_master WHERE delete_flag = 0 AND milestone_id=? and milestone_status=7";
             const milestonevalues = [milestone_id];
             connection.query(checkMilestone, milestonevalues, (err, milestoneResult) => {
                 if (err) {
@@ -3043,9 +3057,28 @@ const sentMilestoneRequest = async (request, response) => {
 }
 //milestone request release,cancel,dispute 
 const checkMilestoneRequest = async (request, response) => {
-    let {user_id,milestone_id,type} = request.body;
-    if (!user_id || !milestone_id || !type) {
+    let {user_id,milestone_id,type,cancel_reason,dispute_title,dispute_description,dispute_amount,dispute_file} = request.body;
+    if (!user_id || !milestone_id || !type ) {
         return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param });
+    }
+    if(type==6){
+        if(!cancel_reason){
+            return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param,'key':'cancel_reason'});
+        }
+    }
+    if(type==5){
+        if(!dispute_title){
+            return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param,'key':'dispute_title'});
+        }
+        if(!dispute_description){
+            return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param,'key':'dispute_description'});
+        }
+        if(!dispute_amount){
+            return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param,'key':'dispute_amount'});
+        }
+        if(!dispute_file){
+            return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param,'key':'dispute_file'});
+        }
     }
     
     try {
@@ -3081,9 +3114,19 @@ const checkMilestoneRequest = async (request, response) => {
                         return response.status(404).json({ success: false, msg: languageMessage.jobNotFound });
                     }
                     const project_title=jobResult[0].title;
-                    
-                    const updateMilestone = `UPDATE milestone_master SET milestone_status=?,updatetime = now() WHERE milestone_id=?`;
-                    const updateValue=[type,milestone_id];
+                    let updateMilestone;
+                    let updateValue;
+                    if(type==4){
+                        updateMilestone = `UPDATE milestone_master SET milestone_status=?,updatetime = now() WHERE milestone_id=?`;
+                        updateValue=[type,milestone_id];
+                    }if(type==5){
+                        updateMilestone = `UPDATE milestone_master SET milestone_status=?,dispute_title=?,dispute_description=?,dispute_amount=?,dispute_file=?,updatetime = now() WHERE milestone_id=?`;
+                        updateValue=[type,dispute_title,dispute_description,dispute_amount,dispute_file,milestone_id];
+                    }
+                    if(type==6){
+                        updateMilestone = `UPDATE milestone_master SET milestone_status=?,reject_reason=?,updatetime = now() WHERE milestone_id=?`;
+                        updateValue=[type,cancel_reason,milestone_id];
+                    }
                     connection.query(updateMilestone, updateValue, async (err, updateResult) => {
                         if (err) {
                             if(type==4){
@@ -3186,10 +3229,15 @@ const getExpertJobDetails = async (request, response) => {
                 const jobPostDetails = await Promise.all(
                     jobPosts.map(async (job) => {
                         // Fetch subcategory name
+                        let subCategory = 'NA';
                         const subCategoryQuery = "SELECT sub_category_name FROM sub_categories_master WHERE sub_category_id = ? AND delete_flag = 0";
-                        const subCategory = await new Promise((resolve) => {
-                            connection.query(subCategoryQuery, [job.sub_category], (err, result) => {
-                                resolve(err ? null : result[0]?.sub_category_name);
+                        subCategory = await new Promise((resolve) => {
+                            connection.query(subCategoryQuery, [job.sub_category], (err, subresult) => {
+                                if (err || !subresult || subresult.length === 0) {
+                                    resolve('NA');
+                                } else {
+                                    resolve(subresult[0].sub_category_name);
+                                }
                             });
                         });
                         // Fetch category name
@@ -3200,10 +3248,10 @@ const getExpertJobDetails = async (request, response) => {
                             });
                         });
                         // Fetch city name
-                        const cityQuery = "SELECT sub_category_name FROM sub_categories_master WHERE sub_category_id = ? AND delete_flag = 0";
+                        const cityQuery = "SELECT city_name FROM city_master WHERE city_id = ? AND delete_flag = 0";
                         const city = await new Promise((resolve) => {
-                            connection.query(cityQuery, [job.city], (err, result) => {
-                                resolve(err ? null : result[0]?.sub_category_name);
+                            connection.query(cityQuery, [job.city], (err, cityresult) => {
+                                resolve(err ? null : cityresult[0]?.city_name);
                             });
                         });
                         // Fetch user name
@@ -3220,6 +3268,18 @@ const getExpertJobDetails = async (request, response) => {
                                 resolve(err ? null : result[0]?.image);
                             });
                         });
+                        // Fetch document
+                        let jobdocument = [];
+                        const jobDocQuery = "SELECT file_name FROM job_file_master WHERE job_id = ? AND delete_flag = 0";
+                        jobdocument = await new Promise((resolve) => {
+                            connection.query(jobDocQuery, [job.job_post_id], (err, fileresult) => {
+                                if (err || !fileresult || fileresult.length === 0) {
+                                    resolve('NA'); // Return an empty array if no files are found
+                                } else {
+                                    resolve(fileresult.map(row => row.file_name)); // Return an array of file names
+                                }
+                            });
+                        });
                         check_hire_expert_id=job.assign_expert_id;
                         return {
                             ...job,
@@ -3230,6 +3290,7 @@ const getExpertJobDetails = async (request, response) => {
                             userimage: userimage,
                             posted_time: getRelativeTime(job.createtime),
                             duration_type_labe:'1=days,2=month,3=year',
+                            file_name: jobdocument,
                             
                         };
                     })
@@ -3325,7 +3386,7 @@ const downloadApp = async (request, response) => {
     <!DOCTYPE html>
     <html lang="en-US">
     <head>
-        <title>Cinema</title>
+        <title>XpertNow</title>
         <meta http-equiv="content-type" content="text/html; charset=utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
     </head>
@@ -3356,7 +3417,7 @@ const deepLink = async(request,response)=>{
            <script>
            (function() {
              var app = {
-               launchApp: function() {
+               launchApp: function(){
                    var get_link = '${get_link}';
                    window.location.replace(get_link);
                    this.timer = setTimeout(this.openWebApp, 3000);
@@ -3511,302 +3572,795 @@ const logOut = (request, response) => {
         return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
     }
 }
-const AddAvailibility = async (request, response) => {
-  var { expert_id, dayofweeks,activeStatus,morningStart,morningEnd,eveningStart,eveningEnd } = request.body;
-if (!expert_id || !dayofweeks || !activeStatus || !morningStart || !morningEnd || ! eveningStart || !eveningEnd) {
-    return response
-      .status(400)
-      .json({ success: false, msg: languageMessage.msg_empty_param, key : "expert_id" });
-  }
-const dayOfWeek_arr=dayofweeks.split(',');
-const activeStatus_arr=activeStatus.split(',');
-const morningStart_arr=morningStart.split(',');
-const morningEnd_arr=morningEnd.split(',');
-const eveningStart_arr=eveningStart.split(',');
-const eveningEnd_arr=eveningEnd.split(',');
-  try {
-    const CheckExpert =
-      "SELECT user_id, active_flag, user_type FROM user_master WHERE user_id = ? AND user_type=2 AND delete_flag=0";
-    connection.query(CheckExpert, [expert_id], async (err, result) => {
-      if (err) {
-        return response.status(500).json({
-          success: false,
-          msg: languageMessage.internalServerError,
-          key: err.message,
-        });
-      }
-      if (result.length === 0) {
-        return response
-          .status(404)
-          .json({ success: false, msg: languageMessage.expertNotFound });
-      }
-      const CheckAvailibityExpert =
-      "SELECT expert_id FROM availiability_master WHERE expert_id = ? AND  delete_flag=0";
-      connection.query(CheckAvailibityExpert,[expert_id],async(err,checkExpert)=>{
-        if(err){
-            return response.status(500).json({
-                success:false,
-                msg:languageMessage.internalServerError,
-                key:err.message
+//chat file upload
+const chatFileUpload = async (request, response) => {
+    let { user_id } = request.body;
+    if (!user_id) {
+        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'user_id' });
+    }
+    if (request.files && request.files['image']) {
+        let files = Array.isArray(request.files['image']) ? request.files['image'] : [request.files['image']];
+        const filePromises = files.map((f) => {
+            return new Promise((resolve, reject) => {
+                const fileInsertQuery = `INSERT INTO chat_file_master (file, createtime, updatetime) VALUES (?, NOW(), NOW())`;
+                
+                connection.query(fileInsertQuery, [f.filename], (err, result) => {
+                    if (err) {
+                        reject(err);
+                    } else {
+                        resolve(f.filename);
+                    }
+                });
             });
-        }
-        if(checkExpert.length>0){
-           return response.status(200).json({
-                success:false,
-                msg:languageMessage.AvailibilityAlreadyExists,
-            }); 
-        }
-     
-      // SQL Insert Query
-      const InsertQuery = `INSERT INTO availiability_master 
-        (expert_id, days,active_status, morn_start_time, morn_end_time, even_start_time, even_end_time, createtime, updatetime, mysqltime) 
-        VALUES (?, ?, ?, ?,?,?,?, NOW(), NOW(), NOW())`;
-        for(let i=0;i<7;i++){
-          connection.query(
-            InsertQuery,
-            [
-              expert_id,
-              dayOfWeek_arr[i],
-              activeStatus_arr[i],
-              morningStart_arr[i],
-              morningEnd_arr[i],
-              eveningStart_arr[i],
-              eveningEnd_arr[i],
-            ],
-            (err, result) => {
-              if (err) {
-          return response.status(200).json({
-            success: true,
-            msg: err.message,
-          });
-        };
-              
-            }
-          );
-        }
-  
-     return response.status(200).json({
-            success: true,
-            msg: languageMessage.AvailibilityCreated,
-          });
-  
-    });
-     });
-  } catch (err) {
-    return response.status(500).json({
-      success: false,
-      msg: languageMessage.internalServerError,
-      key: err.message,
-    });
-  }
-};
-// get availibility by expert id
-const getAvailiblityDetailsById = async (request, response) => {
-  const { expert_id } = request.query;
-  if (!expert_id) {
-    return response
-      .status(200)
-      .json({ success: false, msg: languageMessage.msg_empty_param });
-  }
-  try {
-        const CheckExpert ="SELECT user_id, active_flag, user_type FROM user_master WHERE user_id = ? AND user_type=2 AND delete_flag=0";
-    const values1 = [expert_id];
-    connection.query(CheckExpert, values1, async (err, result) => {
-      if (err) {
-        return response
-          .status(200)
-          .json({
-            success: false,
-            msg: languageMessage.internalServerError,
-            key1: err.message,
-          });
-      }
-      if (result.length === 0) {
-        return response
-          .status(200)
-          .json({ success: false, msg: languageMessage.expertNotFound });
-      }
-      if (result[0]?.active_flag === 0) {
-        return response
-          .status(200)
-          .json({
-            success: false,
-            msg: languageMessage.accountdeactivated,
-            active_status: 0,
-          });
-      }
-       connection.query("select availiabilty_id, expert_id, days, status, active_status, morn_start_time, morn_end_time, even_start_time, even_end_time, delete_flag, createtime, updatetime, mysqltime from availiability_master where expert_id = ? AND delete_flag = 0",
-  [expert_id],async (error, rows) => {
-          if (error) {
-          return response
-          .status(200)
-          .json({
-            success: false,
-            msg: languageMessage.internalServerError,
-            key1: error.message,
-          });
-       } 
-    
-        if (rows.length > 0) {
-  
-                  const availibilityData = rows.map(result => (
-                {
-                    availiabilty_id : result.availiabilty_id ||'NA',
-                    expert_id:expert_id ||'NA',
-                    dayOfWeek: result.days ||'NA',
-                    activeStatus: result.active_status ||0,
-                    morningStart: new Date('1970-01-01T' + result.morn_start_time + 'Z')
-  .toLocaleTimeString('en-US',
-    {timeZone:'UTC',hour12:true,hour:'numeric',minute:'numeric'}
-  )  ||'NA',
-                    morningEnd: new Date('1970-01-01T' + result.morn_end_time + 'Z')
-  .toLocaleTimeString('en-US',
-    {timeZone:'UTC',hour12:true,hour:'numeric',minute:'numeric'}
-  )  ||'NA',
-                    eveningStart: new Date('1970-01-01T' + result.even_start_time + 'Z')
-  .toLocaleTimeString('en-US',
-    {timeZone:'UTC',hour12:true,hour:'numeric',minute:'numeric'}
-  ) ||'NA',
-                    eveningEnd: new Date('1970-01-01T' + result.even_end_time + 'Z')
-  .toLocaleTimeString('en-US',
-    {timeZone:'UTC',hour12:true,hour:'numeric',minute:'numeric'}
-  ) ||'NA',
-               
-                }));
-                  return response.status(200).json({
-                    success: true,
-                    msg: languageMessage.dataFound,
-                    availibilityData: availibilityData,
-                  });
-  
-              }else{
-                 return response.status(200).json({
-                    success: true,
-                    msg: languageMessage.dataFound,
-                    availibilityData: [],
-                  });
-  
-              }
-               
-  
-          }
-  
-        );
-   
-   
-    });
-  } catch (err) {
-    return response
-      .status(200)
-      .json({
-        success: false,
-        msg: languageMessage.internalServerError4,
-        key: err.message,
-      });
-  }
-};
-const EditAvailibility = async (request, response) => {
-  var { expert_id, dayofweeks,activeStatus,morningStart,morningEnd,eveningStart,eveningEnd } = request.body;
-if (!expert_id || !dayofweeks || !activeStatus || !morningStart || !morningEnd || ! eveningStart || !eveningEnd) {
-    return response
-      .status(400)
-      .json({ success: false, msg: languageMessage.msg_empty_param, key : "expert_id" });
-  }
- 
-const dayOfWeek_arr=dayofweeks.split(',');
-const activeStatus_arr=activeStatus.split(',');
-const morningStart_arr=morningStart.split(',');
-const morningEnd_arr=morningEnd.split(',');
-const eveningStart_arr=eveningStart.split(',');
-const eveningEnd_arr=eveningEnd.split(',');
-if (dayOfWeek_arr.length !=7 || activeStatus_arr.length !=7 || morningStart_arr.length !=7 || morningEnd_arr.length !=7 ||  eveningStart_arr.length !=7 || eveningEnd_arr.length !=7) {
-    return response
-      .status(500)
-      .json({ success: false, msg: languageMessage.invalidData, key : {'dayOfWeek':dayOfWeek_arr.length,'activeStatus':activeStatus_arr.length,'morningStart':morningStart_arr.length,'morningEnd':morningEnd_arr.length,'eveningStart':eveningStart_arr.length,'eveningEnd':eveningEnd_arr.length} });
-  }
-var availibility_arr=[];
-  try {
-    const CheckExpert =
-      "SELECT user_id, active_flag, user_type FROM user_master WHERE user_id = ? AND user_type=2 AND delete_flag=0";
-    connection.query(CheckExpert, [expert_id], async (err, result) => {
-      if (err) {
-        return response.status(500).json({
-          success: false,
-          msg: languageMessage.internalServerError,
-          key: err.message,
         });
-      }
-      if (result.length === 0) {
-        return response
-          .status(404)
-          .json({ success: false, msg: languageMessage.expertNotFound });
-      }
+        try{
+            await Promise.all(filePromises);
+            return response.status(200).json({ success: true, msg: languageMessage.fileUploadedSuccess });
+        }catch(err){
+            return response.status(500).json({ success: false, msg: languageMessage.fileUploadedError, key: err.message });
+        }
+    }else{
+        return response.status(400).json({ success: false, msg: "No files uploaded", key: 'image' });
+    }
+};
+//end
+// get expert completed job
+const getExpertCompletedJobs = async (request, response) => {
+    const { user_id } = request.query;
+    if (!user_id) {
+        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param });
+    }
+    try {
+        const query1 = "SELECT mobile, active_flag FROM user_master WHERE user_id = ? AND delete_flag = 0 AND user_type=2";
+        const values1 = [user_id];
+        connection.query(query1, values1, async (err, result) => {
+            if (err) {
+                return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
+            }
+            if (result.length === 0) {
+                return response.status(200).json({ success: false, msg: languageMessage.userNotFound });
+            }
+            if (result[0]?.active_flag === 0) {
+                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated ,active_status:0});
+            }
+            const query2 = `
+                SELECT job_post_id,user_id,title,category,sub_category,max_price,min_price,duration,duration_type,status, updatetime,createtime FROM job_post_master WHERE assign_expert_id = ? AND delete_flag = 0 and status=3`;
+            connection.query(query2, [user_id], async (err, jobPosts) => {
+                if (err) {
+                    return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
+                }
+                if (jobPosts.length === 0) {
+                    return response.status(200).json({ success: true, msg: languageMessage.dataFound, jobPostDetails: 'NA' });
+                }
+                // Fetch category and subcategory names
+                const jobPostDetails = await Promise.all(
+                    jobPosts.map(async (job) => {
+                        // Fetch subcategory name
+                        const subCategoryQuery = "SELECT sub_category_name FROM sub_categories_master WHERE sub_category_id = ? AND delete_flag = 0";
+                        const subCategory = await new Promise((resolve) => {
+                            connection.query(subCategoryQuery, [job.sub_category], (err, result) => {
+                                resolve(err ? null : result[0]?.sub_category_name);
+                            });
+                        });
+                        // Fetch category name
+                        const categoryQuery = "SELECT name FROM categories_master WHERE category_id = ? AND delete_flag = 0";
+                        const category = await new Promise((resolve) => {
+                            connection.query(categoryQuery, [job.category], (err, result) => {
+                                resolve(err ? null : result[0]?.name);
+                            });
+                        });
+                        return {
+                            ...job,
+                            subcategory_id:job.sub_category,
+                            sub_category: subCategory,
+                            category_id:job.category,
+                            category: category,
+                            duration_type_label:'1=days,2=month,3=year',
+                            posted_time: getRelativeTime(job.createtime),
+                        };
+                    })
+                );
+                return response.status(200).json({ success: true, msg: languageMessage.dataFound, jobPostDetails: jobPostDetails });
+            });
+        });
+    } catch (err) {
+        return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
+    }
+};
+//end
+// ADD Availability
+const add_availability = (req, res) => {
+    const { user_id, day, status } = req.body;
+    if(!user_id){
+        return res.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: "user_id" });
+    }
+    if(!day){
+        return res.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: "day" });
+    }
+    if(!status){
+        return res.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: "status" });
+    }
+    const query1 = "SELECT mobile, active_flag FROM user_master WHERE user_id = ? AND delete_flag = 0 AND user_type=2";
+    const values1 = [user_id];
+    connection.query(query1, values1, async (err, result) => {
+        if (err) {
+            return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
+        }
+        if (result.length === 0) {
+            return response.status(200).json({ success: false, msg: languageMessage.userNotFound });
+        }
         if (result[0]?.active_flag === 0) {
-        return response
-          .status(200)
-          .json({
-            success: false,
-            msg: languageMessage.accountdeactivated,
-            active_status: 0,
-          });
-      }
-      const CheckAvailibityExpert =
-      "SELECT availiabilty_id FROM availiability_master WHERE expert_id = ? AND  delete_flag=0";
-      connection.query(CheckAvailibityExpert,[expert_id],async(err,checkExpert)=>{
-        if(err){
-            return response.status(500).json({
-                success:false,
-                msg:languageMessage.internalServerError,
-                key:err.message
+            return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated ,active_status:0});
+        }
+        const days = day.split(',').map(Number);
+        const statuses = status.split(',').map(Number);
+        const queries = days.map((day, index) => {
+            return new Promise((resolve, reject) => {
+                const currentStatus = statuses[index];
+                const checkQuery = `SELECT availability_id FROM availability_master WHERE user_id = ? AND day = ?`;
+                connection.query(checkQuery, [user_id, day], (err, results) => {
+                    if (err) return reject(err);
+                    const availabilityId = results.length > 0 ? results[0].availability_id : null;
+                    if (availabilityId) {
+                        // Update existing availability
+                        const updateQuery = `UPDATE availability_master SET status = ?, updatetime = NOW() WHERE availability_id = ?`;
+                        connection.query(updateQuery, [currentStatus,availabilityId], (updateErr) => {
+                            if (updateErr) return reject(updateErr);
+                            // Delete old slots only if status is 0
+                            if (currentStatus === 0) {
+                                const deleteSlotsQuery = `DELETE FROM slot_master WHERE availability_id = ?`;
+                                connection.query(deleteSlotsQuery, [availabilityId], (deleteErr) => {
+                                    if (deleteErr) return reject(deleteErr);
+                                    insertSlots(availabilityId, req.body, day, resolve, reject);
+                                });
+                            } else {
+                                resolve();
+                            }
+                        });
+                    } else {
+                        // Insert new availability
+                        const insertQuery = `INSERT INTO availability_master (user_id, day, status, createtime,updatetime) VALUES (?, ?, ?, NOW(),NOW())`;
+                        connection.query(insertQuery, [user_id, day, currentStatus], (insertErr, insertResult) => {
+                            if (insertErr) return reject(insertErr);
+                            if (currentStatus === 0) {
+                                insertSlots(insertResult.insertId, req.body, day, resolve, reject);
+                            } else {
+                                resolve();
+                            }
+                        });
+                    }
+                });
+            });
+        });
+        Promise.all(queries)
+        Promise.all(queries)
+            .then(async () => {
+                try {
+                    // const updateAvailabilityStatus = `UPDATE user_master SET availability_status = 1,updatetime=NOW() WHERE user_id = ?`;
+                    // // Convert connection.query to a Promise
+                    // await new Promise((resolve, reject) => {
+                    //     connection.query(updateAvailabilityStatus, [user_id], (updateErr) => {
+                    //         if (updateErr) return reject(updateErr);
+                    //         resolve();
+                    //     });
+                    // });
+                    // // Fetch user data after updating
+                    // const userDetails = await getUserDetails(user_id);
+                    // Send response with updated user data
+                    res.status(200).json({ success: true, msg: languageMessage.AvailibilityCreated});
+                } catch (err) {
+                    console.error("Error updating availability status:", err);
+                    res.status(200).json({ success: false, msg: languageMessage.internalServerError });
+                }
+            })
+            .catch((err) => {
+                console.error("Error:", err);
+                res.status(200).json({ success: false, msg: languageMessage.internalServerError });
+            });
+    });
+};
+function insertSlots(availabilityId, body, day, resolve, reject) {
+    const startTimes = body[`start_time_${day}`]?.split(",") || [];
+    const endTimes = body[`end_time_${day}`]?.split(",") || [];
+    const slotQueries = startTimes.map((start_time, index) => {
+        const end_time = endTimes[index];
+        if (start_time && end_time) {
+            const slotInsertQuery = `INSERT INTO slot_master(availability_id, start_time, end_time, updatetime,createtime) VALUES (?, ?, ?, NOW(),NOW())`;
+            return new Promise((slotResolve, slotReject) => {
+                connection.query(slotInsertQuery, [availabilityId, start_time.trim(), end_time.trim()], (err) => {
+                    if (err) return slotReject(err);
+                    slotResolve();
+                });
             });
         }
-        if(checkExpert.length>0){
-          await checkExpert.map((record)=>{
-          availibility_arr.push(record.availiabilty_id);
-          });
-          
+    });
+    Promise.all(slotQueries).then(resolve).catch(reject);
+}
+// EDIT Availability
+const edit_availability = (req, res) => {
+    const {user_id, day, status } = req.body;
+    // Validate required fields
+    if (!user_id) {
+        return res.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: "user_id" });
+    }
+    if (!day) {
+        return res.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: "day" });
+    }
+    if (!status) {
+        return res.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: "status" });
+    }
+    // Check if influencer exists and is active
+    const query1 = "SELECT mobile, active_flag FROM user_master WHERE user_id = ? AND delete_flag = 0 AND user_type=2";
+    const values1 = [user_id];
+    connection.query(query1, values1, async (err, result) => {
+        if (err) {
+            return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
         }
-     
-      // SQL Insert Query
-      const UpdateQuery = `Update availiability_master SET  days = ?,active_status = ?, morn_start_time = ?, morn_end_time = ?, even_start_time = ?, even_end_time = ?, updatetime = NOW() WHERE delete_flag=0 and availiabilty_id=?`;
-        for(let i=0;i<7;i++){
-          connection.query(
-            UpdateQuery,
-            [
-              dayOfWeek_arr[i],
-              activeStatus_arr[i],
-              morningStart_arr[i],
-              morningEnd_arr[i],
-              eveningStart_arr[i],
-              eveningEnd_arr[i],
-              availibility_arr[i]
-            ],
-            (err, result) => {
-              if (err) {
-          return response.status(200).json({
-            success: true,
-            msg: err.message,
-          });
-        };
-              
+        if (result.length === 0) {
+            return response.status(200).json({ success: false, msg: languageMessage.userNotFound });
+        }
+        if (result[0]?.active_flag === 0) {
+            return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated ,active_status:0});
+        }
+        // Parse days and statuses
+        const days = day.split(',').map(Number);
+        const statuses = status.split(',').map(Number);
+        const createtime = new Date();
+        // Collect promises for all DB operations
+        const updatePromises = days.map((day, index) => {
+            const currentStatus = statuses[index];
+            return new Promise((resolve, reject) => {
+                // Check if availability already exists
+                const checkQuery = `SELECT availability_id FROM availability_master WHERE user_id = ? AND day = ?`;
+                connection.query(checkQuery, [user_id, day], (err, results) => {
+                    if (err) return reject(err);
+                    if (results.length > 0) {
+                        // Update existing availability
+                        const availabilityId = results[0].availability_id;
+                        const updateQuery = `UPDATE availability_master SET status = ?, updatetime = NOW() WHERE availability_id = ?`;
+                        connection.query(updateQuery, [currentStatus, availabilityId], (updateErr) => {
+                            if (updateErr) return reject(updateErr);
+                            // If status is 0, update slots; otherwise, clear them
+                            if (currentStatus === 0) {
+                                clearAndInsertSlots(availabilityId, req.body, day).then(resolve).catch(reject);
+                            } else {
+                                clearSlots(availabilityId).then(resolve).catch(reject);
+                            }
+                        });
+                    } else {
+                        // Insert new availability
+                        const insertQuery = `INSERT INTO availability_master (user_id, day, status, createtime,updatetime) VALUES (?, ?, ?,NOW(),NOW())`;
+                        connection.query(insertQuery, [user_id, day, currentStatus], (insertErr, insertResult) => {
+                            if (insertErr) return reject(insertErr);
+                            if (currentStatus === 0) {
+                                clearAndInsertSlots(insertResult.insertId, req.body, day).then(resolve).catch(reject);
+                            } else {
+                                resolve();
+                            }
+                        });
+                    }
+                });
+            });
+        });
+        // Wait for all queries to complete
+        Promise.all(updatePromises)
+            .then(() => res.status(200).json({ success: true, msg: languageMessage.availabilityUpdated }))
+            .catch((error) => {
+                console.error("Error updating availability:", error);
+                res.status(200).json({ success: false, msg: languageMessage.internalServerError });
+            });
+    });
+};
+function clearAndInsertSlots(availabilityId, body, day) {
+    return new Promise((resolve, reject) => {
+        clearSlots(availabilityId)
+            .then(() => {
+                const startTimes = body[`start_time_${day}`]?.split(",") || [];
+                const endTimes = body[`end_time_${day}`]?.split(",") || [];
+                const createtime = new Date();
+                const insertPromises = startTimes.map((start_time, index) => {
+                    const end_time = endTimes[index];
+                    if (start_time && end_time) {
+                        return new Promise((slotResolve, slotReject) => {
+                            const insertSlotQuery = `INSERT INTO slot_master (availability_id, start_time, end_time, createtime,updatetime) VALUES (?, ?, ?, NOW(),NOW())`;
+                            connection.query(insertSlotQuery, [availabilityId, start_time.trim(), end_time.trim()], (err) => {
+                                if (err) return slotReject(err);
+                                slotResolve();
+                            });
+                        });
+                    }
+                });
+                Promise.all(insertPromises).then(resolve).catch(reject);
+            })
+            .catch(reject);
+    });
+}
+function clearSlots(availabilityId) {
+    return new Promise((resolve, reject) => {
+        const deleteSlotsQuery = `DELETE FROM slot_master WHERE availability_id = ?`;
+        connection.query(deleteSlotsQuery, [availabilityId], (err) => {
+            if (err) return reject(err);
+            resolve();
+        });
+    });
+}
+const get_available_slots = (request, response) => {
+    const {user_id } = request.query;
+    try {
+        if (!user_id) {
+            return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: "user_id" });
+        }
+        const query1 = "SELECT mobile, active_flag FROM user_master WHERE user_id = ? AND delete_flag = 0 AND user_type=2";
+        const values1 = [user_id];
+        connection.query(query1, values1, async (err, result) => {
+            if (err) {
+                return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
             }
-          );
-        }
-  
-     return response.status(200).json({
-            success: true,
-            msg: languageMessage.AvailibilityUdpatedError,
-          });
-  
-    });
-     });
-  } catch (err) {
-    return response.status(500).json({
-      success: false,
-      msg: languageMessage.internalServerError,
-      key: err.message,
-    });
-  }
+            if (result.length === 0) {
+                return response.status(200).json({ success: false, msg: languageMessage.userNotFound });
+            }
+            if (result[0]?.active_flag === 0) {
+                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated ,active_status:0});
+            }
+            const getAvailableSlotsQuery = `SELECT a.availability_id,a.day, a.status,s.slot_id, s.start_time, s.end_time FROM availability_master AS a LEFT JOIN slot_master AS s ON s.availability_id = a.availability_id WHERE a.user_id = ? AND a.delete_flag = 0`;
+            connection.query(getAvailableSlotsQuery, [user_id], (err, slots) => {
+                if (err) {
+                    return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err.message });
+                }
+                if (slots.length === 0) {
+                    const dateList = [
+                        {
+                          "id": 0,
+                          "day": "Mo",
+                          "addtime": [],
+                          "status": "1",
+                        },
+                        {
+                          "id": 1,
+                          "day": "Tu",
+                          "addtime": [],
+                          "status": "1",
+                        },
+                        {
+                          "id": 2,
+                          "day": "We",
+                          "addtime": [],
+                          "status": "1",
+                        },
+                        {
+                          "id": 3,
+                          "day": "Th",
+                          "addtime": [],
+                          "status": "1",
+                        },
+                        {
+                          "id": 4,
+                          "day": "Fr",
+                          "addtime": [],
+                          "status": "1",
+                        },
+                        {
+                          "id": 5,
+                          "day": "Sa",
+                          "addtime": [],
+                          "status": "1",
+                        },
+                        {
+                          "id": 6,
+                          "day": "Su",
+                          "addtime": [],
+                          "status": "1",
+                        },
+                      ];
+                    return response.status(200).json({ success: true, msg: languageMessage.dataFound, available_slots: dateList });
+                }
+                // Format the response to group slots by day
+                const available_slots = slots.reduce((acc, slot) => {
+                    const {availability_id,day, status, slot_id,start_time, end_time } = slot;
+                    let dayEntry = acc.find(item => item.id === day);
+                
+                    const dayMap = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
+                    const dayAbbreviation = dayMap[day];
+                
+                    // Function to get the next occurrence of a specific weekday (0 = Monday, ..., 6 = Sunday)
+                    const getNextDate = (targetDay) => {
+                        const today = new Date();
+                        let currentDay = today.getDay(); // JS: Sunday = 0, Monday = 1, ..., Saturday = 6
+                
+                        // Convert JavaScript's day format to match your format (0 = Monday, ..., 6 = Sunday)
+                        currentDay = (currentDay + 6) % 7; // Shifts Sunday (0) to (6), Monday (1) to (0), etc.
+                
+                        let daysToAdd = targetDay - currentDay;
+                        if (daysToAdd < 0) daysToAdd += 7; // If day has passed, move to next week's occurrence
+                
+                        const nextDate = new Date();
+                        nextDate.setDate(today.getDate() + daysToAdd);
+                        return nextDate.toISOString().split('T')[0]; // Format: YYYY-MM-DD
+                    };
+                
+                    const date = getNextDate(day);
+                
+                    if(!dayEntry){
+                        dayEntry = {availability_id:availability_id, id: day, day: dayAbbreviation, date, addtime: [], status: status.toString() };
+                        acc.push(dayEntry);
+                    }
+                
+                    if (status === 0 && start_time && end_time) {
+                        dayEntry.addtime.push({slot_id, start_time, end_time });
+                    }
+                
+                    return acc;
+                }, []);
+                
+                
+                return response.status(200).json({ success: true, msg: languageMessage.dataFound, available_slots });
+            });
+        });
+    } catch (error) {
+        return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: error.message });
+    }
 };
 
-module.exports = {getExpertDetails,getExpertDetailsById,getExpertByRating,getMyJobs,getJobPostDetails,createJobPost,chatConsultationHistory,chatJobsHistory,callConsultationHistory,callJobsHistory,getExpertByFilter,walletRecharge,walletHistory,getExpertByName,getExpertEarning,withdrawRequest,withdrawHistory,expertCallConsultationHistory,expertCallJobsHistory,getJobPostsForExpert,getExpertEarningHistory,expertChatConsultationHistory,expertChatJobsHistory,getReviewsOfExpert,getExpertMyJobs,getBidsOfJobPost,hireTheExpert,createProjectCost,getSubscriptionPlans,buySubscription,reviewReply,rateExpert,ExpertBidJob,CustomerCallHistory,ExpertCallHistory,getExpertHomeJobs,bookMarkJob,reportOnJob,customerJobFilter,expertJobFilter,createJobCost,createJobMilestone,getJobWorkMilestone,acceptRejectMilestone,sentMilestoneRequest,checkMilestoneRequest,getExpertJobDetails,getUserProfile,downloadApp,deepLink,getExpertByFilterSubLabel,logOut,AddAvailibility,EditAvailibility,getAvailiblityDetailsById};
+//book slot
+const userBookSlot = async (request, response) => {
+    let {user_id,expert_id,availability_id,slot_id,day,date,type} = request.body;
+   
+    if(!user_id || !expert_id || !availability_id || !slot_id || !day || !date) {
+        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param });
+    }
+    try {
+        const query = "SELECT mobile, active_flag FROM user_master WHERE user_id = ? AND delete_flag = 0 AND user_type=1";
+        const values = [user_id];
+        connection.query(query, values, async (err, result) => {
+            if (err) {
+                return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
+            }
+            if (result.length === 0) {
+                return response.status(200).json({ success: false, msg: languageMessage.userNotFound});
+            }
+            if (result[0]?.active_flag === 0) {
+                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated ,active_status:0});
+            }
+            //----------------------check availability---------------------------
+            const availabilityquery = "SELECT status FROM availability_master WHERE user_id = ? AND delete_flag = 0 AND availability_id=?";
+            const availabilityvalues = [expert_id,availability_id];
+            connection.query(availabilityquery, availabilityvalues, async (err, availabilityresult) => {
+                if(err){
+                    return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
+                }
+                if (availabilityresult.length === 0) {
+                    return response.status(200).json({ success: false, msg: languageMessage.AvailibilityNotFound });
+                }
+                //----------------------check slot---------------------------
+                const slotquery = "SELECT slot_id FROM slot_master WHERE slot_id = ? AND delete_flag = 0 AND availability_id=?";
+                const slotvalues = [slot_id,availability_id];
+                connection.query(slotquery, slotvalues, async (err, slotresult) => {
+                    if(err){
+                        return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
+                    }
+                    if (slotresult.length === 0) {
+                        return response.status(200).json({ success: false, msg: languageMessage.SlotNotFound});
+                    }
+                    //-------------------book slot----------------------------
+                    const bookQuery = `INSERT INTO slot_schedule_master (availability_id,user_id,expert_id,slot_id,day,date,type,createtime,updatetime) VALUES (?, ?, ?, ?, ?, ?, ?, now(),now())`;
+                    const bookvalues = [availability_id,user_id,expert_id,slot_id,day,date,type]
+                    connection.query(bookQuery, bookvalues, async (err, bookresult) => {
+                        if(err){
+                            return response.status(200).json({ success: false, msg: languageMessage.Slotbookerror, key: err });
+                        }
+                        return response.status(200).json({ success: true, msg: languageMessage.Slotbooksuccess});
+                    });
+                });
+            });
+        });
+    } catch (err) {
+        return response.status(200).json({ success: false, msg: languageMessage.Slotbookerror, key: err.message });
+    }
+}
+
+const getExpertScheduleSlot = (request, response) => {
+    const {user_id } = request.query;
+    try{
+        if (!user_id) {
+            return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: "user_id" });
+        }
+        const current_date = new Date().toISOString().split('T')[0];
+        const query1 = "SELECT mobile, active_flag FROM user_master WHERE user_id = ? AND delete_flag = 0 AND user_type=2";
+        const values1 = [user_id];
+        connection.query(query1, values1, async (err, result) => {
+            if (err) {
+                return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
+            }
+            if (result.length === 0) {
+                return response.status(200).json({ success: false, msg: languageMessage.userNotFound });
+            }
+            if (result[0]?.active_flag === 0) {
+                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated ,active_status:0});
+            }
+
+            const getAvailableSlotsQuery = `SELECT s.slot_schedule_id,s.availability_id,s.user_id,s.expert_id,s.slot_id,s.day,DATE_FORMAT(s.date, '%Y-%m-%d') AS date,s.type,s.status,u.name,COALESCE(u.image, 'NA') AS image,u.mobile,sm.start_time,sm.end_time FROM slot_schedule_master s LEFT JOIN user_master u ON s.user_id = u.user_id LEFT JOIN slot_master sm ON s.slot_id = sm.slot_id WHERE s.delete_flag = 0 AND s.date >= ? AND s.expert_id = ? order by s.date asc`;
+            connection.query(getAvailableSlotsQuery, [current_date,user_id], (err, slots) => {
+                if(err){
+                    return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err.message });
+                }
+                if(slots.length === 0){
+                    return response.status(200).json({ success: true, msg: languageMessage.dataFound,schedule_slot:'NA'});
+                }
+                return response.status(200).json({ success: true, msg: languageMessage.dataFound,schedule_slot:slots});
+            });
+        });
+    } catch (error) {
+        return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: error.message });
+    }
+};
+//--------------------------convert task to milestone--------------------------
+const convertIntoMilestone = async (request, response) => {
+    let {user_id, milestone_id} = request.body;
+    if(!user_id){
+        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param,'key':'user_id'});
+    }
+    if(!milestone_id){
+        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param,'key':'milestone_id'});
+    }
+    
+    try{
+        const query1 = "SELECT name,mobile, active_flag, wallet_balance FROM user_master WHERE user_id = ? AND delete_flag = 0";
+        const values1 = [user_id];
+        connection.query(query1, values1, (err, userResult) => {
+            if(err){
+                return response.status(500).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
+            }
+            if(userResult.length === 0){
+                return response.status(404).json({ success: false, msg: languageMessage.userNotFound });
+            }
+            if(userResult[0]?.active_flag === 0){
+                return response.status(403).json({ success: false, msg: languageMessage.accountdeactivated ,active_status:0});
+            }
+            const user_name=userResult[0].name;
+            const checkMilestone = "SELECT job_post_id FROM milestone_master WHERE delete_flag = 0 AND milestone_id=? and milestone_status=1";
+            const milestonevalues = [milestone_id];
+            connection.query(checkMilestone, milestonevalues, (err, milestoneResult) =>{
+                if(err){
+                    return response.status(500).json({ success: false, msg: languageMessage.WorkSpaceNotFound, key: err.message });
+                }
+                if(milestoneResult.length === 0){
+                    return response.status(404).json({ success: false, msg: languageMessage.WorkSpaceNotFound });
+                }
+                const checkJob = "SELECT assign_expert_id,title FROM job_post_master WHERE delete_flag = 0 AND job_post_id=? and user_id=?";
+                const jobvalues = [milestoneResult[0].job_post_id,user_id];
+                connection.query(checkJob, jobvalues, (err, jobResult) => {
+                    if (err) {
+                        return response.status(500).json({ success: false, msg: languageMessage.jobNotFound, key: err.message });
+                    }
+                    if (jobResult.length === 0) {
+                        return response.status(404).json({ success: false, msg: languageMessage.jobNotFound });
+                    }
+                    const project_title=jobResult[0].title;
+                    const updateMilestone = `UPDATE milestone_master SET milestone_convert_status=1,milestone_status=7,updatetime = now() WHERE milestone_id=?`;
+                    const updateValue=[milestone_id];
+                    connection.query(updateMilestone, updateValue, async (err, updateResult) => {
+                        if(err){
+                            return response.status(200).json({ success: false, msg: languageMessage.convertMilestoneError, key: err });
+                        }
+                        const user_id_notification = user_id;
+                        const other_user_id_notification = jobResult[0].assign_expert_id;
+                        const action_id = milestone_id;
+                        
+                        const action = "milestone_convert";
+                        const title = "Milestone Converted";
+                        const messages = `${user_name} has converted work space to milestone ${project_title}`;
+                        
+                        const title_2 = title;
+                        const title_3 = title;
+                        const title_4 = title;
+                        const message_2 = messages;
+                        const message_3 = messages;
+                        const message_4 = messages;
+                        const action_data = {user_id: user_id_notification,other_user_id: other_user_id_notification,action_id: action_id,action: action};
+                        await getNotificationArrSingle(user_id_notification,other_user_id_notification,action,action_id,title,title_2,title_3,title_4,messages,message_2,message_3,message_4,action_data, async (notification_arr_check) => {
+                            let notification_arr_check_new = [notification_arr_check];
+                            
+                            if(notification_arr_check_new && notification_arr_check_new.length !== 0 && notification_arr_check_new!=''){
+                                const notiSendStatus = await oneSignalNotificationSendCall(notification_arr_check_new);
+                                
+                            }else{
+                                console.log("Notification array is empty");
+                            }
+                        });
+                        
+                        return response.status(200).json({ success: true, msg: languageMessage.convertMilestoneSuccess });
+                        
+                    });
+                });
+            });
+        });
+    } catch (err) {
+        return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
+    }
+}
+
+//update Job milestone
+const updateJobMilestone = async (request, response) => {
+    let {user_id,milestone_id,title,amount,duration,description,duration_type,pdf_file} = request.body;
+   
+    if(!user_id){
+        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param,'key':'user_id'});
+    }
+    if(!milestone_id){
+        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param,'key':'milestone_id'});
+    }
+    if(!title){
+        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param,'key':'title'});
+    }
+    if(!description){
+        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param,'key':'description'});
+    }
+    if(!amount){
+        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param,'key':'amount'});
+    }
+    if(!duration){
+        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param,'key':'duration'});
+    }
+    if(!duration_type){
+        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param,'key':'duration_type'});
+    }
+   
+    try{
+        const query1 = "SELECT name,active_flag FROM user_master WHERE user_id = ? AND delete_flag = 0";
+        const values1 = [user_id];
+        connection.query(query1, values1, (err, userResult) => {
+            if (err) {
+                return response.status(500).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
+            }
+            if (userResult.length === 0) {
+                return response.status(404).json({ success: false, msg: languageMessage.userNotFound });
+            }
+            if (userResult[0]?.active_flag === 0) {
+                return response.status(403).json({ success: false, msg: languageMessage.accountdeactivated ,active_status:0});
+            }
+            
+            const checkJob = "SELECT job_post_id FROM milestone_master WHERE delete_flag = 0 AND milestone_id=?";
+            const jobvalues = [milestone_id];
+            connection.query(checkJob, jobvalues, (err, jobResult) => {
+                if(err){
+                    return response.status(500).json({ success: false, msg: languageMessage.jobNotFound, key: err.message });
+                }
+                if (jobResult.length === 0) {
+                    return response.status(404).json({ success: false, msg: languageMessage.jobNotFound });
+                }
+                
+                const bookMarkQuery = `UPDATE milestone_master SET price=?,duration=?,description=?,title=?,duration_type=?,updatetime=now(),file=? WHERE delete_flag=0 AND milestone_id=?`;
+                connection.query(bookMarkQuery,[amount,duration,description,title,duration_type,pdf_file,milestone_id],async (err, result)=>{
+                    if(err){
+                        return response.status(200).json({ success: false, msg: languageMessage.milestoneUpdatedUnsuccess, key: err });
+                    }
+                    return response.status(200).json({ success: true, msg: languageMessage.milestoneUpdatedSuccess});
+                });
+            });
+        });
+    } catch (err) {
+        return response.status(200).json({ success: false, msg: languageMessage.milestoneUpdatedUnsuccess, key: err.message });
+    }
+}
+// get wallet amount
+const getWalletAmount = async (request, response) => {
+    const { user_id } = request.query;
+    if (!user_id) {
+        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param });
+    }
+    try {
+        const query1 = "SELECT mobile, active_flag FROM user_master WHERE user_id = ? AND delete_flag = 0";
+        const values1 = [user_id];
+        connection.query(query1, values1, async (err, result) => {
+            if (err) {
+                return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
+            }
+            if (result.length === 0) {
+                return response.status(200).json({ success: false, msg: languageMessage.userNotFound });
+            }
+            if (result[0]?.active_flag === 0) {
+                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated ,active_status:0});
+            }
+            walletResult = await getUserTotalWallet(user_id);
+            return response.status(200).json({ success: true, msg: languageMessage.dataFound, walletResult: walletResult });
+        });
+    } catch (err) {
+        return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
+    }
+};
+//end
+// check wallet amount
+const checkWalletAmount = async (request, response) => {
+    const {user_id,other_user_id,call_type} = request.query;
+    if(!user_id){
+        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param,'key':'user_id'});
+    }
+    if(!other_user_id){
+        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param,'key':'other_user_id'});
+    }
+    try{
+        const query1 = "SELECT mobile, active_flag FROM user_master WHERE user_id = ? AND delete_flag = 0";
+        const values1 = [user_id];
+        connection.query(query1, values1, async (err, result) => {
+            if(err){
+                return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
+            }
+            if(result.length === 0){
+                return response.status(200).json({ success: false, msg: languageMessage.userNotFound });
+            }
+            if(result[0]?.active_flag === 0){
+                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated ,active_status:0});
+            }
+            const query2 = "SELECT call_charge,video_call_charge FROM user_master WHERE user_id = ? AND delete_flag = 0 AND user_type=2";
+            const values2 = [other_user_id];
+            connection.query(query2, values2, async (err, result1)=>{
+                if(err){
+                    return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
+                }
+                if(result1.length === 0){
+                    return response.status(200).json({ success: false, msg: languageMessage.expertNotFound });
+                }
+                const walletResult = await getUserTotalWallet(user_id);
+                const call_charge=result1[0]?.call_charge;
+                const video_call_charge=result1[0]?.video_call_charge;
+                let status;
+                if(call_type==0){
+                    if(walletResult >=call_charge){
+                        status=true;
+                    }else{
+                        status=false;
+                    }
+                }else{
+                    if(walletResult >=video_call_charge){
+                        status=true;
+                    }else{
+                        status=false;
+                    }
+                }
+                return response.status(200).json({ success: status, msg: languageMessage.dataFound,walletResult,call_charge:call_charge,video_call_charge:video_call_charge});
+            });
+        });
+    }catch(err){
+        return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
+    }
+};
+//end
+//debitWalletAmount
+const debitWalletAmount = async (request, response) => {
+    const {user_id,amount} = request.body;
+    if(!user_id){
+        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'user_id' });
+    }
+    if(!amount){
+        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'amount' });
+    }
+    try{
+        const query1 = "SELECT mobile, active_flag FROM user_master WHERE user_id = ? AND delete_flag = 0";
+        const values1 = [user_id];
+        connection.query(query1, values1, async (err, result) => {
+            if(err){
+                return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
+            }
+            if(result.length === 0){
+                return response.status(200).json({ success: false, msg: languageMessage.userNotFound });
+            }
+            if(result[0]?.active_flag === 0){
+                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated ,active_status:0});
+            }
+            const status=1;
+            const type=3;
+            const fileInsertQuery = `INSERT INTO wallet_master(user_id,amount,status,type,createtime,updatetime) VALUES (?,?,?,?,NOW(),NOW())`;
+            connection.query(fileInsertQuery, [user_id,amount,status,type], (err, result1) => {
+                if(err){
+                    return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
+                }
+                return response.status(200).json({ success: true, msg: languageMessage.walletDebitUpdate});
+            });
+        });
+    }catch(err){
+        return response.status(500).json({ success: false, msg: languageMessage.fileUploadedError, key: err.message });
+    }
+};
+//end
+
+module.exports = {getExpertDetails,getExpertDetailsById,getExpertByRating,getMyJobs,getJobPostDetails,createJobPost,chatConsultationHistory,chatJobsHistory,callConsultationHistory,callJobsHistory,getExpertByFilter,walletRecharge,walletHistory,getExpertByName,getExpertEarning,withdrawRequest,withdrawHistory,expertCallConsultationHistory,expertCallJobsHistory,getJobPostsForExpert,getExpertEarningHistory,expertChatConsultationHistory,expertChatJobsHistory,getReviewsOfExpert,getExpertMyJobs,getBidsOfJobPost,hireTheExpert,createProjectCost,getSubscriptionPlans,buySubscription,reviewReply,rateExpert,ExpertBidJob,CustomerCallHistory,ExpertCallHistory,getExpertHomeJobs,bookMarkJob,reportOnJob,customerJobFilter,expertJobFilter,createJobCost,createJobMilestone,getJobWorkMilestone,acceptRejectMilestone,sentMilestoneRequest,checkMilestoneRequest,getExpertJobDetails,getUserProfile,downloadApp,deepLink,getExpertByFilterSubLabel,logOut,chatFileUpload,getExpertCompletedJobs,add_availability,edit_availability,get_available_slots,userBookSlot,getExpertScheduleSlot,convertIntoMilestone,updateJobMilestone,getWalletAmount,checkWalletAmount,debitWalletAmount};
