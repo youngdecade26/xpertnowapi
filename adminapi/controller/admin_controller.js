@@ -4372,7 +4372,7 @@ const UpdateSubCategory = (req, res) => {
     const updatetime = moment().format("YYYY-MM-DD HH:mm:ss");
     let CheckCategory = "";
     CheckCategory =
-      "SELECT sub_category_name  FROM sub_categories_master WHERE sub_category_name = ? AND sub_category_id != ? AND delete_flag = 0 ";
+      "SELECT sub_category_name, image FROM sub_categories_master WHERE sub_category_name = ? AND sub_category_id != ? AND delete_flag = 0 ";
     connection.query(CheckCategory, [name, subcategory_id], (err, result) => {
       if (err) {
         return res.status(200).json({
