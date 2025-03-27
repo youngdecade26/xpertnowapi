@@ -4388,7 +4388,7 @@ const UpdateSubCategory = (req, res) => {
           key: "categoryExists",
         });
       }
-      
+
       // Proceed to update brand detailsconst { blog_id, action, category_id, title, description }
       let updateQuery =
         "UPDATE sub_categories_master SET sub_category_name = ?,category_id=?, updatetime = ?";
@@ -4429,6 +4429,8 @@ const UpdateSubCategory = (req, res) => {
       .json({ success: false, msg: languageMessage.internalServerError });
   }
 };
+
+// commen 
 //Fetch SubCategory
 const FetchSubLevelCategory = async (request, response) => {
   var FetchSubCategory =
