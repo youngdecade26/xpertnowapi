@@ -4756,6 +4756,7 @@ const getExpertEarningPdf = async (request, response) => {
 // AWS S3 Configuration
 const puppeteer = require("puppeteer");
 const AWS = require("aws-sdk");
+const pdf = require('html-pdf');
 
 // Configure AWS S3
 const s3 = new AWS.S3({
