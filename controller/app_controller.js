@@ -3508,7 +3508,7 @@ const deepLink = async (request, response) => {
                    this.timer = setTimeout(this.openWebApp, 3000);
                },
                openWebApp: function() {
-                   window.location.replace("https://youngdecade.org/2024/xpert/server/downloadApp");
+                   window.location.replace("https://zqd422dn6n.ap-south-1.awsapprunner.com/downloadApp");
                }
              };
              app.launchApp();
@@ -3526,6 +3526,8 @@ const deepLink = async (request, response) => {
       </html>
     `);
 }
+
+
 // Get Expert By Filter
 const getExpertByFilterSubLabel = async (request, response) => {
     const { user_id, state, city, category, sub_category, sub_category_level, experience, rating, sub_two_level_category_id, sub_three_level_category_id } = request.body;
@@ -3625,6 +3627,7 @@ const getExpertByFilterSubLabel = async (request, response) => {
     }
 };
 //end
+
 //logout user
 const logOut = (request, response) => {
     const { user_id } = request.query;
@@ -4094,7 +4097,7 @@ const userBookSlot = async (request, response) => {
         return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param });
     }
     try {
-        const query = "SELECT mobile, active_flag FROM user_master WHERE user_id = ? AND delete_flag = 0 AND user_type=1";
+        const query = "SELECT mobile, name, active_flag FROM user_master WHERE user_id = ? AND delete_flag = 0 AND user_type=1";
         const values = [user_id];
         connection.query(query, values, async (err, result) => {
             if (err) {
@@ -4106,6 +4109,8 @@ const userBookSlot = async (request, response) => {
             if (result[0]?.active_flag === 0) {
                 return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
             }
+
+            const user_name = result[0].name;
             //----------------------check availability---------------------------
             const availabilityquery = "SELECT status FROM availability_master WHERE user_id = ? AND delete_flag = 0 AND availability_id=?";
             const availabilityvalues = [expert_id, availability_id];
@@ -4133,7 +4138,35 @@ const userBookSlot = async (request, response) => {
                         if (err) {
                             return response.status(200).json({ success: false, msg: languageMessage.Slotbookerror, key: err });
                         }
-                        return response.status(200).json({ success: true, msg: languageMessage.Slotbooksuccess });
+
+                        let type_label = type == 0 ? 'voice' : 'video '
+
+                        const user_id_notification = user_id;
+                        const other_user_id_notification = expert_id;
+                        const action_id = slot_id;
+
+                        const action = "Call Schedule";
+                        const title = "Call Schedule";
+                        const messages = `${user_name} has scheduled a ${type_label} call`;
+
+                        const title_2 = title;
+                        const title_3 = title;
+                        const title_4 = title;
+                        const message_2 = messages;
+                        const message_3 = messages;
+                        const message_4 = messages;
+                        const action_data = { user_id: user_id_notification, other_user_id: other_user_id_notification, action_id: action_id, action: action };
+                        await getNotificationArrSingle(user_id_notification, other_user_id_notification, action, action_id, title, title_2, title_3, title_4, messages, message_2, message_3, message_4, action_data, async (notification_arr_check) => {
+                            let notification_arr_check_new = [notification_arr_check];
+
+                            if (notification_arr_check_new && notification_arr_check_new.length !== 0 && notification_arr_check_new != '') {
+                                const notiSendStatus = await oneSignalNotificationSendCall(notification_arr_check_new);
+
+                            } else {
+                                console.log("Notification array is empty");
+                            }
+                        });
+                        return response.status(200).json({ success: true, msg: languageMessage.CallScheduled });
                     });
                 });
             });
