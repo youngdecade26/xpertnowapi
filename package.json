@@ -32,6 +32,7 @@
     "nodemailer": "^6.9.15",
     "nodemon": "^3.1.7",
     "pdfkit": "^0.16.0",
+    "phantomjs-prebuilt": "^2.1.16",
     "puppeteer": "^24.5.0",
     "random-string": "^0.2.0",
     "random-strings": "^0.0.1",
