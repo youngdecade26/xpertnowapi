@@ -3,6 +3,7 @@ const moment = require("moment");
 const connection = require('../connection');
 const jwt = require('jsonwebtoken');
 const languageMessage = require('../shared functions/languageMessage');
+const { resolve } = require('path');
 
 const authenticateToken = (req, res, next) => {
     const authHeader = req.headers.authorization;
@@ -898,123 +899,113 @@ async function getUserDetails(user_id){
           });
       });
   }
-  
+
+
   async function getHomeExpertUserJob(expert_id) {
     return new Promise((resolve, reject) => {
-        const query = `
-            SELECT 
-                job_post_id, 
-                assign_expert_id, 
-                title, 
-                category, 
-                sub_category, 
-                max_price, 
-                min_price, 
-                duration, 
-                status, 
-                createtime,
-                user_id,
-                duration_type
-            FROM job_post_master 
-            WHERE assign_expert_id = 0 AND delete_flag = 0 order by job_post_id desc`;
-        connection.query(query,async (err, jobPosts) => {
-            if (err) {
-                return reject({ success: false, msg: "Internal Server Error", key: err.message });
-            }
-            if (!jobPosts || jobPosts.length === 0) {
-                return resolve('NA');
-            }
-            try {
-                const jobPostDetails = await Promise.all(
-                    jobPosts.map(async (job) => {
-                        // Fetch sub-category name
-                        const subCategoryName = await new Promise((resolve) => {
-                            const subCategoryQuery = `
-                                SELECT sub_category_name 
-                                FROM sub_categories_master 
-                                WHERE sub_category_id = ? AND delete_flag = 0`;
-                            connection.query(subCategoryQuery, [job.sub_category], (err, result) => {
-                                resolve(err ? null : result[0]?.sub_category_name || 'NA');
-                            });
-                        });
-                        // Fetch category name
-                        const categoryName = await new Promise((resolve) => {
-                            const categoryQuery = `
-                                SELECT name 
-                                FROM categories_master 
-                                WHERE category_id = ? AND delete_flag = 0`;
-                            connection.query(categoryQuery, [job.category], (err, result) => {
-                                resolve(err ? null : result[0]?.name || 'NA');
-                            });
-                        });
-                       // Fetch user name
-                       const userNameQuery = await new Promise((resolve) => {
-                          const userQuery = `SELECT name,image FROM user_master WHERE user_id = ? AND delete_flag = 0`;
-                          connection.query(userQuery, [job.user_id], (err, result) => {
-                              resolve(err ? null : result[0]?.name || 'NA');
-                          });
-                      });
-                      // Fetch user name
-                      const userimageQuery = await new Promise((resolve) => {
-                          const imageQuery = `SELECT image FROM user_master WHERE user_id = ? AND delete_flag = 0`;
-                          connection.query(imageQuery, [job.user_id], (err, result) => {
-                              resolve(err ? null : result[0]?.image || 'NA');
-                          });
-                      });
-                      // Fetch save status
-                      const jobStatusQuery = await new Promise((resolve) => {
-                        const jobQuery = `
-                            SELECT book_mark_id 
-                            FROM job_bookmark_master 
-                            WHERE job_post_id = ? AND expert_id = ? AND delete_flag = 0`;
-                    
-                        connection.query(jobQuery, [job.job_post_id, expert_id], (err, result) => {
-                            if (err || !result || result.length === 0) {
-                                resolve(0); // Return 0 if there's an error or no result
-                            } else {
-                                resolve(result[0].book_mark_id > 0 ? 1 : 0); // Return 1 if book_mark_id > 0, otherwise 0
-                            }
-                        });
-                      });
-                      // Fetch bid status
-                      const bidStatusQuery = await new Promise((resolve) => {
-                        const bidQuery = `
-                            SELECT bid_id 
-                            FROM bid_master 
-                            WHERE job_post_id = ? AND expert_id = ? AND delete_flag = 0`;
-                    
-                        connection.query(bidQuery, [job.job_post_id, expert_id], (err, result) => {
-                            if (err || !result || result.length === 0) {
-                                resolve(0); // Return 0 if there's an error or no result
-                            } else {
-                                resolve(result[0].bid_id > 0 ? 1 : 0); // Return 1 if bid_id > 0, otherwise 0
-                            }
-                        });
-                      });
-                    
-                      
-                        // Return enriched job details
-                        return {
-                            ...job,
-                            sub_category: subCategoryName,
-                            category: categoryName,
-                            posted_time: getRelativeTime(job.createtime),
-                            status_label: '0=pending,1=hired,2=inprogress,3=completed',
-                            user_name:userNameQuery,
-                            user_image:userimageQuery,
-                            save_status:jobStatusQuery,
-                            duration_type_labe:'1=days,2=month,3=year',
-                            bid_status:bidStatusQuery,
-                        };
-                    })
-                );
-                resolve(jobPostDetails);
-            } catch (error) {
-                reject({ success: false, msg: "Error processing job details", key: error.message });
-            }
+        const sql = 'SELECT category, sub_category FROM user_master WHERE user_id = ? AND delete_flag = 0';
+        connection.query(sql, [expert_id], (infoErr, infoRes) => {
+            if (infoErr) return reject(infoErr);
+            if (infoRes.length === 0) return resolve('NA');
+
+            // resolve(infoRes);
+
+            const { category, sub_category } = infoRes[0];
+
+            const query = `
+                SELECT 
+                    job_post_id, 
+                    assign_expert_id, 
+                    title, 
+                    category, 
+                    sub_category, 
+                    max_price, 
+                    min_price, 
+                    duration, 
+                    status, 
+                    createtime,
+                    user_id,
+                    duration_type
+                FROM job_post_master 
+                WHERE assign_expert_id = 0 
+                AND category = ? 
+                AND sub_category = ? 
+                AND delete_flag = 0 
+                ORDER BY job_post_id DESC`;
+
+            connection.query(query, [category, sub_category], async (err, jobPosts) => {
+                if (err) return reject({ success: false, msg: "Internal Server Error", key: err.message });
+                if (!jobPosts || jobPosts.length === 0) return resolve('NA');
+
+                try {
+                    const jobPostDetails = await Promise.all(
+                        jobPosts.map(async (job) => {
+                            const [
+                                subCategoryRes,
+                                categoryRes,
+                                userRes,
+                                jobStatusRes,
+                                bidStatusRes
+                            ] = await Promise.all([
+                                new Promise((resolve) => {
+                                    const subCategoryQuery = `SELECT sub_category_name FROM sub_categories_master WHERE sub_category_id = ? AND delete_flag = 0`;
+                                    connection.query(subCategoryQuery, [job.sub_category], (err, result) => {
+                                        resolve(err ? 'NA' : result[0]?.sub_category_name || 'NA');
+                                    });
+                                }),
+                                new Promise((resolve) => {
+                                    const categoryQuery = `SELECT name FROM categories_master WHERE category_id = ? AND delete_flag = 0`;
+                                    connection.query(categoryQuery, [job.category], (err, result) => {
+                                        resolve(err ? 'NA' : result[0]?.name || 'NA');
+                                    });
+                                }),
+                                new Promise((resolve) => {
+                                    const userQuery = `SELECT name, image FROM user_master WHERE user_id = ? AND delete_flag = 0`;
+                                    connection.query(userQuery, [job.user_id], (err, result) => {
+                                        resolve(err ? { name: 'NA', image: 'NA' } : result[0] || { name: 'NA', image: 'NA' });
+                                    });
+                                }),
+                                new Promise((resolve) => {
+                                    const jobQuery = `SELECT book_mark_id FROM job_bookmark_master WHERE job_post_id = ? AND expert_id = ? AND delete_flag = 0`;
+                                    connection.query(jobQuery, [job.job_post_id, expert_id], (err, result) => {
+                                        resolve(err || !result || result.length === 0 ? 0 : 1);
+                                    });
+                                }),
+                                new Promise((resolve) => {
+                                    const bidQuery = `SELECT bid_id FROM bid_master WHERE job_post_id = ? AND expert_id = ? AND delete_flag = 0`;
+                                    connection.query(bidQuery, [job.job_post_id, expert_id], (err, result) => {
+                                        resolve(err || !result || result.length === 0 ? 0 : 1);
+                                    });
+                                })
+                            ]);
+
+                            return {
+                                ...job,
+                                sub_category: subCategoryRes,
+                                category: categoryRes,
+                                posted_time: getRelativeTime(job.createtime),
+                                status_label: '0=pending,1=hired,2=inprogress,3=completed',
+                                user_name: userRes.name,
+                                user_image: userRes.image,
+                                save_status: jobStatusRes,
+                                duration_type_label: '1=days,2=month,3=year',
+                                bid_status: bidStatusRes,
+                            };
+                        })
+                    );
+
+                    resolve(jobPostDetails);
+                } catch (error) {
+                    reject({ success: false, msg: "Error processing job details", key: error.message });
+                }
+            });
         });
     });
 }
+
+
+
+
 async function getHomeUserJobCount() {
   return new Promise((resolve, reject) => {
       const query = ` SELECT COUNT(job_post_id) as total_job FROM job_post_master WHERE assign_expert_id = 0 AND delete_flag = 0 order by job_post_id desc`;
@@ -1196,7 +1187,7 @@ async function getExpertJobFilter(user_id,category,sub_category) {
 }
 async function getJobWorkSpace(job_post_id) {
     return new Promise((resolve, reject) => {
-        const query = `SELECT milestone_id,price,duration,description,title,file,createtime,milestone_status,duration_type FROM milestone_master WHERE delete_flag = 0 and job_post_id=? order by job_post_id desc`;
+        const query = `SELECT milestone_id,price,duration,description,title,file,createtime,milestone_status,duration_type,reject_reason,dispute_title,dispute_description,dispute_amount,dispute_file FROM milestone_master WHERE delete_flag = 0 and job_post_id=? order by job_post_id desc`;
   
         connection.query(query,[job_post_id],async (err, jobPosts) => {
             if (err) {
@@ -1206,6 +1197,8 @@ async function getJobWorkSpace(job_post_id) {
             if (!jobPosts || jobPosts.length === 0) {
                 return resolve('NA');
             }
+            
+            
   
             try {
                 let task = 0;
@@ -1232,7 +1225,7 @@ async function getJobWorkSpace(job_post_id) {
   }
   async function getJobMilestone(job_post_id){
     return new Promise((resolve, reject) =>{
-        const query = `SELECT milestone_id,price,duration,description,title,file,createtime,milestone_status,duration_type FROM milestone_master WHERE delete_flag = 0 and job_post_id=? and milestone_status!=0 order by job_post_id desc`;
+        const query = `SELECT milestone_id,price,duration,description,title,file,createtime,milestone_status,duration_type,reject_reason,dispute_title,dispute_description,dispute_amount,dispute_file, invoice_pdf FROM milestone_master WHERE delete_flag = 0 and job_post_id=? and milestone_convert_status =1  order by job_post_id desc`;
         connection.query(query,[job_post_id],async (err, jobPosts)=>{
             if(err){
                 return reject({ success: false, msg: "Internal Server Error", key: err.message });
@@ -1240,11 +1233,16 @@ async function getJobWorkSpace(job_post_id) {
             if(!jobPosts || jobPosts.length === 0){
                 return resolve('NA');
             }
+           
             try{
                 let task = 0;
                 const jobPostDetails = await Promise.all(
                     jobPosts.map(async (job) => {
                         // Return enriched job details
+                        let expert_earning_status = null;
+                        if (job.milestone_status === 4) {
+                            expert_earning_status = await getExpertId(job.milestone_id);
+                        }
                         task += 1;
                         return {
                             ...job,
@@ -1252,6 +1250,7 @@ async function getJobWorkSpace(job_post_id) {
                             posted_time : moment(job.createtime).format("MMM DD YYYY hh:mm A"),
                             status_label: '0=pending,1=accept,2=reject,3=milestone request send,4=release milestone,5=dispute,6=cancel,7=convert milestone',
                             duration_type_label: '1=days,2=month,3=year',
+                            expert_earning_status: expert_earning_status
                         };
                     })
                 );
@@ -1263,6 +1262,24 @@ async function getJobWorkSpace(job_post_id) {
         });
     });
   }
+
+  async function getExpertId(milestone_id){
+    return new Promise(( resolve, reject ) => {
+        const sql = 'SELECT expert_earning_id  FROM expert_earning_master WHERE milestone_id = ? AND delete_flag = 0';
+        connection.query(sql, [milestone_id], async(err, res) => {
+            if(err){
+                reject(err);
+            }
+            resolve(res.length > 0 ? res[0].expert_earning_id : null);
+        })
+    })
+  }
+
+
+
+
+
+
   async function getHomeExpertCompletedJob(user_id) {
     return new Promise((resolve, reject) => {
         const query = `

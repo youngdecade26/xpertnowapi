@@ -1,14 +1,17 @@
 const connection = require('../connection');
 const moment = require("moment");
 const jwt = require('jsonwebtoken');
-const { generateOTP, hashPassword,getUserDetails,getUserDocument,getRelativeTime,getRatingBarAvg,getCategoryName,getHomeExpertJob,getHomeExpertUserJob,getHomeUserJobCount,getCustomerJobFilter,getAvgRating,getExpertJobFilter,getJobMilestone,getJobWorkSpace,getHomeExpertCompletedJob,authenticateToken,getUserTotalWallet } = require('../shared functions/functions');
+const { generateOTP, hashPassword, getUserDetails, getUserDocument, getRelativeTime, getRatingBarAvg, getCategoryName, getHomeExpertJob, getHomeExpertUserJob, getHomeUserJobCount, getCustomerJobFilter, getAvgRating, getExpertJobFilter, getJobMilestone, getJobWorkSpace, getHomeExpertCompletedJob, authenticateToken, getUserTotalWallet } = require('../shared functions/functions');
 const languageMessage = require('../shared functions/languageMessage');
-const {getNotificationArrSingle,oneSignalNotificationSendCall} = require('./notification');
+const { getNotificationArrSingle, oneSignalNotificationSendCall } = require('./notification');
 // const twilio = require('twilio');
 const util = require("util");
+const { connect } = require('http2');
+const { request } = require('http');
+// const { multer} = require('../middleware/multer');
 // Get Expert Details By category
 const getExpertDetails = async (request, response) => {
-    const { user_id, category_id, sub_category_id, sub_level_id,sub_two_level_category_id,sub_three_level_category_id } = request.body;
+    const { user_id, category_id, sub_category_id, sub_level_id, sub_two_level_category_id, sub_three_level_category_id } = request.body;
     // Validate input parameters
     if (!user_id || !category_id || !sub_category_id || !sub_level_id) {
         return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param });
@@ -17,31 +20,31 @@ const getExpertDetails = async (request, response) => {
         // SQL query to fetch expert details
         let query = `SELECT user_id as expert_id FROM user_master  WHERE category = ? AND sub_category = ?  AND FIND_IN_SET(?, sub_category_level) AND active_flag = 1 and delete_flag=0`;
         let values = [category_id, sub_category_id, sub_level_id];
-        if(sub_two_level_category_id!=0){
+        if (sub_two_level_category_id != 0) {
             query += " AND sub_two_level_category_id = ?";
             values.push((sub_two_level_category_id));
         }
-        if(sub_three_level_category_id!=0){
+        if (sub_three_level_category_id != 0) {
             query += " AND sub_three_level_category_id = ?";
             values.push((sub_three_level_category_id));
         }
-        connection.query(query,values, async (err, result) => {
-        if (result.length > 0) {
-            // Fetch user details for each expert and filter out "NA"
-            const expertDetails = await Promise.all(
-                result.map(async (expert) => {
-                    const userDetails = await getUserDetails(expert.expert_id);
-                    return userDetails === "NA" ? null : { ...expert, userDetails };
-                })
-            );
-        // Filter out null values
-        const filteredDetails = expertDetails.filter((expert) => expert !== null);
-           
-            return response.status(200).json({success: true,expertDetails: filteredDetails});
-        }else{
-            return response.status(200).json({success: true,expertDetails: 'NA'});
-        }
-    });
+        connection.query(query, values, async (err, result) => {
+            if (result.length > 0) {
+                // Fetch user details for each expert and filter out "NA"
+                const expertDetails = await Promise.all(
+                    result.map(async (expert) => {
+                        const userDetails = await getUserDetails(expert.expert_id);
+                        return userDetails === "NA" ? null : { ...expert, userDetails };
+                    })
+                );
+                // Filter out null values
+                const filteredDetails = expertDetails.filter((expert) => expert !== null);
+
+                return response.status(200).json({ success: true, expertDetails: filteredDetails });
+            } else {
+                return response.status(200).json({ success: true, expertDetails: 'NA' });
+            }
+        });
     } catch (error) {
         console.error("Error fetching expert details:", error);
         return response.status(200).json({ success: false, msg: languageMessage.internalServerError4, key: err.message });
@@ -65,13 +68,13 @@ const getExpertDetailsById = async (request, response) => {
                 return response.status(200).json({ success: false, msg: languageMessage.userNotFound });
             }
             if (result[0]?.active_flag === 0) {
-                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated,active_status:0 });
+                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
             }
-            
+
             const userDetails = await getUserDetails(expert_id);
             return response.status(200).json({ success: true, msg: languageMessage.dataFound, expertDetails: userDetails });
-                    
-            
+
+
         });
     } catch (err) {
         return response.status(200).json({ success: false, msg: languageMessage.internalServerError4, key: err.message });
@@ -114,12 +117,12 @@ const getExpertByRating = async (request, response) => {
         const expertDetails = await Promise.all(
             expertResults.map(async (expert) => {
                 const userDetails = await getUserDetails(expert.expert_id);
-                return userDetails === "NA" ? null : { ...expert,userDetails };
+                return userDetails === "NA" ? null : { ...expert, userDetails };
             })
         );
         // Filter out null values
         const filteredDetails = expertDetails.filter((expert) => expert !== null);
-        
+
         filteredDetails.sort((a, b) => (b.userDetails.average_rating || 0) - (a.userDetails.average_rating || 0));
         // Respond with success
         return response.status(200).json({ success: true, msg: languageMessage.dataFound, expertDetails: filteredDetails });
@@ -146,12 +149,12 @@ const getMyJobs = async (request, response) => {
                 return response.status(200).json({ success: false, msg: languageMessage.userNotFound });
             }
             if (result[0]?.active_flag === 0) {
-                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated ,active_status:0});
+                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
             }
             const query2 = `
                 SELECT job_post_id, assign_expert_id, title, category, sub_category, max_price, min_price, duration,duration_type, status, updatetime,createtime
                 FROM job_post_master 
-                WHERE user_id = ? AND delete_flag = 0
+                WHERE user_id = ? AND delete_flag = 0 AND status!=3 ORDER BY createtime DESC
             `;
             connection.query(query2, [user_id], async (err, jobPosts) => {
                 if (err) {
@@ -163,6 +166,7 @@ const getMyJobs = async (request, response) => {
                 // Fetch category and subcategory names
                 const jobPostDetails = await Promise.all(
                     jobPosts.map(async (job) => {
+
                         // Fetch subcategory name
                         const subCategoryQuery = "SELECT sub_category_name FROM sub_categories_master WHERE sub_category_id = ? AND delete_flag = 0";
                         const subCategory = await new Promise((resolve) => {
@@ -179,11 +183,11 @@ const getMyJobs = async (request, response) => {
                         });
                         return {
                             ...job,
-                            subcategory_id:job.sub_category,
+                            subcategory_id: job.sub_category,
                             sub_category: subCategory,
-                            category_id:job.category,
+                            category_id: job.category,
                             category: category,
-                            duration_type_label:'1=days,2=month,3=year',
+                            duration_type_label: '1=days,2=month,3=year',
                             posted_time: getRelativeTime(job.createtime),
                         };
                     })
@@ -196,6 +200,7 @@ const getMyJobs = async (request, response) => {
     }
 };
 //end
+
 // get job post details
 const getJobPostDetails = async (request, response) => {
     const { user_id, job_post_id } = request.query;
@@ -216,9 +221,9 @@ const getJobPostDetails = async (request, response) => {
                 return response.status(200).json({ success: false, msg: languageMessage.userNotFound });
             }
             if (result[0]?.active_flag === 0) {
-                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated ,active_status:0});
+                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
             }
-            let check_hire_expert_id=0;
+            let check_hire_expert_id = 0;
             const query2 = `SELECT job_post_id, user_id, assign_expert_id, title, category, sub_category, max_price, min_price, duration, status, createtime, updatetime,description,duration_type,project_cost FROM job_post_master WHERE job_post_id = ? AND delete_flag = 0`;
             connection.query(query2, [job_post_id], async (err, jobPosts) => {
                 if (err) {
@@ -227,6 +232,8 @@ const getJobPostDetails = async (request, response) => {
                 if (jobPosts.length === 0) {
                     return response.status(200).json({ success: false, msg: languageMessage.dataNotFound });
                 }
+
+
                 // Fetch category and subcategory names
                 const jobPostDetails = await Promise.all(
                     jobPosts.map(async (job) => {
@@ -282,74 +289,116 @@ const getJobPostDetails = async (request, response) => {
                                 }
                             });
                         });
-                        
-                        check_hire_expert_id=job.assign_expert_id;
+
+                        const milestoneSql = `
+                    SELECT milestone_id, status, milestone_status  
+                    FROM milestone_master 
+                    WHERE job_post_id = ? AND delete_flag = 0
+                `;
+
+                        const mileStoneStatus = await new Promise((resolve) => {
+                            connection.query(milestoneSql, [job_post_id], (err, milestoneRes) => {
+                                if (err || !milestoneRes || milestoneRes.length === 0) {
+                                    return resolve(false); // Default to false if no milestones exist
+                                }
+
+                                for (const milestone of milestoneRes) {
+                                    if ([0, 1, 3].includes(milestone.milestone_status)) {
+                                        return resolve(false); // If any milestone is pending, return false immediately
+                                    }
+                                }
+
+                                return resolve(true); // If all milestones are completed, return true
+                            });
+                        });
+
+                        check_hire_expert_id = job.assign_expert_id;
+
                         return {
                             ...job,
-                           
                             category: category,
                             city: city,
                             userName: userName,
                             userimage: userimage,
                             posted_time: getRelativeTime(job.createtime),
-                            duration_type_labe:'1=days,2=month,3=year',
-                            status_label:'0=pending,1=hired,2=inprogress,3=completed',
-                            file_name:jobdocument,
+                            duration_type_labe: '1=days,2=month,3=year',
+                            status_label: '0=pending,1=hired,2=inprogress,3=completed',
+                            file_name: jobdocument,
                             sub_category: subCategory,
-                            
+                            job_complete_status: mileStoneStatus
                         };
                     })
                 );
                 // Fetch expert bid data
                 let querybid;
                 let bidValues;
-                if(check_hire_expert_id===0){
+                if (check_hire_expert_id === 0) {
                     querybid = "SELECT bid_id, expert_id, price, duration, files, createtime,status,duration_type FROM bid_master WHERE job_post_id = ? AND delete_flag = 0";
-                    bidValues=[job_post_id];
-                }else{
+                    bidValues = [job_post_id];
+                } else {
                     querybid = "SELECT bid_id, expert_id, price, duration, files, createtime,status,duration_type FROM bid_master WHERE job_post_id = ? AND delete_flag = 0 and expert_id=?";
-                    bidValues=[job_post_id,check_hire_expert_id];
+                    bidValues = [job_post_id, check_hire_expert_id];
                 }
                 connection.query(querybid, bidValues, (err, bidResult) => {
                     if (err) {
                         return response.status(500).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
                     }
-                    let bidsDataArray='NA';
+
+                    let bidsDataArray = 'NA';
                     if (bidResult.length === 0) {
-                        return response.status(200).json({ success: true, msg: languageMessage.dataFound, expertDetails: jobPostDetails,bidsDataArray:bidsDataArray,bidcount:bidResult.length});
+                        return response.status(200).json({ success: true, msg: languageMessage.dataFound, expertDetails: jobPostDetails, bidsDataArray: bidsDataArray, bidcount: bidResult.length });
                     }
+
                     let finalBidResult = [];
                     let processedCount = 0;
                     bidResult.forEach((bidItem) => {
-                        const expertQuery = "SELECT user_id, name, image FROM user_master WHERE delete_flag = 0 AND user_id = ?";
-                        connection.query(expertQuery, [bidItem.expert_id], async(err, expertResult) => {
+                        const expertQuery = "SELECT user_id, name, image, chat_charge, call_charge, video_call_charge, category FROM user_master WHERE delete_flag = 0 AND user_id = ?";
+                        connection.query(expertQuery, [bidItem.expert_id], async (err, expertResult) => {
                             if (err) {
                                 return response.status(500).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
                             }
-                            const expertbidDetails = expertResult.length > 0 ? expertResult[0] : null;
-                            const expert_name=expertResult[0].name;
-                            const status_label='0=pending,1=hired';
-                            const expert_image = expertResult[0].image ? expertResult[0].image : "NA";
-                            const averageResult = await getAvgRating(bidItem.expert_id); // Wait for the promise to resolve
-                            const average_rating = averageResult.average_rating || 0;
-                            finalBidResult.push({
-                                ...bidItem,
-                                expert_name,
-                                expert_image,
-                                status_label,
-                                posted_time: getRelativeTime(bidItem.createtime),
-                                avg_rating: parseFloat(average_rating.toFixed(1)),
-                                duration_type_labe:'1=days,2=month,3=year',
-                                check_hire_expert_id:check_hire_expert_id
+                            const categoryName = 'SELECT type_name, name FROM categories_master WHERE category_id = ? AND delete_flag= 0';
+                            connection.query(categoryName, [expertResult[0].category], async (err, catResult) => {
+                                if (err) {
+                                    return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err.message });
+                                }
+
+
+
+                                const expertbidDetails = expertResult.length > 0 ? expertResult[0] : null;
+                                const expert_name = expertResult[0].name;
+                                const status_label = '0=pending,1=hired';
+                                const expert_image = expertResult[0].image ? expertResult[0].image : "NA";
+                                const averageResult = await getAvgRating(bidItem.expert_id); // Wait for the promise to resolve
+                                const average_rating = averageResult.average_rating || 0;
+                                const chat_charge = expertResult[0].chat_charge;
+                                const call_charge = expertResult[0].call_charge;
+                                const video_call_charge = expertResult[0].video_call_charge;
+                                const category_name = catResult[0].name;
+
+                                finalBidResult.push({
+                                    ...bidItem,
+                                    expert_name,
+                                    expert_image,
+                                    chat_charge,
+                                    call_charge,
+                                    video_call_charge,
+                                    category_name,
+                                    status_label,
+                                    posted_time: getRelativeTime(bidItem.createtime),
+                                    avg_rating: parseFloat(average_rating.toFixed(1)),
+                                    duration_type_labe: '1=days,2=month,3=year',
+                                    check_hire_expert_id: check_hire_expert_id
+                                });
+                                processedCount++;
+                                if (processedCount === bidResult.length) {
+                                    bidsDataArray = finalBidResult;
+                                    return response.status(200).json({ success: true, msg: languageMessage.dataFound, expertDetails: jobPostDetails, bidsDataArray: bidsDataArray, bidcount: bidResult.length });
+                                }
                             });
-                            processedCount++;
-                            if (processedCount === bidResult.length) {
-                                bidsDataArray=finalBidResult;
-                                return response.status(200).json({ success: true, msg: languageMessage.dataFound, expertDetails: jobPostDetails,bidsDataArray:bidsDataArray,bidcount:bidResult.length});
-                            }
                         });
+
                     });
-                    
                 });
             });
         });
@@ -360,8 +409,8 @@ const getJobPostDetails = async (request, response) => {
 //end
 //Create job post
 const createJobPost = async (request, response) => {
-    let { user_id, title, category, sub_category, max_price, min_price, duration, description,duration_type,nda_status, file } = request.body;
-   
+    let { user_id, title, category, sub_category, max_price, min_price, duration, description, duration_type, nda_status, file } = request.body;
+
     if (!user_id || !title || !category || !sub_category || !max_price || !min_price || !duration || !description || !duration_type) {
         return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param });
     }
@@ -376,18 +425,18 @@ const createJobPost = async (request, response) => {
                 return response.status(200).json({ success: false, msg: languageMessage.userNotFound });
             }
             if (result[0]?.active_flag === 0) {
-                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated ,active_status:0});
+                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
             }
             const newUserQuery = `
             INSERT INTO job_post_master (user_id, title, category, sub_category, max_price, min_price, duration, description,duration_type,nda_status, createtime,updatetime)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?,?, now(),now())`;
-            const values = [user_id, title, category, sub_category, max_price, min_price, duration, description,duration_type,nda_status]
+            const values = [user_id, title, category, sub_category, max_price, min_price, duration, description, duration_type, nda_status]
             connection.query(newUserQuery, values, async (err, result) => {
                 if (err) {
                     return response.status(200).json({ success: false, msg: languageMessage.jobPostCreatedError, key: err });
                 }
                 // if (request.files && request.files['file']) {
-                 // const filePromises = request.files['file'].map((f) => {
+                // const filePromises = request.files['file'].map((f) => {
                 if (file) {
                     // Ensure file is an array by splitting it if it's a comma-separated string
                     const fileArray = Array.isArray(file) ? file : file.split(",");
@@ -397,7 +446,7 @@ const createJobPost = async (request, response) => {
                                 INSERT INTO job_file_master (file_name, delete_flag, createtime, updatetime, job_id) 
                                 VALUES (?, 0, NOW(), NOW(), ?)
                             `;
-                
+
                             connection.query(fileInsertQuery, [fileName.trim(), result.insertId], (err, res) => {
                                 if (err) {
                                     reject(err);
@@ -407,16 +456,16 @@ const createJobPost = async (request, response) => {
                             });
                         });
                     });
-                
+
                     Promise.all(filePromises)
-                    .then((insertedFiles) => {
-                        console.log("Inserted Files:", insertedFiles);
-                    })
-                    .catch((error) => {
-                        console.error("Error inserting files:", error);
-                    });
+                        .then((insertedFiles) => {
+                            console.log("Inserted Files:", insertedFiles);
+                        })
+                        .catch((error) => {
+                            console.error("Error inserting files:", error);
+                        });
                 }
-                    
+
                 const query1 = "SELECT job_post_id, title, category, sub_category, max_price, min_price, duration, description, file,duration_type,nda_status, createtime FROM job_post_master WHERE job_post_id = ? AND delete_flag=0";
                 const values1 = [result.insertId];
                 connection.query(query1, values1, async (err, result1) => {
@@ -449,7 +498,7 @@ const chatConsultationHistory = async (request, response) => {
                 return response.status(200).json({ success: false, msg: languageMessage.userNotFound });
             }
             if (result[0]?.active_flag === 0) {
-                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated,active_status:0 });
+                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
             }
             const query2 = `
                 SELECT chat_call_history_id, expert_id, createtime, updatetime
@@ -546,7 +595,7 @@ const chatJobsHistory = async (request, response) => {
                 return response.status(200).json({ success: false, msg: languageMessage.userNotFound });
             }
             if (result[0]?.active_flag === 0) {
-                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated ,active_status:0});
+                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
             }
             const query2 = `
                 SELECT chat_call_history_id, expert_id, createtime, updatetime
@@ -643,7 +692,7 @@ const callConsultationHistory = async (request, response) => {
                 return response.status(200).json({ success: false, msg: languageMessage.userNotFound });
             }
             if (result[0]?.active_flag === 0) {
-                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated ,active_status:0});
+                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
             }
             const query2 = `
                 SELECT chat_call_history_id, expert_id, call_cost, duration, createtime, updatetime
@@ -740,7 +789,7 @@ const callJobsHistory = async (request, response) => {
                 return response.status(200).json({ success: false, msg: languageMessage.userNotFound });
             }
             if (result[0]?.active_flag === 0) {
-                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated ,active_status:0});
+                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
             }
             const query2 = `
                 SELECT chat_call_history_id, expert_id, createtime, updatetime
@@ -839,7 +888,7 @@ const getExpertByFilter = async (request, response) => {
                 return response.status(200).json({ success: false, msg: languageMessage.userNotFound });
             }
             if (result[0]?.active_flag === 0) {
-                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated ,active_status:0});
+                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
             }
             // Prepare query for experts
             let query2 = `
@@ -847,19 +896,19 @@ const getExpertByFilter = async (request, response) => {
                 FROM user_master 
                 WHERE delete_flag = 0 AND active_flag = 1 AND user_type = 2 and expert_status=1`;
             let value2 = [];
-            if(state){
+            if (state) {
                 query2 += " AND state = ?";
                 value2.push((state));
             }
-            if(city){
+            if (city) {
                 query2 += " AND city = ?";
                 value2.push((city));
             }
-            if(category){
+            if (category) {
                 query2 += " AND category = ?";
                 value2.push((category));
             }
-            if(sub_category){
+            if (sub_category) {
                 query2 += " AND sub_category = ?";
                 value2.push((sub_category));
             }
@@ -889,8 +938,8 @@ const getExpertByFilter = async (request, response) => {
                     let finalResult = parsedResult;
                     if (rating) {
                         const minRating = parseFloat(rating);
-                    
-                        finalResult = parsedResult.filter((item) => 
+
+                        finalResult = parsedResult.filter((item) =>
                             item.userDetails && item.userDetails.average_rating == minRating
                         ).map((item) => ({
                             expert_id: item.expert_id,
@@ -928,7 +977,7 @@ const getExpertByName = async (request, response) => {
                 return response.status(200).json({ success: false, msg: languageMessage.userNotFound });
             }
             if (result[0]?.active_flag === 0) {
-                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated ,active_status:0});
+                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
             }
             const query2 = `
             SELECT user_id, name, mobile, sub_category_level, consulting_time, language, degree, experience, call_charge, video_call_charge, chat_charge, updatetime
@@ -1030,13 +1079,13 @@ const getExpertByName = async (request, response) => {
 //end
 // wallket recharge
 const walletRecharge = async (request, response) => {
-    let {user_id,recharge_amount,transaction_id} = request.body;
-    if (!user_id || !recharge_amount ||!transaction_id) {
+    let { user_id, recharge_amount, transaction_id } = request.body;
+    if (!user_id || !recharge_amount || !transaction_id) {
         return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param });
     }
-    const type=1;
-    const status=0;
-    
+    const type = 1;
+    const status = 0;
+
     try {
         const query1 = "SELECT mobile, active_flag, wallet_balance FROM user_master WHERE user_id = ? AND delete_flag = 0 AND user_type=1";
         const values1 = [user_id];
@@ -1048,7 +1097,7 @@ const walletRecharge = async (request, response) => {
                 return response.status(200).json({ success: false, msg: languageMessage.userNotFound });
             }
             if (result[0]?.active_flag === 0) {
-                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated ,active_status:0});
+                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
             }
             let finalWallet;
             if (type == 0) {
@@ -1061,7 +1110,7 @@ const walletRecharge = async (request, response) => {
             INSERT INTO wallet_master (user_id,type,amount,wallet_balance,createtime,status,payment_transaction_id)
             VALUES (?, ?, ?, ?, now(),?,?)
         `;
-            const values = [user_id,type,recharge_amount,finalWallet,status,transaction_id]
+            const values = [user_id, type, recharge_amount, finalWallet, status, transaction_id]
             connection.query(newUserQuery, values, async (err, result) => {
                 if (err) {
                     return response.status(200).json({ success: false, msg: languageMessage.walletUpdateError, key: err });
@@ -1076,10 +1125,10 @@ const walletRecharge = async (request, response) => {
                         return response.status(200).json({ success: false, msg: languageMessage.walletUpdateError, key: err });
                     }
                     if (result.affectedRows > 0) {
-                       
-                        const userDetails =await getUserDetails(user_id);
-                            return response.status(200).json({ success: true, msg: languageMessage.walletUpdate, userDataArray: userDetails });
-                     
+
+                        const userDetails = await getUserDetails(user_id);
+                        return response.status(200).json({ success: true, msg: languageMessage.walletUpdate, userDataArray: userDetails });
+
                     } else {
                         return response.status(200).json({ success: false, msg: languageMessage.walletUpdateError, key: err.message });
                     }
@@ -1108,11 +1157,11 @@ const walletHistory = async (request, response) => {
                 return response.status(200).json({ success: false, msg: languageMessage.userNotFound });
             }
             if (result[0]?.active_flag === 0) {
-                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated ,active_status:0});
+                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
             }
             let wallet = [];
             const userDetails = await getUserDetails(user_id);
-            const query2 = "SELECT transition_id, payment_transaction_id, expert_id, amount, createtime, status, type FROM wallet_master WHERE user_id = ? AND delete_flag = 0";
+            const query2 = "SELECT transition_id, payment_transaction_id, expert_id, amount, createtime, status, type FROM wallet_master WHERE user_id = ? AND delete_flag = 0 ORDER BY createtime DESC";
             const values2 = [user_id];
             connection.query(query2, values2, async (err, walletresult) => {
                 if (err) {
@@ -1192,7 +1241,7 @@ const getBidsOfJobPost = async (request, response) => {
                 return response.status(404).json({ success: false, msg: languageMessage.userNotFound });
             }
             if (userResult[0]?.active_flag === 0) {
-                return response.status(403).json({ success: false, msg: languageMessage.accountdeactivated ,active_status:0});
+                return response.status(403).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
             }
             const query2 = "SELECT bid_id, expert_id, price, duration, files, createtime FROM bid_master WHERE job_post_id = ? AND delete_flag = 0";
             connection.query(query2, [job_post_id], (err, bidResult) => {
@@ -1234,8 +1283,8 @@ const getBidsOfJobPost = async (request, response) => {
 //end
 //Hire the Expert
 const hireTheExpert = async (request, response) => {
-    let {user_id, job_post_id, expert_id,bid_id} = request.body;
-    if (!user_id || !job_post_id || !expert_id ||!bid_id) {
+    let { user_id, job_post_id, expert_id, bid_id } = request.body;
+    if (!user_id || !job_post_id || !expert_id || !bid_id) {
         return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param });
     }
     try {
@@ -1249,10 +1298,10 @@ const hireTheExpert = async (request, response) => {
                 return response.status(404).json({ success: false, msg: languageMessage.userNotFound });
             }
             if (userResult[0]?.active_flag === 0) {
-                return response.status(403).json({ success: false, msg: languageMessage.accountdeactivated ,active_status:0});
+                return response.status(403).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
             }
             const checkJob = "SELECT job_post_id FROM job_post_master WHERE user_id = ? AND delete_flag = 0 AND job_post_id=?";
-            const jobvalues = [user_id,job_post_id];
+            const jobvalues = [user_id, job_post_id];
             connection.query(checkJob, jobvalues, (err, jobResult) => {
                 if (err) {
                     return response.status(500).json({ success: false, msg: languageMessage.jobNotFound, key: err.message });
@@ -1260,15 +1309,15 @@ const hireTheExpert = async (request, response) => {
                 if (jobResult.length === 0) {
                     return response.status(404).json({ success: false, msg: languageMessage.jobNotFound });
                 }
-                
+
                 const newUserQuery = `UPDATE job_post_master  SET assign_expert_id = ?, status = 1,updatetime=now() WHERE job_post_id = ? and user_id=?`;
-                connection.query(newUserQuery, [expert_id, job_post_id,user_id], async (err, result) => {
+                connection.query(newUserQuery, [expert_id, job_post_id, user_id], async (err, result) => {
                     if (err) {
                         return response.status(200).json({ success: false, msg: languageMessage.expertHireUnsuccess, key: err });
                     }
                     if (result.affectedRows > 0) {
                         const checkJobbid = "SELECT bid_id FROM bid_master WHERE delete_flag = 0 AND job_post_id=? and expert_id=? and bid_id=?";
-                        const jobbidvalues = [job_post_id,expert_id,bid_id];
+                        const jobbidvalues = [job_post_id, expert_id, bid_id];
                         connection.query(checkJobbid, jobbidvalues, (err, bidResult) => {
                             if (err) {
                                 return response.status(500).json({ success: false, msg: languageMessage.jobBidNotFound, key: err.message });
@@ -1277,7 +1326,7 @@ const hireTheExpert = async (request, response) => {
                                 return response.status(404).json({ success: false, msg: languageMessage.jobBidNotFound });
                             }
                             const bidQuery = `UPDATE bid_master  SET status = 1,updatetime=now() WHERE job_post_id = ? and bid_id=? and expert_id=?`;
-                            connection.query(bidQuery, [job_post_id,bid_id,expert_id], async (err, resultbid) => {
+                            connection.query(bidQuery, [job_post_id, bid_id, expert_id], async (err, resultbid) => {
                                 if (err) {
                                     return response.status(200).json({ success: false, msg: languageMessage.expertHireUnsuccess, key: err });
                                 }
@@ -1294,17 +1343,17 @@ const hireTheExpert = async (request, response) => {
                                     const message_2 = messages;
                                     const message_3 = messages;
                                     const message_4 = messages;
-                                    const action_data = {user_id: user_id_notification,other_user_id: other_user_id_notification,action_id: action_id,action: action};
-                                    await getNotificationArrSingle(user_id_notification,other_user_id_notification,action,action_id,title,title_2,title_3,title_4,messages,message_2,message_3,message_4,action_data, async (notification_arr_check) => {
+                                    const action_data = { user_id: user_id_notification, other_user_id: other_user_id_notification, action_id: action_id, action: action };
+                                    await getNotificationArrSingle(user_id_notification, other_user_id_notification, action, action_id, title, title_2, title_3, title_4, messages, message_2, message_3, message_4, action_data, async (notification_arr_check) => {
                                         let notification_arr_check_new = [notification_arr_check];
-                                        
-                                        if(notification_arr_check_new && notification_arr_check_new.length !== 0 && notification_arr_check_new!=''){
+
+                                        if (notification_arr_check_new && notification_arr_check_new.length !== 0 && notification_arr_check_new != '') {
                                             const notiSendStatus = await oneSignalNotificationSendCall(notification_arr_check_new);
-                                            
-                                        }else{
+
+                                        } else {
                                             console.log("Notification array is empty");
                                         }
-                                    
+
                                     });
                                     return response.status(200).json({ success: true, msg: languageMessage.expertHireSuccess });
                                 }
@@ -1335,7 +1384,7 @@ const createProjectCost = async (request, response) => {
                 return response.status(404).json({ success: false, msg: languageMessage.userNotFound });
             }
             if (userResult[0]?.active_flag === 0) {
-                return response.status(403).json({ success: false, msg: languageMessage.accountdeactivated ,active_status:0});
+                return response.status(403).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
             }
             const newUserQuery = `
             UPDATE job_post_master 
@@ -1358,6 +1407,7 @@ const createProjectCost = async (request, response) => {
 const getMilestones = async (request, response) => {
     let { } = request.body;
 }
+
 // Get expert's earning 
 const getExpertEarning = async (request, response) => {
     let { user_id } = request.query;
@@ -1375,7 +1425,7 @@ const getExpertEarning = async (request, response) => {
                 return response.status(200).json({ success: false, msg: languageMessage.userNotFound });
             }
             if (result[0]?.active_flag === 0) {
-                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated ,active_status:0});
+                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
             }
             const query2 = `SELECT SUM(expert_earning) AS partial_expert_earning FROM expert_earning_master WHERE expert_id = ?`;
             connection.query(query2, [user_id], async (err, result) => {
@@ -1390,7 +1440,7 @@ const getExpertEarning = async (request, response) => {
                     }
                     const withdraws = result[0]?.total_withdraw_amount;
                     const total_expert_earning = partialEarning - withdraws;
-                    return response.status(200).json({ success: true, msg: languageMessage.dataFound, userDataArray: { total_expert_earning: total_expert_earning } });
+                    return response.status(200).json({ success: true, msg: languageMessage.dataFound, total_expert_earning: total_expert_earning  });
                 });
             });
         });
@@ -1401,7 +1451,7 @@ const getExpertEarning = async (request, response) => {
 //end
 //make withdraw request
 const withdrawRequest = async (request, response) => {
-    let { user_id, withdraw_amount, withdraw_message} = request.body;
+    let { user_id, withdraw_amount, withdraw_message } = request.body;
     if (!user_id || !withdraw_amount || !withdraw_message) {
         return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param });
     }
@@ -1416,16 +1466,16 @@ const withdrawRequest = async (request, response) => {
                 return response.status(200).json({ success: false, msg: languageMessage.userNotFound });
             }
             if (result[0]?.active_flag === 0) {
-                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated ,active_status:0});
+                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
             }
             const newUserQuery = `INSERT INTO expert_withdraw_master (expert_id,withdraw_amount,withdraw_message,createtime,updatetime)VALUES (?,?,?,now(),now())`;
-            const values = [user_id,withdraw_amount,withdraw_message]
+            const values = [user_id, withdraw_amount, withdraw_message]
             connection.query(newUserQuery, values, async (err, requestresult) => {
                 if (err) {
                     return response.status(200).json({ success: false, msg: languageMessage.withdrawSendError, key: err });
                 }
                 const userDetails = await getUserDetails(user_id);
-                return response.status(200).json({ success: true, msg: languageMessage.withdrawSend,userDetails:userDetails});
+                return response.status(200).json({ success: true, msg: languageMessage.withdrawSend, userDetails: userDetails });
             });
         });
     } catch (err) {
@@ -1450,7 +1500,7 @@ const withdrawHistory = async (request, response) => {
                 return response.status(200).json({ success: false, msg: languageMessage.userNotFound });
             }
             if (result[0]?.active_flag === 0) {
-                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated ,active_status:0});
+                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
             }
             const query1 = "SELECT expert_withdraw_id, expert_id, withdraw_status, withdraw_amount, total_earning_amount, withdraw_message, earning_after_withdraw,createtime FROM expert_withdraw_master WHERE expert_id = ? order by expert_withdraw_id desc";
             const values1 = [user_id];
@@ -1470,7 +1520,7 @@ const withdrawHistory = async (request, response) => {
                         status_label: '	0=pending 1=approved 2=reject',
                     };
                 }));
-                if(finalBidResult.length===0){
+                if (finalBidResult.length === 0) {
                     return response.status(200).json({ success: true, msg: languageMessage.dataFound, withdrawRequestData: "NA" });
                 }
                 return response.status(200).json({ success: true, msg: languageMessage.dataFound, withdrawRequestData: finalBidResult });
@@ -1498,7 +1548,7 @@ const expertCallConsultationHistory = async (request, response) => {
                 return response.status(200).json({ success: false, msg: languageMessage.userNotFound });
             }
             if (result[0]?.active_flag === 0) {
-                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated ,active_status:0});
+                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
             }
             const query2 = `
                 SELECT chat_call_history_id, user_id, call_cost, duration, createtime, updatetime
@@ -1566,7 +1616,7 @@ const expertCallJobsHistory = async (request, response) => {
                 return response.status(200).json({ success: false, msg: languageMessage.userNotFound });
             }
             if (result[0]?.active_flag === 0) {
-                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated ,active_status:0});
+                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
             }
             const query2 = `
                 SELECT chat_call_history_id, user_id, call_cost, duration, createtime, updatetime
@@ -1634,7 +1684,7 @@ const getJobPostsForExpert = async (request, response) => {
                 return response.status(200).json({ success: false, msg: languageMessage.userNotFound });
             }
             if (result[0]?.active_flag === 0) {
-                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated ,active_status:0});
+                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
             }
             const category = result[0].category;
             const subCategory = result[0].sub_category;
@@ -1706,10 +1756,11 @@ const getExpertEarningHistory = async (request, response) => {
                 return response.status(200).json({ success: false, msg: languageMessage.userNotFound });
             }
             if (result[0]?.active_flag === 0) {
-                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated ,active_status:0});
+                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
             }
-            const query1 = "SELECT expert_earning_id, total_amount, admin_commission_amount, commission_percentage, expert_earning, invoice_url, transition_id, createtime,type,user_id FROM expert_earning_master WHERE expert_id = ? ";
+            const query1 = "SELECT expert_earning_id, total_amount, admin_commission_amount, commission_percentage, expert_earning, invoice_url, transition_id, createtime,type,user_id FROM expert_earning_master WHERE expert_id = ?  ORDER BY createtime DESC";
             const values1 = [user_id];
+
             connection.query(query1, values1, async (err, earningresult) => {
                 if (err) {
                     return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
@@ -1717,7 +1768,22 @@ const getExpertEarningHistory = async (request, response) => {
                 if (earningresult.length === 0) {
                     return response.status(200).json({ success: true, msg: languageMessage.dataFound, earning_history: 'NA' });
                 }
-                // Fetch user details for each item and category
+
+                const query2 = `SELECT SUM(expert_earning) AS partial_expert_earning FROM expert_earning_master WHERE expert_id = ?`;
+                connection.query(query2, [user_id], async (err2, result2) => {
+                    if (err2) {
+                        return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
+                    }
+                    const partialEarning = result2[0]?.partial_expert_earning;
+                    const query2 = `SELECT SUM(withdraw_amount) AS total_withdraw_amount FROM expert_withdraw_master WHERE expert_id = ? AND withdraw_status=1`;
+                    connection.query(query2, [user_id], async (err3, result3) => {
+                        if (err3) {
+                            return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err3.message });
+                        }
+                        const withdraws = result3[0]?.total_withdraw_amount;
+                        const total_expert_earning = partialEarning - withdraws;
+
+                // Fetch user details for each item and category            
                 const finalBidResult = await Promise.all(earningresult.map(async (Item) => {
                     const userDetails = await new Promise((resolve, reject) => {
                         const userQuery = `SELECT name, image FROM user_master WHERE user_id = ? AND delete_flag = 0`;
@@ -1733,14 +1799,16 @@ const getExpertEarningHistory = async (request, response) => {
                         ...Item,
                         posted_time: moment(Item.createtime).format("MMM DD YYYY hh:mm A"),
                         time: moment(Item.createtime).format("hh:mm A"),
-                        type_label:"0=milestone,1=consultant,2=subscription",
+                        type_label: "0=milestone,1=consultant,2=subscription",
                         user_name: userDetails.name,
                         user_image: userDetails.image,
                     };
                 }));
-                return response.status(200).json({ success: true, msg: languageMessage.dataFound, earning_history: finalBidResult, });
+                return response.status(200).json({ success: true, msg: languageMessage.dataFound, total_expert_earning,  earning_history: finalBidResult, });
             });
         });
+    });
+});
     } catch (err) {
         return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
     }
@@ -1763,7 +1831,7 @@ const expertChatConsultationHistory = async (request, response) => {
                 return response.status(200).json({ success: false, msg: languageMessage.userNotFound });
             }
             if (result[0]?.active_flag === 0) {
-                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated ,active_status:0});
+                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
             }
             const query2 = `
                 SELECT chat_call_history_id, user_id, call_cost, duration, createtime, updatetime
@@ -1831,7 +1899,7 @@ const expertChatJobsHistory = async (request, response) => {
                 return response.status(200).json({ success: false, msg: languageMessage.userNotFound });
             }
             if (result[0]?.active_flag === 0) {
-                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated ,active_status:0});
+                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
             }
             const query2 = `
                 SELECT chat_call_history_id, user_id, call_cost, duration, createtime, updatetime
@@ -1901,18 +1969,18 @@ const getReviewsOfExpert = (request, response) => {
                 return response.status(200).json({ success: false, msg: languageMessage.userNotFound });
             }
             if (result[0]?.active_flag === 0) {
-                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated ,active_status:0});
+                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
             }
             const expert_image = result[0].image ? result[0].image : "NA";
             const rating_bar = await getRatingBarAvg(user_id);
-            const query2 = `SELECT rating_id, user_id, rating, review, createtime FROM rating_master WHERE expert_id = ? AND delete_flag = 0`;
+            const query2 = `SELECT rating_id, user_id, rating, review, createtime FROM rating_master WHERE expert_id = ? AND delete_flag = 0 ORDER BY createtime DESC`;
             connection.query(query2, [user_id], (err, historyPosts) => {
                 if (err) {
                     return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
                 }
                 if (historyPosts.length === 0) {
                     //return response.status(200).json({ success: true, msg: languageMessage.dataFound });
-                    var rating_bar_new= [
+                    var rating_bar_new = [
                         {
                             "rating": 1,
                             "rating_count": 0,
@@ -1939,12 +2007,12 @@ const getReviewsOfExpert = (request, response) => {
                             "percentage": "0.00"
                         }
                     ];
-                    var total_review_count=0;
-                    var avg_rating="0.0";
-                    return response.status(200).json({success: true,msg: languageMessage.dataFound,historyPosts:'NA',rating_bar:rating_bar_new,total_review_count,avg_rating: avg_rating,expert_image});
+                    var total_review_count = 0;
+                    var avg_rating = "0.0";
+                    return response.status(200).json({ success: true, msg: languageMessage.dataFound, historyPosts: 'NA', rating_bar: rating_bar_new, total_review_count, avg_rating: avg_rating, expert_image });
                 }
-                var total_review_count=0;
-                var avg_rating=0;
+                var total_review_count = 0;
+                var avg_rating = 0;
                 const usersIds = historyPosts.map(item => item.user_id);
                 const query3 = `
                     SELECT user_id, name, image 
@@ -1974,7 +2042,7 @@ const getReviewsOfExpert = (request, response) => {
                                     resolve(results); // Return the first reply
                                 });
                             });
-                            
+
                             return {
                                 ...history,
                                 user_name: user ? user.name : "NA",
@@ -1985,7 +2053,7 @@ const getReviewsOfExpert = (request, response) => {
                         })
                     );
                     const get_avg_rating = total_review_count > 0 ? avg_rating / total_review_count : 0;
-                    return response.status(200).json({success: true,msg: languageMessage.dataFound,historyPosts: combinedHistoryPosts,rating_bar,total_review_count,avg_rating: get_avg_rating.toFixed(1),expert_image});
+                    return response.status(200).json({ success: true, msg: languageMessage.dataFound, historyPosts: combinedHistoryPosts, rating_bar, total_review_count, avg_rating: get_avg_rating.toFixed(1), expert_image });
                 });
             });
         });
@@ -2011,12 +2079,12 @@ const getExpertMyJobs = (request, response) => {
                 return response.status(200).json({ success: false, msg: languageMessage.userNotFound });
             }
             if (result[0]?.active_flag === 0) {
-                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated ,active_status:0});
+                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
             }
             const query2 = `
                 SELECT job_post_id, user_id,assign_expert_id, title, category, sub_category, max_price, min_price, duration, status, updatetime
                 ,createtime FROM job_post_master 
-                WHERE assign_expert_id = ? AND delete_flag = 0`;
+                WHERE assign_expert_id = ? AND delete_flag = 0 ORDER BY createtime DESC`;
             connection.query(query2, [user_id], async (err, jobPosts) => {
                 if (err) {
                     return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
@@ -2042,34 +2110,34 @@ const getExpertMyJobs = (request, response) => {
                             });
                         });
                         // Fetch user name
-                     const userNameQuery = await new Promise((resolve) => {
-                        const userQuery = `SELECT name,image FROM user_master WHERE user_id = ? AND delete_flag = 0`;
-                        connection.query(userQuery, [job.user_id], (err, result) => {
-                            resolve(err ? null : result[0]?.name || 'NA');
+                        const userNameQuery = await new Promise((resolve) => {
+                            const userQuery = `SELECT name,image FROM user_master WHERE user_id = ? AND delete_flag = 0`;
+                            connection.query(userQuery, [job.user_id], (err, result) => {
+                                resolve(err ? null : result[0]?.name || 'NA');
+                            });
                         });
-                    });
-                    // Fetch user name
-                    const userimageQuery = await new Promise((resolve) => {
-                        const imageQuery = `SELECT image FROM user_master WHERE user_id = ? AND delete_flag = 0`;
-                        connection.query(imageQuery, [job.user_id], (err, result) => {
-                            resolve(err ? null : result[0]?.image || 'NA');
+                        // Fetch user name
+                        const userimageQuery = await new Promise((resolve) => {
+                            const imageQuery = `SELECT image FROM user_master WHERE user_id = ? AND delete_flag = 0`;
+                            connection.query(imageQuery, [job.user_id], (err, result) => {
+                                resolve(err ? null : result[0]?.image || 'NA');
+                            });
                         });
-                    });
                         return {
                             ...job,
                             sub_category: subCategory,
                             category: category,
                             posted_time: getRelativeTime(job.createtime),
                             status_label: '0=pending,1=hired,2=inprogress,3=completed',
-                            user_name:userNameQuery,
-                            user_image:userimageQuery,
+                            user_name: userNameQuery,
+                            user_image: userimageQuery,
                         };
                     })
                 );
                 return response.status(200).json({ success: true, msg: languageMessage.dataFound, jobPostDetails: jobPostDetails });
             });
         });
-    } catch (err){
+    } catch (err) {
         return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
     }
 }
@@ -2090,7 +2158,7 @@ const getSubscriptionPlans = (request, response) => {
                 return response.status(200).json({ success: false, msg: languageMessage.userNotFound });
             }
             if (result[0]?.active_flag === 0) {
-                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated ,active_status:0});
+                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
             }
             const query2 = `SELECT subscription_id, amount, description, duration, plan_type,createtime FROM subscription_master WHERE delete_flag = 0 order by plan_type asc`;
             connection.query(query2, async (err, subscriptions) => {
@@ -2098,10 +2166,10 @@ const getSubscriptionPlans = (request, response) => {
                     return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
                 }
                 if (subscriptions.length === 0) {
-                    return response.status(200).json({ success: false, msg: languageMessage.dataNotFound,subscriptionPlanDetails:'NA'});
+                    return response.status(200).json({ success: false, msg: languageMessage.dataNotFound, subscriptionPlanDetails: 'NA' });
                 }
-               
-                return response.status(200).json({ success: true, msg: languageMessage.dataFound, subscriptionPlanDetails: subscriptions,plan_type_label:'0=free, 1=primium,2 standard'});
+
+                return response.status(200).json({ success: true, msg: languageMessage.dataFound, subscriptionPlanDetails: subscriptions, plan_type_label: '0=free, 1=primium,2 standard' });
             });
         });
     } catch (err) {
@@ -2124,7 +2192,7 @@ const buySubscription = (request, response) => {
                 return response.status(200).json({ success: false, msg: languageMessage.userNotFound });
             }
             if (result[0]?.active_flag === 0) {
-                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated ,active_status:0});
+                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
             }
             const query2 = `
             SELECT subscription_id, amount, description, duration, createtime,plan_type
@@ -2139,21 +2207,21 @@ const buySubscription = (request, response) => {
                 }
                 let startdate = new Date();
                 let enddate = new Date();
-                const transaction_id='123456';
-                const status=1;
-                const amount=subscriptions[0].amount;
-                const duration=subscriptions[0].duration;
-                const plan_type=subscriptions[0].plan_type;
+                const transaction_id = '123456';
+                const status = 1;
+                const amount = subscriptions[0].amount;
+                const duration = subscriptions[0].duration;
+                const plan_type = subscriptions[0].plan_type;
                 enddate.setMonth(startdate.getMonth() + subscriptions[0].duration);
                 const subscriptionQuery = `INSERT INTO expert_subscription_master(expert_id,subscription_id,amount,start_date,end_date,transaction_id,status,duration,plan_type,createtime,updatetime)
                 VALUES (?,?,?,?,?,?,?,?,?,now(),now())`;
-                const values = [user_id,subscription_id,amount,startdate,enddate,transaction_id,status,duration,plan_type]
+                const values = [user_id, subscription_id, amount, startdate, enddate, transaction_id, status, duration, plan_type]
                 connection.query(subscriptionQuery, values, async (err, buyresult) => {
                     if (err) {
                         return response.status(200).json({ success: false, msg: languageMessage.buySubscriptionUnsuccess, key: err });
                     }
                     if (buyresult.affectedRows > 0) {
-                        return response.status(200).json({ success: true, msg: languageMessage.buySubscriptionSuccess});
+                        return response.status(200).json({ success: true, msg: languageMessage.buySubscriptionSuccess });
                     } else {
                         return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
                     }
@@ -2166,17 +2234,17 @@ const buySubscription = (request, response) => {
 }
 //reply on review
 const reviewReply = async (request, response) => {
-    let {user_id,rating_id,message } = request.body;
-    if (!user_id){
-        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param,key:'user_id'});
+    let { user_id, rating_id, message } = request.body;
+    if (!user_id) {
+        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'user_id' });
     }
-    if (!rating_id){
-        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param,key:'rating_id'});
+    if (!rating_id) {
+        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'rating_id' });
     }
-    if (!message){
-        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param,key:'message'});
+    if (!message) {
+        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'message' });
     }
-    
+
     try {
         const query1 = "SELECT mobile, active_flag FROM user_master WHERE user_id = ? AND delete_flag = 0";
         const values1 = [user_id];
@@ -2188,16 +2256,16 @@ const reviewReply = async (request, response) => {
                 return response.status(200).json({ success: false, msg: languageMessage.userNotFound });
             }
             if (result[0]?.active_flag === 0) {
-                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated ,active_status:0});
+                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
             }
             const newUserQuery = `INSERT INTO rating_reply_master (expert_id,rating_id,reply_message,createtime,updatetime)
             VALUES (?, ?, ?, now(),now())`;
             const values = [user_id, rating_id, message]
-            connection.query(newUserQuery, values, async (err, result) =>{
+            connection.query(newUserQuery, values, async (err, result) => {
                 if (err) {
                     return response.status(200).json({ success: false, msg: languageMessage.replySentUnsuccess, key: err });
                 }
-                return response.status(200).json({ success: true, msg: languageMessage.replySentSuccess});
+                return response.status(200).json({ success: true, msg: languageMessage.replySentSuccess });
             });
         });
     } catch (err) {
@@ -2207,20 +2275,20 @@ const reviewReply = async (request, response) => {
 //end
 //rate now expert
 const rateExpert = async (request, response) => {
-    let {user_id,expert_id,rating,review} = request.body;
-    if (!user_id){
-        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param,key:'user_id'});
+    let { user_id, expert_id, rating, review } = request.body;
+    if (!user_id) {
+        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'user_id' });
     }
-    if (!expert_id){
-        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param,key:'expert_id'});
+    if (!expert_id) {
+        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'expert_id' });
     }
-    if (!rating){
-        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param,key:'rating'});
+    if (!rating) {
+        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'rating' });
     }
-    if (!review){
-        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param,key:'review'});
+    if (!review) {
+        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'review' });
     }
-    
+
     try {
         const query1 = "SELECT mobile, active_flag,name FROM user_master WHERE user_id = ? AND delete_flag = 0";
         const values1 = [user_id];
@@ -2232,12 +2300,12 @@ const rateExpert = async (request, response) => {
                 return response.status(200).json({ success: false, msg: languageMessage.userNotFound });
             }
             if (result[0]?.active_flag === 0) {
-                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated ,active_status:0});
+                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
             }
             const user_name = result[0].name ? result[0].name : "NA";
             const newUserQuery = `INSERT INTO rating_master(user_id,expert_id,rating,review,createtime,updatetime)
             VALUES (?, ?, ?,?, now(),now())`;
-            const values = [user_id,expert_id,rating,review]
+            const values = [user_id, expert_id, rating, review]
             connection.query(newUserQuery, values, async (err, ratingresult) => {
                 if (err) {
                     return response.status(200).json({ success: false, msg: languageMessage.ratingSentUnsuccess, key: err });
@@ -2254,19 +2322,19 @@ const rateExpert = async (request, response) => {
                 const message_2 = messages;
                 const message_3 = messages;
                 const message_4 = messages;
-                const action_data = {user_id: user_id_notification,other_user_id: other_user_id_notification,action_id: action_id,action: action};
-                await getNotificationArrSingle(user_id_notification,other_user_id_notification,action,action_id,title,title_2,title_3,title_4,messages,message_2,message_3,message_4,action_data, async (notification_arr_check) => {
+                const action_data = { user_id: user_id_notification, other_user_id: other_user_id_notification, action_id: action_id, action: action };
+                await getNotificationArrSingle(user_id_notification, other_user_id_notification, action, action_id, title, title_2, title_3, title_4, messages, message_2, message_3, message_4, action_data, async (notification_arr_check) => {
                     let notification_arr_check_new = [notification_arr_check];
-                    
-                    if(notification_arr_check_new && notification_arr_check_new.length !== 0 && notification_arr_check_new!=''){
+
+                    if (notification_arr_check_new && notification_arr_check_new.length !== 0 && notification_arr_check_new != '') {
                         const notiSendStatus = await oneSignalNotificationSendCall(notification_arr_check_new);
-                        
-                    }else{
+
+                    } else {
                         console.log("Notification array is empty");
                     }
-                
+
                 });
-                return response.status(200).json({ success: true, msg: languageMessage.ratingSentSuccess});
+                return response.status(200).json({ success: true, msg: languageMessage.ratingSentSuccess });
             });
         });
     } catch (err) {
@@ -2291,7 +2359,7 @@ const CustomerCallHistory = async (request, response) => {
                 return response.status(404).json({ success: false, msg: languageMessage.userNotFound });
             }
             if (userResult[0]?.active_flag === 0) {
-                return response.status(403).json({ success: false, msg: languageMessage.accountdeactivated ,active_status:0});
+                return response.status(403).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
             }
             // Fetch call history
             const callHistoryQuery = `
@@ -2328,8 +2396,8 @@ const CustomerCallHistory = async (request, response) => {
                             call_history.push({
                                 ...record,
                                 createtime: formattedTime,
-                                type_label:'1=video,2=voice',
-                                status_label:'0-pending,1-start,2-completed,3=rejected',
+                                type_label: '1=video,2=voice',
+                                status_label: '0-pending,1-start,2-completed,3=rejected',
                                 expert_name: expertDetails.name,
                                 expert_image: expertDetails.image,
                                 expert_category_id: expertDetails.category,
@@ -2374,7 +2442,7 @@ const ExpertCallHistory = async (request, response) => {
                 return response.status(404).json({ success: false, msg: languageMessage.userNotFound });
             }
             if (userResult[0]?.active_flag === 0) {
-                return response.status(403).json({ success: false, msg: languageMessage.accountdeactivated ,active_status:0});
+                return response.status(403).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
             }
             // Fetch call history
             const callHistoryQuery = `
@@ -2411,8 +2479,8 @@ const ExpertCallHistory = async (request, response) => {
                             call_history.push({
                                 ...record,
                                 createtime: formattedTime,
-                                type_label:'1=video,2=voice',
-                                status_label:'0-pending,1-start,2-completed,3=rejected',
+                                type_label: '1=video,2=voice',
+                                status_label: '0-pending,1-start,2-completed,3=rejected',
                                 user_name: expertDetails.name,
                                 user_image: expertDetails.image,
                                 expert_category_id: userResult[0].category,
@@ -2432,28 +2500,28 @@ const ExpertCallHistory = async (request, response) => {
                 });
             });
         });
-    }catch(err){
+    } catch (err) {
         return response.status(500).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
     }
 };
 //end
 // exper bid on job
 const ExpertBidJob = async (request, response) => {
-    let {user_id,job_post_id,duration,price,duration_type, pdf_file, nda_file} = request.body;
-    if (!user_id){
-        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param,key:'user_id'});
+    let { user_id, job_post_id, duration, price, duration_type, pdf_file, nda_file } = request.body;
+    if (!user_id) {
+        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'user_id' });
     }
-    if (!job_post_id){
-        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param,key:'job_post_id'});
+    if (!job_post_id) {
+        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'job_post_id' });
     }
-    if (!duration){
-        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param,key:'duration'});
+    if (!duration) {
+        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'duration' });
     }
-    if (!price){
-        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param,key:'price'});
+    if (!price) {
+        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'price' });
     }
-    if (!duration_type){
-        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param,key:'duration_type'});
+    if (!duration_type) {
+        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'duration_type' });
     }
     // let pdf_file = null;
     // let nda_file = null;
@@ -2463,9 +2531,9 @@ const ExpertBidJob = async (request, response) => {
     // if (request.files && request.files['nda_file']) {
     //     nda_file = request.files['nda_file'][0].filename;
     // }
-    
+
     try {
-        
+
         const query1 = "SELECT mobile, active_flag,name FROM user_master WHERE user_id = ? AND delete_flag = 0";
         const values1 = [user_id];
         connection.query(query1, values1, async (err, result) => {
@@ -2476,9 +2544,9 @@ const ExpertBidJob = async (request, response) => {
                 return response.status(200).json({ success: false, msg: languageMessage.userNotFound });
             }
             if (result[0]?.active_flag === 0) {
-                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated ,active_status:0});
+                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
             }
-            
+
             const checkJob = "SELECT user_id FROM job_post_master WHERE job_post_id = ? AND delete_flag = 0";
             const jobvalue = [job_post_id];
             connection.query(checkJob, jobvalue, async (err, jobresult) => {
@@ -2488,11 +2556,11 @@ const ExpertBidJob = async (request, response) => {
                 if (jobresult.length === 0) {
                     return response.status(200).json({ success: false, msg: languageMessage.jobNotFound });
                 }
-            
+
                 const other_user_id = jobresult[0].user_id ? jobresult[0].user_id : 0;
                 const bidQuery = `INSERT INTO bid_master(job_post_id,expert_id,price,duration,files,nda_file,duration_type,createtime,updatetime)
                 VALUES (?,?,?,?,?,?,?,now(),now())`;
-                const values = [job_post_id,user_id,price,duration,pdf_file,nda_file,duration_type]
+                const values = [job_post_id, user_id, price, duration, pdf_file, nda_file, duration_type]
                 connection.query(bidQuery, values, async (err, bidresult) => {
                     if (err) {
                         return response.status(200).json({ success: false, msg: languageMessage.bidSentUnsuccess, key: err });
@@ -2509,19 +2577,19 @@ const ExpertBidJob = async (request, response) => {
                     const message_2 = messages;
                     const message_3 = messages;
                     const message_4 = messages;
-                    const action_data = {user_id: user_id_notification,other_user_id: other_user_id_notification,action_id: action_id,action: action};
-                    await getNotificationArrSingle(user_id_notification,other_user_id_notification,action,action_id,title,title_2,title_3,title_4,messages,message_2,message_3,message_4,action_data, async (notification_arr_check) => {
+                    const action_data = { user_id: user_id_notification, other_user_id: other_user_id_notification, action_id: action_id, action: action };
+                    await getNotificationArrSingle(user_id_notification, other_user_id_notification, action, action_id, title, title_2, title_3, title_4, messages, message_2, message_3, message_4, action_data, async (notification_arr_check) => {
                         let notification_arr_check_new = [notification_arr_check];
-                        
-                        if(notification_arr_check_new && notification_arr_check_new.length !== 0 && notification_arr_check_new!=''){
+
+                        if (notification_arr_check_new && notification_arr_check_new.length !== 0 && notification_arr_check_new != '') {
                             const notiSendStatus = await oneSignalNotificationSendCall(notification_arr_check_new);
-                            
-                        }else{
+
+                        } else {
                             console.log("Notification array is empty");
                         }
-                    
+
                     });
-                    return response.status(200).json({ success: true, msg: languageMessage.bidSentSuccess});
+                    return response.status(200).json({ success: true, msg: languageMessage.bidSentSuccess });
                 });
             });
         });
@@ -2536,33 +2604,40 @@ const getExpertHomeJobs = (request, response) => {
         return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param });
     }
     try {
-        const query1 = "SELECT mobile, active_flag FROM user_master WHERE user_id = ? AND delete_flag = 0 AND user_type=2";
+        const query1 = "SELECT mobile, active_flag, expert_status FROM user_master WHERE user_id = ? AND delete_flag = 0 AND user_type=2";
         const values1 = [user_id];
         connection.query(query1, values1, async (err, result) => {
-            if(err){
+            if (err) {
                 return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
             }
             if (result.length === 0) {
                 return response.status(200).json({ success: false, msg: languageMessage.userNotFound });
             }
             if (result[0]?.active_flag === 0) {
-                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated ,active_status:0});
+                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
             }
-            
+            if (result[0].expert_status === 0) {
+                return response.status(200).json({ success: false, msg: languageMessage.ExpertRequestNotApproved })
+            }
+
+            if (result[0].expert_status === 2) {
+                return response.status(200).json({ success: false, msg: languageMessage.ExpertRejected });
+            }
+
             const jobPostDetails = await getHomeExpertJob(user_id);
             const completedJobDetails = await getHomeExpertCompletedJob(user_id);
             const userjobPost = await getHomeExpertUserJob(user_id);
             const userjobPostCount = await getHomeUserJobCount();
-            return response.status(200).json({ success: true, msg: languageMessage.dataFound, jobPostDetails: jobPostDetails,userjobPost:userjobPost,userjobPostCount:userjobPostCount,completedJobDetails:completedJobDetails })
-           
+            return response.status(200).json({ success: true, msg: languageMessage.dataFound, jobPostDetails: jobPostDetails, userjobPost: userjobPost, userjobPostCount: userjobPostCount, completedJobDetails: completedJobDetails })
+
         });
-    } catch (err){
+    } catch (err) {
         return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
     }
 }
 //book mark job
 const bookMarkJob = async (request, response) => {
-    let {user_id, job_post_id,type} = request.body;
+    let { user_id, job_post_id, type } = request.body;
     if (!user_id || !job_post_id) {
         return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param });
     }
@@ -2577,9 +2652,9 @@ const bookMarkJob = async (request, response) => {
                 return response.status(404).json({ success: false, msg: languageMessage.userNotFound });
             }
             if (userResult[0]?.active_flag === 0) {
-                return response.status(403).json({ success: false, msg: languageMessage.accountdeactivated ,active_status:0});
+                return response.status(403).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
             }
-            
+
             const checkJob = "SELECT job_post_id FROM job_post_master WHERE delete_flag = 0 AND job_post_id=?";
             const jobvalues = [job_post_id];
             connection.query(checkJob, jobvalues, (err, jobResult) => {
@@ -2589,40 +2664,40 @@ const bookMarkJob = async (request, response) => {
                 if (jobResult.length === 0) {
                     return response.status(404).json({ success: false, msg: languageMessage.jobNotFound });
                 }
-                if(type==0){
+                if (type == 0) {
                     const bookMarkQuery = `INSERT INTO job_bookmark_master(expert_id,job_post_id,createtime,updatetime)
                     VALUES (?,?,now(),now())`;
-                    connection.query(bookMarkQuery, [user_id,job_post_id], async (err, result) => {
+                    connection.query(bookMarkQuery, [user_id, job_post_id], async (err, result) => {
                         if (err) {
                             return response.status(200).json({ success: false, msg: languageMessage.bookMarkUnsuccess, key: err });
                         }
                         return response.status(200).json({ success: true, msg: languageMessage.bookMarkSuccess });
                     });
-                }else{
+                } else {
                     const bookMarkQuery = `DELETE FROM job_bookmark_master WHERE expert_id=? and job_post_id=?`;
-                    connection.query(bookMarkQuery, [user_id,job_post_id], async (err, result) => {
+                    connection.query(bookMarkQuery, [user_id, job_post_id], async (err, result) => {
                         if (err) {
                             return response.status(200).json({ success: false, msg: languageMessage.jobUnsaveUnsuccess, key: err });
                         }
                         return response.status(200).json({ success: true, msg: languageMessage.jobSaveSuccess });
                     });
                 }
-                
+
             });
         });
     } catch (err) {
-        if(type==0){
+        if (type == 0) {
             return response.status(200).json({ success: false, msg: languageMessage.bookMarkUnsuccess, key: err.message });
-        }else{
+        } else {
             return response.status(200).json({ success: false, msg: languageMessage.jobUnsaveUnsuccess, key: err.message });
         }
-        
+
     }
 }
 //report on job
 const reportOnJob = async (request, response) => {
-    let {user_id,job_post_id,reason} = request.body;
-    if (!user_id || !job_post_id ||!reason) {
+    let { user_id, job_post_id, reason } = request.body;
+    if (!user_id || !job_post_id || !reason) {
         return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param });
     }
     try {
@@ -2636,9 +2711,9 @@ const reportOnJob = async (request, response) => {
                 return response.status(404).json({ success: false, msg: languageMessage.userNotFound });
             }
             if (userResult[0]?.active_flag === 0) {
-                return response.status(403).json({ success: false, msg: languageMessage.accountdeactivated ,active_status:0});
+                return response.status(403).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
             }
-            
+
             const checkJob = "SELECT job_post_id FROM job_post_master WHERE delete_flag = 0 AND job_post_id=?";
             const jobvalues = [job_post_id];
             connection.query(checkJob, jobvalues, (err, jobResult) => {
@@ -2650,7 +2725,7 @@ const reportOnJob = async (request, response) => {
                 }
                 const bookMarkQuery = `INSERT INTO report_master(expert_id,job_post_id,type,reason,createtime,updatetime)
                 VALUES (?,?,?,?,now(),now())`;
-                connection.query(bookMarkQuery, [user_id,job_post_id,0,reason], async (err, result) => {
+                connection.query(bookMarkQuery, [user_id, job_post_id, 0, reason], async (err, result) => {
                     if (err) {
                         return response.status(200).json({ success: false, msg: languageMessage.jobReportUnsuccess, key: err });
                     }
@@ -2664,67 +2739,67 @@ const reportOnJob = async (request, response) => {
 }
 //get customer job fiter
 const customerJobFilter = (request, response) => {
-    const {user_id,category,sub_category} = request.body;
-    if (!user_id ||!category ||!sub_category) {
+    const { user_id, category, sub_category } = request.body;
+    if (!user_id || !category || !sub_category) {
         return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param });
     }
     try {
         const query1 = "SELECT mobile, active_flag FROM user_master WHERE user_id = ? AND delete_flag = 0";
         const values1 = [user_id];
         connection.query(query1, values1, async (err, result) => {
-            if(err){
+            if (err) {
                 return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
             }
             if (result.length === 0) {
                 return response.status(200).json({ success: false, msg: languageMessage.userNotFound });
             }
             if (result[0]?.active_flag === 0) {
-                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated ,active_status:0});
+                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
             }
-            
-           
-            const userjobPost = await getCustomerJobFilter(user_id,category,sub_category);
-            
-            return response.status(200).json({ success: true, msg: languageMessage.dataFound,userjobPost:userjobPost})
-           
+
+
+            const userjobPost = await getCustomerJobFilter(user_id, category, sub_category);
+
+            return response.status(200).json({ success: true, msg: languageMessage.dataFound, userjobPost: userjobPost })
+
         });
-    } catch (err){
+    } catch (err) {
         return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
     }
 }
 //get expert job fiter
 const expertJobFilter = (request, response) => {
-    const {user_id,category,sub_category} = request.body;
-    if (!user_id ||!category ||!sub_category) {
+    const { user_id, category, sub_category } = request.body;
+    if (!user_id || !category || !sub_category) {
         return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param });
     }
     try {
         const query1 = "SELECT mobile, active_flag FROM user_master WHERE user_id = ? AND delete_flag = 0";
         const values1 = [user_id];
         connection.query(query1, values1, async (err, result) => {
-            if(err){
+            if (err) {
                 return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
             }
             if (result.length === 0) {
                 return response.status(200).json({ success: false, msg: languageMessage.userNotFound });
             }
             if (result[0]?.active_flag === 0) {
-                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated ,active_status:0});
+                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
             }
-            
-           
-            const userjobPost = await getExpertJobFilter(user_id,category,sub_category);
-            
-            return response.status(200).json({ success: true, msg: languageMessage.dataFound,userjobPost:userjobPost})
-           
+
+
+            const userjobPost = await getExpertJobFilter(user_id, category, sub_category);
+
+            return response.status(200).json({ success: true, msg: languageMessage.dataFound, userjobPost: userjobPost })
+
         });
-    } catch (err){
+    } catch (err) {
         return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
     }
 }
 //create Job Cost
 const createJobCost = async (request, response) => {
-    let {user_id, job_post_id,project_cost} = request.body;
+    let { user_id, job_post_id, project_cost } = request.body;
     if (!user_id || !job_post_id || !project_cost) {
         return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param });
     }
@@ -2739,11 +2814,11 @@ const createJobCost = async (request, response) => {
                 return response.status(404).json({ success: false, msg: languageMessage.userNotFound });
             }
             if (userResult[0]?.active_flag === 0) {
-                return response.status(403).json({ success: false, msg: languageMessage.accountdeactivated ,active_status:0});
+                return response.status(403).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
             }
-            
+
             const checkJob = "SELECT job_post_id FROM job_post_master WHERE delete_flag = 0 AND job_post_id=? and user_id = ? and assign_expert_id!=0";
-            const jobvalues = [job_post_id,user_id];
+            const jobvalues = [job_post_id, user_id];
             connection.query(checkJob, jobvalues, (err, jobResult) => {
                 if (err) {
                     return response.status(500).json({ success: false, msg: languageMessage.jobNotFound, key: err.message });
@@ -2752,7 +2827,7 @@ const createJobCost = async (request, response) => {
                     return response.status(404).json({ success: false, msg: languageMessage.jobNotFound });
                 }
                 const bookMarkQuery = `UPDATE job_post_master SET project_cost = ?, updatetime = now(),status=2 WHERE job_post_id=? and user_id = ?`;
-                connection.query(bookMarkQuery, [project_cost,job_post_id,user_id], async (err, result) => {
+                connection.query(bookMarkQuery, [project_cost, job_post_id, user_id], async (err, result) => {
                     if (err) {
                         return response.status(200).json({ success: false, msg: languageMessage.projectCostUnsuccess, key: err });
                     }
@@ -2766,13 +2841,13 @@ const createJobCost = async (request, response) => {
 }
 //create Job milestone
 const createJobMilestone = async (request, response) => {
-    let {user_id, job_post_id,title,amount,duration,description,duration_type, pdf_file} = request.body;
+    let { user_id, job_post_id, title, amount, duration, description, duration_type, pdf_file } = request.body;
     // return response.status(200).json({ "check": request.body})
-    if (!user_id || !job_post_id || !title ||!description ||!amount ||!duration ||!duration_type) {
+    if (!user_id || !job_post_id || !title || !description || !amount || !duration || !duration_type) {
         return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param });
     }
-    
-   
+
+
     try {
         const query1 = "SELECT name,mobile, active_flag, wallet_balance FROM user_master WHERE user_id = ? AND delete_flag = 0";
         const values1 = [user_id];
@@ -2784,11 +2859,11 @@ const createJobMilestone = async (request, response) => {
                 return response.status(404).json({ success: false, msg: languageMessage.userNotFound });
             }
             if (userResult[0]?.active_flag === 0) {
-                return response.status(403).json({ success: false, msg: languageMessage.accountdeactivated ,active_status:0});
+                return response.status(403).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
             }
-            const user_name=userResult[0].name;
+            const user_name = userResult[0].name;
             const checkJob = "SELECT job_post_id,title,assign_expert_id FROM job_post_master WHERE delete_flag = 0 AND job_post_id=? and user_id = ? and assign_expert_id!=0";
-            const jobvalues = [job_post_id,user_id];
+            const jobvalues = [job_post_id, user_id];
             connection.query(checkJob, jobvalues, (err, jobResult) => {
                 if (err) {
                     return response.status(500).json({ success: false, msg: languageMessage.jobNotFound, key: err.message });
@@ -2796,11 +2871,11 @@ const createJobMilestone = async (request, response) => {
                 if (jobResult.length === 0) {
                     return response.status(404).json({ success: false, msg: languageMessage.jobNotFound });
                 }
-                const project_title=jobResult[0].title;
-                const other_user_id=jobResult[0].assign_expert_id;
+                const project_title = jobResult[0].title;
+                const other_user_id = jobResult[0].assign_expert_id;
                 const bookMarkQuery = `INSERT INTO milestone_master(job_post_id,price,duration,description,file,title,duration_type,createtime,updatetime)
                 VALUES (?,?,?,?,?,?,?,now(),now())`;
-                connection.query(bookMarkQuery, [job_post_id,amount,duration,description,pdf_file,title,duration_type], async (err, result) => {
+                connection.query(bookMarkQuery, [job_post_id, amount, duration, description, pdf_file, title, duration_type], async (err, result) => {
                     if (err) {
                         return response.status(200).json({ success: false, msg: languageMessage.milestoneCreateUnsuccess, key: err });
                     }
@@ -2816,17 +2891,17 @@ const createJobMilestone = async (request, response) => {
                     const message_2 = messages;
                     const message_3 = messages;
                     const message_4 = messages;
-                    const action_data = {user_id: user_id_notification,other_user_id: other_user_id_notification,action_id: action_id,action: action};
-                    await getNotificationArrSingle(user_id_notification,other_user_id_notification,action,action_id,title,title_2,title_3,title_4,messages,message_2,message_3,message_4,action_data, async (notification_arr_check) => {
+                    const action_data = { user_id: user_id_notification, other_user_id: other_user_id_notification, action_id: action_id, action: action };
+                    await getNotificationArrSingle(user_id_notification, other_user_id_notification, action, action_id, title, title_2, title_3, title_4, messages, message_2, message_3, message_4, action_data, async (notification_arr_check) => {
                         let notification_arr_check_new = [notification_arr_check];
-                        
-                        if(notification_arr_check_new && notification_arr_check_new.length !== 0 && notification_arr_check_new!=''){
+
+                        if (notification_arr_check_new && notification_arr_check_new.length !== 0 && notification_arr_check_new != '') {
                             const notiSendStatus = await oneSignalNotificationSendCall(notification_arr_check_new);
-                            
-                        }else{
+
+                        } else {
                             console.log("Notification array is empty");
                         }
-                    
+
                     });
                     return response.status(200).json({ success: true, msg: languageMessage.milestoneCreateSuccess });
                 });
@@ -2838,41 +2913,41 @@ const createJobMilestone = async (request, response) => {
 }
 //get job milestone
 const getJobWorkMilestone = (request, response) => {
-    const {user_id,job_post_id} = request.query;
-    if (!user_id ||!job_post_id) {
+    const { user_id, job_post_id } = request.query;
+    if (!user_id || !job_post_id) {
         return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param });
     }
     try {
         const query1 = "SELECT mobile, active_flag FROM user_master WHERE user_id = ? AND delete_flag = 0";
         const values1 = [user_id];
         connection.query(query1, values1, async (err, result) => {
-            if(err){
+            if (err) {
                 return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
             }
             if (result.length === 0) {
                 return response.status(200).json({ success: false, msg: languageMessage.userNotFound });
             }
             if (result[0]?.active_flag === 0) {
-                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated ,active_status:0});
+                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
             }
             const jobMilestone = await getJobMilestone(job_post_id);
             const jobWorkSpace = await getJobWorkSpace(job_post_id);
-            return response.status(200).json({ success: true, msg: languageMessage.dataFound,jobWorkSpace:jobWorkSpace,jobMilestone:jobMilestone});
-           
+            return response.status(200).json({ success: true, msg: languageMessage.dataFound, jobWorkSpace: jobWorkSpace, jobMilestone: jobMilestone });
         });
-    } catch (err){
+    } catch (err) {
         return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
     }
 }
+
 //update 
 const acceptRejectMilestone = async (request, response) => {
-    let {user_id, milestone_id,type,reject_reason} = request.body;
+    let { user_id, milestone_id, type, reject_reason } = request.body;
     if (!user_id || !milestone_id || !type) {
         return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param });
     }
-    if(type==2){
+    if (type == 2) {
         if (!reject_reason) {
-            return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param,reject_reason:'reject_reason' });
+            return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, reject_reason: 'reject_reason' });
         }
     }
     try {
@@ -2886,9 +2961,9 @@ const acceptRejectMilestone = async (request, response) => {
                 return response.status(404).json({ success: false, msg: languageMessage.userNotFound });
             }
             if (userResult[0]?.active_flag === 0) {
-                return response.status(403).json({ success: false, msg: languageMessage.accountdeactivated ,active_status:0});
+                return response.status(403).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
             }
-            const user_name=userResult[0].name;
+            const user_name = userResult[0].name;
             const checkMilestone = "SELECT job_post_id FROM milestone_master WHERE delete_flag = 0 AND milestone_id=? and milestone_status=0";
             const milestonevalues = [milestone_id];
             connection.query(checkMilestone, milestonevalues, (err, milestoneResult) => {
@@ -2899,7 +2974,7 @@ const acceptRejectMilestone = async (request, response) => {
                     return response.status(404).json({ success: false, msg: languageMessage.WorkSpaceNotFound });
                 }
                 const checkJob = "SELECT user_id,title FROM job_post_master WHERE delete_flag = 0 AND job_post_id=? and assign_expert_id=?";
-                const jobvalues = [milestoneResult[0].job_post_id,user_id];
+                const jobvalues = [milestoneResult[0].job_post_id, user_id];
                 connection.query(checkJob, jobvalues, (err, jobResult) => {
                     if (err) {
                         return response.status(500).json({ success: false, msg: languageMessage.jobNotFound, key: err.message });
@@ -2907,24 +2982,24 @@ const acceptRejectMilestone = async (request, response) => {
                     if (jobResult.length === 0) {
                         return response.status(404).json({ success: false, msg: languageMessage.jobNotFound });
                     }
-                    const project_title=jobResult[0].title;
+                    const project_title = jobResult[0].title;
                     let updateMilestone;
                     let updateValue;
-                    if(type==1){
+                    if (type == 1) {
                         updateMilestone = `UPDATE milestone_master SET milestone_status=?,updatetime = now() WHERE milestone_id=?`;
-                        updateValue=[type,milestone_id];
-                    }else{
+                        updateValue = [type, milestone_id];
+                    } else {
                         updateMilestone = `UPDATE milestone_master SET milestone_status=?,reject_reason=?,updatetime = now() WHERE milestone_id=?`;
-                        updateValue=[type,reject_reason,milestone_id];
+                        updateValue = [type, reject_reason, milestone_id];
                     }
                     connection.query(updateMilestone, updateValue, async (err, updateResult) => {
                         if (err) {
-                            if(type==1){
+                            if (type == 1) {
                                 return response.status(200).json({ success: false, msg: languageMessage.WorkAcceptUnsuccess, key: err });
-                            }else{
+                            } else {
                                 return response.status(200).json({ success: false, msg: languageMessage.WorkRejectUnsuccess, key: err });
                             }
-                            
+
                         }
                         const user_id_notification = user_id;
                         const other_user_id_notification = jobResult[0].user_id;
@@ -2932,11 +3007,11 @@ const acceptRejectMilestone = async (request, response) => {
                         let action;
                         let title;
                         let messages;
-                        if(type==1){
+                        if (type == 1) {
                             action = "accept_milestone";
                             title = "Milestone Accepted";
                             messages = `${user_name} has accepted work space for the project ${project_title}`;
-                        }else{
+                        } else {
                             action = "reject_milestone";
                             title = "Milestone Rejected";
                             messages = `${user_name} has rejected work space for the project ${project_title}`;
@@ -2947,21 +3022,21 @@ const acceptRejectMilestone = async (request, response) => {
                         const message_2 = messages;
                         const message_3 = messages;
                         const message_4 = messages;
-                        const action_data = {user_id: user_id_notification,other_user_id: other_user_id_notification,action_id: action_id,action: action};
-                        await getNotificationArrSingle(user_id_notification,other_user_id_notification,action,action_id,title,title_2,title_3,title_4,messages,message_2,message_3,message_4,action_data, async (notification_arr_check) => {
+                        const action_data = { user_id: user_id_notification, other_user_id: other_user_id_notification, action_id: action_id, action: action };
+                        await getNotificationArrSingle(user_id_notification, other_user_id_notification, action, action_id, title, title_2, title_3, title_4, messages, message_2, message_3, message_4, action_data, async (notification_arr_check) => {
                             let notification_arr_check_new = [notification_arr_check];
-                            
-                            if(notification_arr_check_new && notification_arr_check_new.length !== 0 && notification_arr_check_new!=''){
+
+                            if (notification_arr_check_new && notification_arr_check_new.length !== 0 && notification_arr_check_new != '') {
                                 const notiSendStatus = await oneSignalNotificationSendCall(notification_arr_check_new);
-                                
-                            }else{
+
+                            } else {
                                 console.log("Notification array is empty");
                             }
-                        
+
                         });
-                        if(type==1){
+                        if (type == 1) {
                             return response.status(200).json({ success: true, msg: languageMessage.WorkAcceptSuccess });
-                        }else{
+                        } else {
                             return response.status(200).json({ success: true, msg: languageMessage.WorkRejectSuccess });
                         }
                     });
@@ -2974,11 +3049,11 @@ const acceptRejectMilestone = async (request, response) => {
 }
 //sent milestone request
 const sentMilestoneRequest = async (request, response) => {
-    let {user_id, milestone_id} = request.body;
+    let { user_id, milestone_id } = request.body;
     if (!user_id || !milestone_id) {
         return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param });
     }
-    
+
     try {
         const query1 = "SELECT name,mobile, active_flag, wallet_balance FROM user_master WHERE user_id = ? AND delete_flag = 0";
         const values1 = [user_id];
@@ -2990,9 +3065,9 @@ const sentMilestoneRequest = async (request, response) => {
                 return response.status(404).json({ success: false, msg: languageMessage.userNotFound });
             }
             if (userResult[0]?.active_flag === 0) {
-                return response.status(403).json({ success: false, msg: languageMessage.accountdeactivated ,active_status:0});
+                return response.status(403).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
             }
-            const user_name=userResult[0].name;
+            const user_name = userResult[0].name;
             const checkMilestone = "SELECT job_post_id FROM milestone_master WHERE delete_flag = 0 AND milestone_id=? and milestone_status=7";
             const milestonevalues = [milestone_id];
             connection.query(checkMilestone, milestonevalues, (err, milestoneResult) => {
@@ -3003,7 +3078,7 @@ const sentMilestoneRequest = async (request, response) => {
                     return response.status(200).json({ success: false, msg: languageMessage.WorkSpaceNotFound });
                 }
                 const checkJob = "SELECT user_id,title FROM job_post_master WHERE delete_flag = 0 AND job_post_id=? and assign_expert_id=?";
-                const jobvalues = [milestoneResult[0].job_post_id,user_id];
+                const jobvalues = [milestoneResult[0].job_post_id, user_id];
                 connection.query(checkJob, jobvalues, (err, jobResult) => {
                     if (err) {
                         return response.status(500).json({ success: false, msg: languageMessage.jobNotFound, key: err.message });
@@ -3011,11 +3086,11 @@ const sentMilestoneRequest = async (request, response) => {
                     if (jobResult.length === 0) {
                         return response.status(200).json({ success: false, msg: languageMessage.jobNotFound });
                     }
-                    const project_title=jobResult[0].title;
-                   
+                    const project_title = jobResult[0].title;
+
                     const updateMilestone = `UPDATE milestone_master SET milestone_status=3,updatetime = now() WHERE milestone_id=?`;
-                    const updateValue=[milestone_id];
-                    
+                    const updateValue = [milestone_id];
+
                     connection.query(updateMilestone, updateValue, async (err, updateResult) => {
                         if (err) {
                             return response.status(200).json({ success: false, msg: languageMessage.milestoneRequestUnsuccess, key: err });
@@ -3023,28 +3098,28 @@ const sentMilestoneRequest = async (request, response) => {
                         const user_id_notification = user_id;
                         const other_user_id_notification = jobResult[0].user_id;
                         const action_id = milestone_id;
-                        
+
                         const action = "milestone_request";
                         const title = "Milestone Request";
                         const messages = `${user_name} has sent a milestone request for the project ${project_title}`;
-                       
+
                         const title_2 = title;
                         const title_3 = title;
                         const title_4 = title;
                         const message_2 = messages;
                         const message_3 = messages;
                         const message_4 = messages;
-                        const action_data = {user_id: user_id_notification,other_user_id: other_user_id_notification,action_id: action_id,action: action};
-                        await getNotificationArrSingle(user_id_notification,other_user_id_notification,action,action_id,title,title_2,title_3,title_4,messages,message_2,message_3,message_4,action_data, async (notification_arr_check) => {
+                        const action_data = { user_id: user_id_notification, other_user_id: other_user_id_notification, action_id: action_id, action: action };
+                        await getNotificationArrSingle(user_id_notification, other_user_id_notification, action, action_id, title, title_2, title_3, title_4, messages, message_2, message_3, message_4, action_data, async (notification_arr_check) => {
                             let notification_arr_check_new = [notification_arr_check];
-                            
-                            if(notification_arr_check_new && notification_arr_check_new.length !== 0 && notification_arr_check_new!=''){
+
+                            if (notification_arr_check_new && notification_arr_check_new.length !== 0 && notification_arr_check_new != '') {
                                 const notiSendStatus = await oneSignalNotificationSendCall(notification_arr_check_new);
-                                
-                            }else{
+
+                            } else {
                                 console.log("Notification array is empty");
                             }
-                        
+
                         });
                         return response.status(200).json({ success: true, msg: languageMessage.milestoneRequestSuccess });
                     });
@@ -3057,30 +3132,30 @@ const sentMilestoneRequest = async (request, response) => {
 }
 //milestone request release,cancel,dispute 
 const checkMilestoneRequest = async (request, response) => {
-    let {user_id,milestone_id,type,cancel_reason,dispute_title,dispute_description,dispute_amount,dispute_file} = request.body;
-    if (!user_id || !milestone_id || !type ) {
+    let { user_id, milestone_id, type, cancel_reason, dispute_title, dispute_description, dispute_amount, dispute_file } = request.body;
+    if (!user_id || !milestone_id || !type) {
         return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param });
     }
-    if(type==6){
-        if(!cancel_reason){
-            return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param,'key':'cancel_reason'});
+    if (type == 6) {
+        if (!cancel_reason) {
+            return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, 'key': 'cancel_reason' });
         }
     }
-    if(type==5){
-        if(!dispute_title){
-            return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param,'key':'dispute_title'});
+    if (type == 5) {
+        if (!dispute_title) {
+            return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, 'key': 'dispute_title' });
         }
-        if(!dispute_description){
-            return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param,'key':'dispute_description'});
+        if (!dispute_description) {
+            return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, 'key': 'dispute_description' });
         }
-        if(!dispute_amount){
-            return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param,'key':'dispute_amount'});
+        if (!dispute_amount) {
+            return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, 'key': 'dispute_amount' });
         }
-        if(!dispute_file){
-            return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param,'key':'dispute_file'});
+        if (!dispute_file) {
+            return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, 'key': 'dispute_file' });
         }
     }
-    
+
     try {
         const query1 = "SELECT name,mobile, active_flag, wallet_balance FROM user_master WHERE user_id = ? AND delete_flag = 0";
         const values1 = [user_id];
@@ -3092,9 +3167,9 @@ const checkMilestoneRequest = async (request, response) => {
                 return response.status(404).json({ success: false, msg: languageMessage.userNotFound });
             }
             if (userResult[0]?.active_flag === 0) {
-                return response.status(403).json({ success: false, msg: languageMessage.accountdeactivated ,active_status:0});
+                return response.status(403).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
             }
-            const user_name=userResult[0].name;
+            const user_name = userResult[0].name;
             const checkMilestone = "SELECT job_post_id FROM milestone_master WHERE delete_flag = 0 AND milestone_id=? and milestone_status=3";
             const milestonevalues = [milestone_id];
             connection.query(checkMilestone, milestonevalues, (err, milestoneResult) => {
@@ -3105,7 +3180,7 @@ const checkMilestoneRequest = async (request, response) => {
                     return response.status(404).json({ success: false, msg: languageMessage.WorkSpaceNotFound });
                 }
                 const checkJob = "SELECT assign_expert_id,title FROM job_post_master WHERE delete_flag = 0 AND job_post_id=? and user_id=?";
-                const jobvalues = [milestoneResult[0].job_post_id,user_id];
+                const jobvalues = [milestoneResult[0].job_post_id, user_id];
                 connection.query(checkJob, jobvalues, (err, jobResult) => {
                     if (err) {
                         return response.status(500).json({ success: false, msg: languageMessage.jobNotFound, key: err.message });
@@ -3113,32 +3188,35 @@ const checkMilestoneRequest = async (request, response) => {
                     if (jobResult.length === 0) {
                         return response.status(404).json({ success: false, msg: languageMessage.jobNotFound });
                     }
-                    const project_title=jobResult[0].title;
+                    const project_title = jobResult[0].title;
                     let updateMilestone;
                     let updateValue;
-                    if(type==4){
+                    if (type == 4) {
                         updateMilestone = `UPDATE milestone_master SET milestone_status=?,updatetime = now() WHERE milestone_id=?`;
-                        updateValue=[type,milestone_id];
-                    }if(type==5){
+                        updateValue = [type, milestone_id];
+
+
+
+                    } if (type == 5) {
                         updateMilestone = `UPDATE milestone_master SET milestone_status=?,dispute_title=?,dispute_description=?,dispute_amount=?,dispute_file=?,updatetime = now() WHERE milestone_id=?`;
-                        updateValue=[type,dispute_title,dispute_description,dispute_amount,dispute_file,milestone_id];
+                        updateValue = [type, dispute_title, dispute_description, dispute_amount, dispute_file, milestone_id];
                     }
-                    if(type==6){
+                    if (type == 6) {
                         updateMilestone = `UPDATE milestone_master SET milestone_status=?,reject_reason=?,updatetime = now() WHERE milestone_id=?`;
-                        updateValue=[type,cancel_reason,milestone_id];
+                        updateValue = [type, cancel_reason, milestone_id];
                     }
                     connection.query(updateMilestone, updateValue, async (err, updateResult) => {
                         if (err) {
-                            if(type==4){
+                            if (type == 4) {
                                 return response.status(200).json({ success: false, msg: languageMessage.milestoneReleaseUnsuccess, key: err });
                             }
-                            if(type==5){
+                            if (type == 5) {
                                 return response.status(200).json({ success: false, msg: languageMessage.milestoneDisputeUnsuccess, key: err });
                             }
-                            if(type==6){
+                            if (type == 6) {
                                 return response.status(200).json({ success: false, msg: languageMessage.milestoneCancelUnsuccess, key: err });
                             }
-                            
+
                         }
                         const user_id_notification = user_id;
                         const other_user_id_notification = jobResult[0].assign_expert_id;
@@ -3146,16 +3224,16 @@ const checkMilestoneRequest = async (request, response) => {
                         let action;
                         let title;
                         let messages;
-                        if(type==4){
+                        if (type == 4) {
                             action = "milestone_release";
                             title = "Milestone Release";
                             messages = `${user_name} has release milestone for the project ${project_title}`;
-                        }if(type==5){
+                        } if (type == 5) {
                             action = "milestone_dipute";
                             title = "Milestone Dispute";
                             messages = `${user_name} has dipute milestone for the project ${project_title}`;
                         }
-                        if(type==6){
+                        if (type == 6) {
                             action = "milestone_cancel";
                             title = "Milestone Cancelled";
                             messages = `${user_name} has cancel milestone for the project ${project_title}`;
@@ -3166,24 +3244,25 @@ const checkMilestoneRequest = async (request, response) => {
                         const message_2 = messages;
                         const message_3 = messages;
                         const message_4 = messages;
-                        const action_data = {user_id: user_id_notification,other_user_id: other_user_id_notification,action_id: action_id,action: action};
-                        await getNotificationArrSingle(user_id_notification,other_user_id_notification,action,action_id,title,title_2,title_3,title_4,messages,message_2,message_3,message_4,action_data, async (notification_arr_check) => {
+                        const action_data = { user_id: user_id_notification, other_user_id: other_user_id_notification, action_id: action_id, action: action };
+                        await getNotificationArrSingle(user_id_notification, other_user_id_notification, action, action_id, title, title_2, title_3, title_4, messages, message_2, message_3, message_4, action_data, async (notification_arr_check) => {
                             let notification_arr_check_new = [notification_arr_check];
-                            
-                            if(notification_arr_check_new && notification_arr_check_new.length !== 0 && notification_arr_check_new!=''){
+
+                            if (notification_arr_check_new && notification_arr_check_new.length !== 0 && notification_arr_check_new != '') {
                                 const notiSendStatus = await oneSignalNotificationSendCall(notification_arr_check_new);
-                                
-                            }else{
+
+                            } else {
                                 console.log("Notification array is empty");
                             }
                         });
-                        if(type==4){
-                            return response.status(200).json({ success: true, msg: languageMessage.milestoneReleaseSuccess });
+                        if (type == 4) {
+                            var expert_earning = await getExpertEarningg(milestone_id, user_id);
+                            return response.status(200).json({ success: true, msg: languageMessage.milestoneReleaseSuccess, expert_earning_id: expert_earning });
                         }
-                        if(type==5){
+                        if (type == 5) {
                             return response.status(200).json({ success: true, msg: languageMessage.milestoneDisputeSuccess });
                         }
-                        if(type==6){
+                        if (type == 6) {
                             return response.status(200).json({ success: true, msg: languageMessage.milestoneCancelSuccess });
                         }
                     });
@@ -3214,14 +3293,16 @@ const getExpertJobDetails = async (request, response) => {
                 return response.status(200).json({ success: false, msg: languageMessage.userNotFound });
             }
             if (result[0]?.active_flag === 0) {
-                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated ,active_status:0});
+                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
             }
-            let check_hire_expert_id=0;
-            const query2 = `SELECT job_post_id, user_id, assign_expert_id, title, category, sub_category, max_price, min_price, duration, status, createtime, updatetime,description,duration_type,project_cost FROM job_post_master WHERE job_post_id = ? AND delete_flag = 0`;
+
+            let check_hire_expert_id = 0;
+            const query2 = `SELECT job_post_id, user_id, status, assign_expert_id, title, category, sub_category, max_price, min_price, duration, status, createtime, updatetime,description, duration_type,project_cost FROM job_post_master WHERE job_post_id = ? AND delete_flag = 0`;
             connection.query(query2, [job_post_id], async (err, jobPosts) => {
                 if (err) {
                     return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
                 }
+
                 if (jobPosts.length === 0) {
                     return response.status(200).json({ success: false, msg: languageMessage.dataNotFound });
                 }
@@ -3261,6 +3342,7 @@ const getExpertJobDetails = async (request, response) => {
                                 resolve(err ? null : result[0]?.name);
                             });
                         });
+
                         // Fetch user image
                         const userImageQuery = "SELECT image FROM user_master WHERE user_id = ? AND delete_flag = 0";
                         const userimage = await new Promise((resolve) => {
@@ -3280,47 +3362,50 @@ const getExpertJobDetails = async (request, response) => {
                                 }
                             });
                         });
-                        check_hire_expert_id=job.assign_expert_id;
+                        check_hire_expert_id = job.assign_expert_id;
+                        let jobstatus = job.status <= 2 ? true : false;
                         return {
-                            ...job,
+
+                            ...job, jobstatus,
                             sub_category: subCategory,
                             category: category,
                             city: city,
                             userName: userName,
                             userimage: userimage,
                             posted_time: getRelativeTime(job.createtime),
-                            duration_type_labe:'1=days,2=month,3=year',
+                            duration_type_labe: '1=days,2=month,3=year',
                             file_name: jobdocument,
-                            
+                            // status: status,
+
                         };
                     })
                 );
                 // Fetch expert bid data
                 let querybid;
                 let bidValues;
-               
+
                 querybid = "SELECT bid_id, expert_id, price, duration, files, createtime,status,duration_type FROM bid_master WHERE job_post_id = ? AND delete_flag = 0 and expert_id=?";
-                bidValues=[job_post_id,user_id];
-                
+                bidValues = [job_post_id, user_id];
+
                 connection.query(querybid, bidValues, (err, bidResult) => {
                     if (err) {
                         return response.status(500).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
                     }
-                    let bidsDataArray='NA';
+                    let bidsDataArray = 'NA';
                     if (bidResult.length === 0) {
-                        return response.status(200).json({ success: true, msg: languageMessage.dataFound, expertDetails: jobPostDetails,bidsDataArray:bidsDataArray,bidcount:bidResult.length});
+                        return response.status(200).json({ success: true, msg: languageMessage.dataFound, expertDetails: jobPostDetails, bidsDataArray: bidsDataArray, bidcount: bidResult.length });
                     }
                     let finalBidResult = [];
                     let processedCount = 0;
                     bidResult.forEach((bidItem) => {
                         const expertQuery = "SELECT user_id, name, image FROM user_master WHERE delete_flag = 0 AND user_id = ?";
-                        connection.query(expertQuery, [bidItem.expert_id], async(err, expertResult) => {
+                        connection.query(expertQuery, [bidItem.expert_id], async (err, expertResult) => {
                             if (err) {
                                 return response.status(500).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
                             }
                             const expertbidDetails = expertResult.length > 0 ? expertResult[0] : null;
-                            const expert_name=expertResult[0].name;
-                            const status_label='0=pending,1=hired';
+                            const expert_name = expertResult[0].name;
+                            const status_label = '0=pending,1=hired';
                             const expert_image = expertResult[0].image ? expertResult[0].image : "NA";
                             const averageResult = await getAvgRating(bidItem.expert_id); // Wait for the promise to resolve
                             const average_rating = averageResult.average_rating || 0;
@@ -3331,17 +3416,17 @@ const getExpertJobDetails = async (request, response) => {
                                 status_label,
                                 posted_time: getRelativeTime(bidItem.createtime),
                                 avg_rating: parseFloat(average_rating.toFixed(1)),
-                                duration_type_labe:'1=days,2=month,3=year',
-                                check_hire_expert_id:check_hire_expert_id
+                                duration_type_labe: '1=days,2=month,3=year',
+                                check_hire_expert_id: check_hire_expert_id
                             });
                             processedCount++;
                             if (processedCount === bidResult.length) {
-                                bidsDataArray=finalBidResult;
-                                return response.status(200).json({ success: true, msg: languageMessage.dataFound, expertDetails: jobPostDetails,bidsDataArray:bidsDataArray});
+                                bidsDataArray = finalBidResult;
+                                return response.status(200).json({ success: true, msg: languageMessage.dataFound, expertDetails: jobPostDetails, bidsDataArray: bidsDataArray });
                             }
                         });
                     });
-                    
+
                 });
             });
         });
@@ -3352,31 +3437,31 @@ const getExpertJobDetails = async (request, response) => {
 //end
 //get user details
 const getUserProfile = (request, response) => {
-    const {user_id} = request.query;
+    const { user_id } = request.query;
     if (!user_id) {
-        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param,key:'user_id'});
+        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'user_id' });
     }
     try {
         const query1 = "SELECT mobile, active_flag FROM user_master WHERE user_id = ? AND delete_flag = 0";
         const values1 = [user_id];
         connection.query(query1, values1, async (err, result) => {
-            if(err){
+            if (err) {
                 return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
             }
             if (result.length === 0) {
                 return response.status(200).json({ success: false, msg: languageMessage.userNotFound });
             }
             if (result[0]?.active_flag === 0) {
-                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated ,active_status:0});
+                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
             }
-            
-           
+
+
             const userDetails = await getUserDetails(user_id);
-            
-            return response.status(200).json({ success: true, msg: languageMessage.dataFound,userDetails:userDetails})
-           
+
+            return response.status(200).json({ success: true, msg: languageMessage.dataFound, userDetails: userDetails })
+
         });
-    } catch (err){
+    } catch (err) {
         return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
     }
 }
@@ -3394,10 +3479,10 @@ const downloadApp = async (request, response) => {
         <section>
             <div class="btn-holder">
                 <a class="btn" href="https://www.apple.com/in/app-store/" style="padding-left: 0;">
-                    <img alt="" src="https://youngdecade.org/2024/xpert/server/downloadImg/appstore.png">
+                    <img alt="" src="https://xpertnowbucket.s3.ap-south-1.amazonaws.com/uploads/1743657529575-appstore.png">
                 </a>
                 <a class="btn" href="https://play.google.com/store/apps">
-                    <img alt="" src="https://youngdecade.org/2024/xpert/server/downloadImg/googleplay.png">
+                    <img alt="" src="https://xpertnowbucket.s3.ap-south-1.amazonaws.com/uploads/1743657283582-googleplay.png">
                 </a>
             </div>
         </section>
@@ -3406,7 +3491,7 @@ const downloadApp = async (request, response) => {
   `
     );
 };
-const deepLink = async(request,response)=>{
+const deepLink = async (request, response) => {
     const get_link = request.query.link;
     response.send(`
       <!DOCTYPE html>
@@ -3443,7 +3528,7 @@ const deepLink = async(request,response)=>{
 }
 // Get Expert By Filter
 const getExpertByFilterSubLabel = async (request, response) => {
-    const { user_id, state, city, category, sub_category,sub_category_level,experience, rating,sub_two_level_category_id,sub_three_level_category_id} = request.body;
+    const { user_id, state, city, category, sub_category, sub_category_level, experience, rating, sub_two_level_category_id, sub_three_level_category_id } = request.body;
     if (!user_id) {
         return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param });
     }
@@ -3463,29 +3548,29 @@ const getExpertByFilterSubLabel = async (request, response) => {
                 return response.status(200).json({ success: false, msg: languageMessage.userNotFound });
             }
             if (result[0]?.active_flag === 0) {
-                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated ,active_status:0});
+                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
             }
-            
+
             // Prepare query for experts
             let query2 = `SELECT user_id as expert_id FROM user_master WHERE delete_flag = 0 AND active_flag = 1 AND user_type = 2 and expert_status=1`;
             let value2 = [];
-            if(state){
+            if (state) {
                 query2 += " AND state = ?";
                 value2.push((state));
             }
-            if(city){
+            if (city) {
                 query2 += " AND city = ?";
                 value2.push((city));
             }
-            if(category){
+            if (category) {
                 query2 += " AND category = ?";
                 value2.push((category));
             }
-            if(sub_category){
+            if (sub_category) {
                 query2 += " AND sub_category = ?";
                 value2.push((sub_category));
             }
-            if(sub_category_level){
+            if (sub_category_level) {
                 query2 += " AND FIND_IN_SET(?, sub_category_level)";
                 value2.push((sub_category_level));
             }
@@ -3493,11 +3578,11 @@ const getExpertByFilterSubLabel = async (request, response) => {
                 query2 += " AND experience >= ? AND experience < ?";
                 value2.push(Number(experience), Number(experience) + 1);
             }
-            if(sub_two_level_category_id){
+            if (sub_two_level_category_id) {
                 query2 += " AND sub_two_level_category_id = ?";
                 value2.push((sub_two_level_category_id));
             }
-            if(sub_three_level_category_id){
+            if (sub_three_level_category_id) {
                 query2 += " AND sub_three_level_category_id = ?";
                 value2.push((sub_three_level_category_id));
             }
@@ -3542,33 +3627,33 @@ const getExpertByFilterSubLabel = async (request, response) => {
 //end
 //logout user
 const logOut = (request, response) => {
-    const {user_id} = request.query;
+    const { user_id } = request.query;
     if (!user_id) {
-        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param,key:'user_id'});
+        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'user_id' });
     }
     try {
         const query1 = "SELECT mobile, active_flag FROM user_master WHERE user_id = ? AND delete_flag = 0";
         const values1 = [user_id];
         connection.query(query1, values1, async (err, result) => {
-            if(err){
+            if (err) {
                 return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
             }
             if (result.length === 0) {
                 return response.status(200).json({ success: false, msg: languageMessage.userNotFound });
             }
             if (result[0]?.active_flag === 0) {
-                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated ,active_status:0});
+                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
             }
-            
-            
-                const delete_query = "DELETE FROM `user_notification` WHERE user_id = ? AND delete_flag = 0";
-                const delete_values = [user_id];
-                connection.query(delete_query, delete_values, async (err, delete_result) => {
-                    return response.status(200).json({ success: true, msg: languageMessage.logOutSuccess});
-                });
-            
+
+
+            const delete_query = "DELETE FROM `user_notification` WHERE user_id = ? AND delete_flag = 0";
+            const delete_values = [user_id];
+            connection.query(delete_query, delete_values, async (err, delete_result) => {
+                return response.status(200).json({ success: true, msg: languageMessage.logOutSuccess });
+            });
+
         });
-    } catch (err){
+    } catch (err) {
         return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
     }
 }
@@ -3583,7 +3668,7 @@ const chatFileUpload = async (request, response) => {
         const filePromises = files.map((f) => {
             return new Promise((resolve, reject) => {
                 const fileInsertQuery = `INSERT INTO chat_file_master (file, createtime, updatetime) VALUES (?, NOW(), NOW())`;
-                
+
                 connection.query(fileInsertQuery, [f.filename], (err, result) => {
                     if (err) {
                         reject(err);
@@ -3593,13 +3678,13 @@ const chatFileUpload = async (request, response) => {
                 });
             });
         });
-        try{
+        try {
             await Promise.all(filePromises);
             return response.status(200).json({ success: true, msg: languageMessage.fileUploadedSuccess });
-        }catch(err){
+        } catch (err) {
             return response.status(500).json({ success: false, msg: languageMessage.fileUploadedError, key: err.message });
         }
-    }else{
+    } else {
         return response.status(400).json({ success: false, msg: "No files uploaded", key: 'image' });
     }
 };
@@ -3611,7 +3696,7 @@ const getExpertCompletedJobs = async (request, response) => {
         return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param });
     }
     try {
-        const query1 = "SELECT mobile, active_flag FROM user_master WHERE user_id = ? AND delete_flag = 0 AND user_type=2";
+        const query1 = "SELECT mobile, active_flag FROM user_master WHERE user_id = ? AND delete_flag = 0";
         const values1 = [user_id];
         connection.query(query1, values1, async (err, result) => {
             if (err) {
@@ -3621,10 +3706,10 @@ const getExpertCompletedJobs = async (request, response) => {
                 return response.status(200).json({ success: false, msg: languageMessage.userNotFound });
             }
             if (result[0]?.active_flag === 0) {
-                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated ,active_status:0});
+                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
             }
             const query2 = `
-                SELECT job_post_id,user_id,title,category,sub_category,max_price,min_price,duration,duration_type,status, updatetime,createtime FROM job_post_master WHERE assign_expert_id = ? AND delete_flag = 0 and status=3`;
+                SELECT job_post_id,user_id,title,category,sub_category,max_price,min_price,duration,duration_type,status, updatetime,createtime FROM job_post_master WHERE user_id = ? AND delete_flag = 0 AND status=3`;
             connection.query(query2, [user_id], async (err, jobPosts) => {
                 if (err) {
                     return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
@@ -3651,11 +3736,11 @@ const getExpertCompletedJobs = async (request, response) => {
                         });
                         return {
                             ...job,
-                            subcategory_id:job.sub_category,
+                            subcategory_id: job.sub_category,
                             sub_category: subCategory,
-                            category_id:job.category,
+                            category_id: job.category,
                             category: category,
-                            duration_type_label:'1=days,2=month,3=year',
+                            duration_type_label: '1=days,2=month,3=year',
                             posted_time: getRelativeTime(job.createtime),
                         };
                     })
@@ -3671,13 +3756,13 @@ const getExpertCompletedJobs = async (request, response) => {
 // ADD Availability
 const add_availability = (req, res) => {
     const { user_id, day, status } = req.body;
-    if(!user_id){
+    if (!user_id) {
         return res.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: "user_id" });
     }
-    if(!day){
+    if (!day) {
         return res.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: "day" });
     }
-    if(!status){
+    if (!status) {
         return res.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: "status" });
     }
     const query1 = "SELECT mobile, active_flag FROM user_master WHERE user_id = ? AND delete_flag = 0 AND user_type=2";
@@ -3690,7 +3775,7 @@ const add_availability = (req, res) => {
             return response.status(200).json({ success: false, msg: languageMessage.userNotFound });
         }
         if (result[0]?.active_flag === 0) {
-            return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated ,active_status:0});
+            return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
         }
         const days = day.split(',').map(Number);
         const statuses = status.split(',').map(Number);
@@ -3704,7 +3789,7 @@ const add_availability = (req, res) => {
                     if (availabilityId) {
                         // Update existing availability
                         const updateQuery = `UPDATE availability_master SET status = ?, updatetime = NOW() WHERE availability_id = ?`;
-                        connection.query(updateQuery, [currentStatus,availabilityId], (updateErr) => {
+                        connection.query(updateQuery, [currentStatus, availabilityId], (updateErr) => {
                             if (updateErr) return reject(updateErr);
                             // Delete old slots only if status is 0
                             if (currentStatus === 0) {
@@ -3747,7 +3832,7 @@ const add_availability = (req, res) => {
                     // // Fetch user data after updating
                     // const userDetails = await getUserDetails(user_id);
                     // Send response with updated user data
-                    res.status(200).json({ success: true, msg: languageMessage.AvailibilityCreated});
+                    res.status(200).json({ success: true, msg: languageMessage.AvailibilityCreated });
                 } catch (err) {
                     console.error("Error updating availability status:", err);
                     res.status(200).json({ success: false, msg: languageMessage.internalServerError });
@@ -3778,7 +3863,7 @@ function insertSlots(availabilityId, body, day, resolve, reject) {
 }
 // EDIT Availability
 const edit_availability = (req, res) => {
-    const {user_id, day, status } = req.body;
+    const { user_id, day, status } = req.body;
     // Validate required fields
     if (!user_id) {
         return res.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: "user_id" });
@@ -3800,7 +3885,7 @@ const edit_availability = (req, res) => {
             return response.status(200).json({ success: false, msg: languageMessage.userNotFound });
         }
         if (result[0]?.active_flag === 0) {
-            return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated ,active_status:0});
+            return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
         }
         // Parse days and statuses
         const days = day.split(',').map(Number);
@@ -3885,7 +3970,7 @@ function clearSlots(availabilityId) {
     });
 }
 const get_available_slots = (request, response) => {
-    const {user_id } = request.query;
+    const { user_id } = request.query;
     try {
         if (!user_id) {
             return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: "user_id" });
@@ -3900,7 +3985,7 @@ const get_available_slots = (request, response) => {
                 return response.status(200).json({ success: false, msg: languageMessage.userNotFound });
             }
             if (result[0]?.active_flag === 0) {
-                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated ,active_status:0});
+                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
             }
             const getAvailableSlotsQuery = `SELECT a.availability_id,a.day, a.status,s.slot_id, s.start_time, s.end_time FROM availability_master AS a LEFT JOIN slot_master AS s ON s.availability_id = a.availability_id WHERE a.user_id = ? AND a.delete_flag = 0`;
             connection.query(getAvailableSlotsQuery, [user_id], (err, slots) => {
@@ -3910,89 +3995,89 @@ const get_available_slots = (request, response) => {
                 if (slots.length === 0) {
                     const dateList = [
                         {
-                          "id": 0,
-                          "day": "Mo",
-                          "addtime": [],
-                          "status": "1",
+                            "id": 0,
+                            "day": "Mo",
+                            "addtime": [],
+                            "status": "1",
                         },
                         {
-                          "id": 1,
-                          "day": "Tu",
-                          "addtime": [],
-                          "status": "1",
+                            "id": 1,
+                            "day": "Tu",
+                            "addtime": [],
+                            "status": "1",
                         },
                         {
-                          "id": 2,
-                          "day": "We",
-                          "addtime": [],
-                          "status": "1",
+                            "id": 2,
+                            "day": "We",
+                            "addtime": [],
+                            "status": "1",
                         },
                         {
-                          "id": 3,
-                          "day": "Th",
-                          "addtime": [],
-                          "status": "1",
+                            "id": 3,
+                            "day": "Th",
+                            "addtime": [],
+                            "status": "1",
                         },
                         {
-                          "id": 4,
-                          "day": "Fr",
-                          "addtime": [],
-                          "status": "1",
+                            "id": 4,
+                            "day": "Fr",
+                            "addtime": [],
+                            "status": "1",
                         },
                         {
-                          "id": 5,
-                          "day": "Sa",
-                          "addtime": [],
-                          "status": "1",
+                            "id": 5,
+                            "day": "Sa",
+                            "addtime": [],
+                            "status": "1",
                         },
                         {
-                          "id": 6,
-                          "day": "Su",
-                          "addtime": [],
-                          "status": "1",
+                            "id": 6,
+                            "day": "Su",
+                            "addtime": [],
+                            "status": "1",
                         },
-                      ];
+                    ];
                     return response.status(200).json({ success: true, msg: languageMessage.dataFound, available_slots: dateList });
                 }
                 // Format the response to group slots by day
                 const available_slots = slots.reduce((acc, slot) => {
-                    const {availability_id,day, status, slot_id,start_time, end_time } = slot;
+                    const { availability_id, day, status, slot_id, start_time, end_time } = slot;
                     let dayEntry = acc.find(item => item.id === day);
-                
+
                     const dayMap = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
                     const dayAbbreviation = dayMap[day];
-                
+
                     // Function to get the next occurrence of a specific weekday (0 = Monday, ..., 6 = Sunday)
                     const getNextDate = (targetDay) => {
                         const today = new Date();
                         let currentDay = today.getDay(); // JS: Sunday = 0, Monday = 1, ..., Saturday = 6
-                
+
                         // Convert JavaScript's day format to match your format (0 = Monday, ..., 6 = Sunday)
                         currentDay = (currentDay + 6) % 7; // Shifts Sunday (0) to (6), Monday (1) to (0), etc.
-                
+
                         let daysToAdd = targetDay - currentDay;
                         if (daysToAdd < 0) daysToAdd += 7; // If day has passed, move to next week's occurrence
-                
+
                         const nextDate = new Date();
                         nextDate.setDate(today.getDate() + daysToAdd);
                         return nextDate.toISOString().split('T')[0]; // Format: YYYY-MM-DD
                     };
-                
+
                     const date = getNextDate(day);
-                
-                    if(!dayEntry){
-                        dayEntry = {availability_id:availability_id, id: day, day: dayAbbreviation, date, addtime: [], status: status.toString() };
+
+                    if (!dayEntry) {
+                        dayEntry = { availability_id: availability_id, id: day, day: dayAbbreviation, date, addtime: [], status: status.toString() };
                         acc.push(dayEntry);
                     }
-                
+
                     if (status === 0 && start_time && end_time) {
-                        dayEntry.addtime.push({slot_id, start_time, end_time });
+                        dayEntry.addtime.push({ slot_id, start_time, end_time });
                     }
-                
+
                     return acc;
                 }, []);
-                
-                
+
+
                 return response.status(200).json({ success: true, msg: languageMessage.dataFound, available_slots });
             });
         });
@@ -4003,9 +4088,9 @@ const get_available_slots = (request, response) => {
 
 //book slot
 const userBookSlot = async (request, response) => {
-    let {user_id,expert_id,availability_id,slot_id,day,date,type} = request.body;
-   
-    if(!user_id || !expert_id || !availability_id || !slot_id || !day || !date) {
+    let { user_id, expert_id, availability_id, slot_id, day, date, type } = request.body;
+
+    if (!user_id || !expert_id || !availability_id || !slot_id || !day || !date) {
         return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param });
     }
     try {
@@ -4016,16 +4101,16 @@ const userBookSlot = async (request, response) => {
                 return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
             }
             if (result.length === 0) {
-                return response.status(200).json({ success: false, msg: languageMessage.userNotFound});
+                return response.status(200).json({ success: false, msg: languageMessage.userNotFound });
             }
             if (result[0]?.active_flag === 0) {
-                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated ,active_status:0});
+                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
             }
             //----------------------check availability---------------------------
             const availabilityquery = "SELECT status FROM availability_master WHERE user_id = ? AND delete_flag = 0 AND availability_id=?";
-            const availabilityvalues = [expert_id,availability_id];
+            const availabilityvalues = [expert_id, availability_id];
             connection.query(availabilityquery, availabilityvalues, async (err, availabilityresult) => {
-                if(err){
+                if (err) {
                     return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
                 }
                 if (availabilityresult.length === 0) {
@@ -4033,22 +4118,22 @@ const userBookSlot = async (request, response) => {
                 }
                 //----------------------check slot---------------------------
                 const slotquery = "SELECT slot_id FROM slot_master WHERE slot_id = ? AND delete_flag = 0 AND availability_id=?";
-                const slotvalues = [slot_id,availability_id];
+                const slotvalues = [slot_id, availability_id];
                 connection.query(slotquery, slotvalues, async (err, slotresult) => {
-                    if(err){
+                    if (err) {
                         return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
                     }
                     if (slotresult.length === 0) {
-                        return response.status(200).json({ success: false, msg: languageMessage.SlotNotFound});
+                        return response.status(200).json({ success: false, msg: languageMessage.SlotNotFound });
                     }
                     //-------------------book slot----------------------------
                     const bookQuery = `INSERT INTO slot_schedule_master (availability_id,user_id,expert_id,slot_id,day,date,type,createtime,updatetime) VALUES (?, ?, ?, ?, ?, ?, ?, now(),now())`;
-                    const bookvalues = [availability_id,user_id,expert_id,slot_id,day,date,type]
+                    const bookvalues = [availability_id, user_id, expert_id, slot_id, day, date, type]
                     connection.query(bookQuery, bookvalues, async (err, bookresult) => {
-                        if(err){
+                        if (err) {
                             return response.status(200).json({ success: false, msg: languageMessage.Slotbookerror, key: err });
                         }
-                        return response.status(200).json({ success: true, msg: languageMessage.Slotbooksuccess});
+                        return response.status(200).json({ success: true, msg: languageMessage.Slotbooksuccess });
                     });
                 });
             });
@@ -4059,8 +4144,8 @@ const userBookSlot = async (request, response) => {
 }
 
 const getExpertScheduleSlot = (request, response) => {
-    const {user_id } = request.query;
-    try{
+    const { user_id } = request.query;
+    try {
         if (!user_id) {
             return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: "user_id" });
         }
@@ -4075,18 +4160,18 @@ const getExpertScheduleSlot = (request, response) => {
                 return response.status(200).json({ success: false, msg: languageMessage.userNotFound });
             }
             if (result[0]?.active_flag === 0) {
-                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated ,active_status:0});
+                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
             }
 
             const getAvailableSlotsQuery = `SELECT s.slot_schedule_id,s.availability_id,s.user_id,s.expert_id,s.slot_id,s.day,DATE_FORMAT(s.date, '%Y-%m-%d') AS date,s.type,s.status,u.name,COALESCE(u.image, 'NA') AS image,u.mobile,sm.start_time,sm.end_time FROM slot_schedule_master s LEFT JOIN user_master u ON s.user_id = u.user_id LEFT JOIN slot_master sm ON s.slot_id = sm.slot_id WHERE s.delete_flag = 0 AND s.date >= ? AND s.expert_id = ? order by s.date asc`;
-            connection.query(getAvailableSlotsQuery, [current_date,user_id], (err, slots) => {
-                if(err){
+            connection.query(getAvailableSlotsQuery, [current_date, user_id], (err, slots) => {
+                if (err) {
                     return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err.message });
                 }
-                if(slots.length === 0){
-                    return response.status(200).json({ success: true, msg: languageMessage.dataFound,schedule_slot:'NA'});
+                if (slots.length === 0) {
+                    return response.status(200).json({ success: true, msg: languageMessage.dataFound, schedule_slot: 'NA' });
                 }
-                return response.status(200).json({ success: true, msg: languageMessage.dataFound,schedule_slot:slots});
+                return response.status(200).json({ success: true, msg: languageMessage.dataFound, schedule_slot: slots });
             });
         });
     } catch (error) {
@@ -4095,39 +4180,39 @@ const getExpertScheduleSlot = (request, response) => {
 };
 //--------------------------convert task to milestone--------------------------
 const convertIntoMilestone = async (request, response) => {
-    let {user_id, milestone_id} = request.body;
-    if(!user_id){
-        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param,'key':'user_id'});
+    let { user_id, milestone_id } = request.body;
+    if (!user_id) {
+        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, 'key': 'user_id' });
     }
-    if(!milestone_id){
-        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param,'key':'milestone_id'});
+    if (!milestone_id) {
+        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, 'key': 'milestone_id' });
     }
-    
-    try{
+
+    try {
         const query1 = "SELECT name,mobile, active_flag, wallet_balance FROM user_master WHERE user_id = ? AND delete_flag = 0";
         const values1 = [user_id];
         connection.query(query1, values1, (err, userResult) => {
-            if(err){
+            if (err) {
                 return response.status(500).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
             }
-            if(userResult.length === 0){
+            if (userResult.length === 0) {
                 return response.status(404).json({ success: false, msg: languageMessage.userNotFound });
             }
-            if(userResult[0]?.active_flag === 0){
-                return response.status(403).json({ success: false, msg: languageMessage.accountdeactivated ,active_status:0});
+            if (userResult[0]?.active_flag === 0) {
+                return response.status(403).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
             }
-            const user_name=userResult[0].name;
+            const user_name = userResult[0].name;
             const checkMilestone = "SELECT job_post_id FROM milestone_master WHERE delete_flag = 0 AND milestone_id=? and milestone_status=1";
             const milestonevalues = [milestone_id];
-            connection.query(checkMilestone, milestonevalues, (err, milestoneResult) =>{
-                if(err){
+            connection.query(checkMilestone, milestonevalues, (err, milestoneResult) => {
+                if (err) {
                     return response.status(500).json({ success: false, msg: languageMessage.WorkSpaceNotFound, key: err.message });
                 }
-                if(milestoneResult.length === 0){
+                if (milestoneResult.length === 0) {
                     return response.status(404).json({ success: false, msg: languageMessage.WorkSpaceNotFound });
                 }
                 const checkJob = "SELECT assign_expert_id,title FROM job_post_master WHERE delete_flag = 0 AND job_post_id=? and user_id=?";
-                const jobvalues = [milestoneResult[0].job_post_id,user_id];
+                const jobvalues = [milestoneResult[0].job_post_id, user_id];
                 connection.query(checkJob, jobvalues, (err, jobResult) => {
                     if (err) {
                         return response.status(500).json({ success: false, msg: languageMessage.jobNotFound, key: err.message });
@@ -4135,41 +4220,41 @@ const convertIntoMilestone = async (request, response) => {
                     if (jobResult.length === 0) {
                         return response.status(404).json({ success: false, msg: languageMessage.jobNotFound });
                     }
-                    const project_title=jobResult[0].title;
+                    const project_title = jobResult[0].title;
                     const updateMilestone = `UPDATE milestone_master SET milestone_convert_status=1,milestone_status=7,updatetime = now() WHERE milestone_id=?`;
-                    const updateValue=[milestone_id];
+                    const updateValue = [milestone_id];
                     connection.query(updateMilestone, updateValue, async (err, updateResult) => {
-                        if(err){
+                        if (err) {
                             return response.status(200).json({ success: false, msg: languageMessage.convertMilestoneError, key: err });
                         }
                         const user_id_notification = user_id;
                         const other_user_id_notification = jobResult[0].assign_expert_id;
                         const action_id = milestone_id;
-                        
+
                         const action = "milestone_convert";
                         const title = "Milestone Converted";
                         const messages = `${user_name} has converted work space to milestone ${project_title}`;
-                        
+
                         const title_2 = title;
                         const title_3 = title;
                         const title_4 = title;
                         const message_2 = messages;
                         const message_3 = messages;
                         const message_4 = messages;
-                        const action_data = {user_id: user_id_notification,other_user_id: other_user_id_notification,action_id: action_id,action: action};
-                        await getNotificationArrSingle(user_id_notification,other_user_id_notification,action,action_id,title,title_2,title_3,title_4,messages,message_2,message_3,message_4,action_data, async (notification_arr_check) => {
+                        const action_data = { user_id: user_id_notification, other_user_id: other_user_id_notification, action_id: action_id, action: action };
+                        await getNotificationArrSingle(user_id_notification, other_user_id_notification, action, action_id, title, title_2, title_3, title_4, messages, message_2, message_3, message_4, action_data, async (notification_arr_check) => {
                             let notification_arr_check_new = [notification_arr_check];
-                            
-                            if(notification_arr_check_new && notification_arr_check_new.length !== 0 && notification_arr_check_new!=''){
+
+                            if (notification_arr_check_new && notification_arr_check_new.length !== 0 && notification_arr_check_new != '') {
                                 const notiSendStatus = await oneSignalNotificationSendCall(notification_arr_check_new);
-                                
-                            }else{
+
+                            } else {
                                 console.log("Notification array is empty");
                             }
                         });
-                        
+
                         return response.status(200).json({ success: true, msg: languageMessage.convertMilestoneSuccess });
-                        
+
                     });
                 });
             });
@@ -4181,31 +4266,31 @@ const convertIntoMilestone = async (request, response) => {
 
 //update Job milestone
 const updateJobMilestone = async (request, response) => {
-    let {user_id,milestone_id,title,amount,duration,description,duration_type,pdf_file} = request.body;
-   
-    if(!user_id){
-        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param,'key':'user_id'});
+    let { user_id, milestone_id, title, amount, duration, description, duration_type, pdf_file } = request.body;
+
+    if (!user_id) {
+        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, 'key': 'user_id' });
     }
-    if(!milestone_id){
-        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param,'key':'milestone_id'});
+    if (!milestone_id) {
+        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, 'key': 'milestone_id' });
     }
-    if(!title){
-        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param,'key':'title'});
+    if (!title) {
+        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, 'key': 'title' });
     }
-    if(!description){
-        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param,'key':'description'});
+    if (!description) {
+        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, 'key': 'description' });
     }
-    if(!amount){
-        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param,'key':'amount'});
+    if (!amount) {
+        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, 'key': 'amount' });
     }
-    if(!duration){
-        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param,'key':'duration'});
+    if (!duration) {
+        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, 'key': 'duration' });
     }
-    if(!duration_type){
-        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param,'key':'duration_type'});
+    if (!duration_type) {
+        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, 'key': 'duration_type' });
     }
-   
-    try{
+
+    try {
         const query1 = "SELECT name,active_flag FROM user_master WHERE user_id = ? AND delete_flag = 0";
         const values1 = [user_id];
         connection.query(query1, values1, (err, userResult) => {
@@ -4216,25 +4301,25 @@ const updateJobMilestone = async (request, response) => {
                 return response.status(404).json({ success: false, msg: languageMessage.userNotFound });
             }
             if (userResult[0]?.active_flag === 0) {
-                return response.status(403).json({ success: false, msg: languageMessage.accountdeactivated ,active_status:0});
+                return response.status(403).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
             }
-            
+
             const checkJob = "SELECT job_post_id FROM milestone_master WHERE delete_flag = 0 AND milestone_id=?";
             const jobvalues = [milestone_id];
             connection.query(checkJob, jobvalues, (err, jobResult) => {
-                if(err){
+                if (err) {
                     return response.status(500).json({ success: false, msg: languageMessage.jobNotFound, key: err.message });
                 }
-                if (jobResult.length === 0) {
+                if (jobResult.length == 0) {
                     return response.status(404).json({ success: false, msg: languageMessage.jobNotFound });
                 }
-                
+
                 const bookMarkQuery = `UPDATE milestone_master SET price=?,duration=?,description=?,title=?,duration_type=?,updatetime=now(),file=? WHERE delete_flag=0 AND milestone_id=?`;
-                connection.query(bookMarkQuery,[amount,duration,description,title,duration_type,pdf_file,milestone_id],async (err, result)=>{
-                    if(err){
+                connection.query(bookMarkQuery, [amount, duration, description, title, duration_type, pdf_file, milestone_id], async (err, result) => {
+                    if (err) {
                         return response.status(200).json({ success: false, msg: languageMessage.milestoneUpdatedUnsuccess, key: err });
                     }
-                    return response.status(200).json({ success: true, msg: languageMessage.milestoneUpdatedSuccess});
+                    return response.status(200).json({ success: true, msg: languageMessage.milestoneUpdatedSuccess });
                 });
             });
         });
@@ -4242,6 +4327,8 @@ const updateJobMilestone = async (request, response) => {
         return response.status(200).json({ success: false, msg: languageMessage.milestoneUpdatedUnsuccess, key: err.message });
     }
 }
+
+
 // get wallet amount
 const getWalletAmount = async (request, response) => {
     const { user_id } = request.query;
@@ -4259,7 +4346,7 @@ const getWalletAmount = async (request, response) => {
                 return response.status(200).json({ success: false, msg: languageMessage.userNotFound });
             }
             if (result[0]?.active_flag === 0) {
-                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated ,active_status:0});
+                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
             }
             walletResult = await getUserTotalWallet(user_id);
             return response.status(200).json({ success: true, msg: languageMessage.dataFound, walletResult: walletResult });
@@ -4271,96 +4358,1242 @@ const getWalletAmount = async (request, response) => {
 //end
 // check wallet amount
 const checkWalletAmount = async (request, response) => {
-    const {user_id,other_user_id,call_type} = request.query;
-    if(!user_id){
-        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param,'key':'user_id'});
+    const { user_id, other_user_id, call_type } = request.query;
+    if (!user_id) {
+        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, 'key': 'user_id' });
     }
-    if(!other_user_id){
-        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param,'key':'other_user_id'});
+    if (!other_user_id) {
+        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, 'key': 'other_user_id' });
     }
-    try{
+    try {
         const query1 = "SELECT mobile, active_flag FROM user_master WHERE user_id = ? AND delete_flag = 0";
         const values1 = [user_id];
         connection.query(query1, values1, async (err, result) => {
-            if(err){
+            if (err) {
                 return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
             }
-            if(result.length === 0){
+            if (result.length === 0) {
                 return response.status(200).json({ success: false, msg: languageMessage.userNotFound });
             }
-            if(result[0]?.active_flag === 0){
-                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated ,active_status:0});
+            if (result[0]?.active_flag === 0) {
+                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
             }
             const query2 = "SELECT call_charge,video_call_charge FROM user_master WHERE user_id = ? AND delete_flag = 0 AND user_type=2";
             const values2 = [other_user_id];
-            connection.query(query2, values2, async (err, result1)=>{
-                if(err){
+            connection.query(query2, values2, async (err, result1) => {
+                if (err) {
                     return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
                 }
-                if(result1.length === 0){
+                if (result1.length === 0) {
                     return response.status(200).json({ success: false, msg: languageMessage.expertNotFound });
                 }
                 const walletResult = await getUserTotalWallet(user_id);
-                const call_charge=result1[0]?.call_charge;
-                const video_call_charge=result1[0]?.video_call_charge;
+                const call_charge = result1[0]?.call_charge;
+                const video_call_charge = result1[0]?.video_call_charge;
                 let status;
-                if(call_type==0){
-                    if(walletResult >=call_charge){
-                        status=true;
-                    }else{
-                        status=false;
+                if (call_type == 0) {
+                    if (walletResult >= call_charge) {
+                        status = true;
+                    } else {
+                        status = false;
                     }
-                }else{
-                    if(walletResult >=video_call_charge){
-                        status=true;
-                    }else{
-                        status=false;
+                } else {
+                    if (walletResult >= video_call_charge) {
+                        status = true;
+                    } else {
+                        status = false;
                     }
                 }
-                return response.status(200).json({ success: status, msg: languageMessage.dataFound,walletResult,call_charge:call_charge,video_call_charge:video_call_charge});
+                return response.status(200).json({ success: status, msg: languageMessage.dataFound, walletResult, call_charge: call_charge, video_call_charge: video_call_charge });
             });
         });
-    }catch(err){
+    } catch (err) {
         return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
     }
 };
 //end
 //debitWalletAmount
 const debitWalletAmount = async (request, response) => {
-    const {user_id,amount} = request.body;
-    if(!user_id){
+    const { user_id, amount } = request.body;
+    if (!user_id) {
         return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'user_id' });
     }
-    if(!amount){
+    if (!amount) {
         return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'amount' });
     }
-    try{
+    try {
         const query1 = "SELECT mobile, active_flag FROM user_master WHERE user_id = ? AND delete_flag = 0";
         const values1 = [user_id];
         connection.query(query1, values1, async (err, result) => {
-            if(err){
+            if (err) {
                 return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
             }
-            if(result.length === 0){
+            if (result.length === 0) {
                 return response.status(200).json({ success: false, msg: languageMessage.userNotFound });
             }
-            if(result[0]?.active_flag === 0){
-                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated ,active_status:0});
+            if (result[0]?.active_flag === 0) {
+                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
             }
-            const status=1;
-            const type=3;
+            const status = 1;
+            const type = 3;
             const fileInsertQuery = `INSERT INTO wallet_master(user_id,amount,status,type,createtime,updatetime) VALUES (?,?,?,?,NOW(),NOW())`;
-            connection.query(fileInsertQuery, [user_id,amount,status,type], (err, result1) => {
-                if(err){
+            connection.query(fileInsertQuery, [user_id, amount, status, type], (err, result1) => {
+                if (err) {
                     return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
                 }
-                return response.status(200).json({ success: true, msg: languageMessage.walletDebitUpdate});
+                return response.status(200).json({ success: true, msg: languageMessage.walletDebitUpdate });
             });
         });
-    }catch(err){
+    } catch (err) {
         return response.status(500).json({ success: false, msg: languageMessage.fileUploadedError, key: err.message });
     }
 };
 //end
 
-module.exports = {getExpertDetails,getExpertDetailsById,getExpertByRating,getMyJobs,getJobPostDetails,createJobPost,chatConsultationHistory,chatJobsHistory,callConsultationHistory,callJobsHistory,getExpertByFilter,walletRecharge,walletHistory,getExpertByName,getExpertEarning,withdrawRequest,withdrawHistory,expertCallConsultationHistory,expertCallJobsHistory,getJobPostsForExpert,getExpertEarningHistory,expertChatConsultationHistory,expertChatJobsHistory,getReviewsOfExpert,getExpertMyJobs,getBidsOfJobPost,hireTheExpert,createProjectCost,getSubscriptionPlans,buySubscription,reviewReply,rateExpert,ExpertBidJob,CustomerCallHistory,ExpertCallHistory,getExpertHomeJobs,bookMarkJob,reportOnJob,customerJobFilter,expertJobFilter,createJobCost,createJobMilestone,getJobWorkMilestone,acceptRejectMilestone,sentMilestoneRequest,checkMilestoneRequest,getExpertJobDetails,getUserProfile,downloadApp,deepLink,getExpertByFilterSubLabel,logOut,chatFileUpload,getExpertCompletedJobs,add_availability,edit_availability,get_available_slots,userBookSlot,getExpertScheduleSlot,convertIntoMilestone,updateJobMilestone,getWalletAmount,checkWalletAmount,debitWalletAmount};
+// Generate unique id
+const generateUniqueId = async (request, response) => {
+    const { user_id } = request.query;
+    try {
+        if (!user_id) {
+            return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'user_id' });
+        }
+        const checkUser = 'SELECT user_id , active_flag FROM user_master WHERE user_id = ? AND delete_flag = 0';
+        connection.query(checkUser, [user_id], async (err, res) => {
+            if (err) {
+                return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err.message });
+            }
+            if (res.length == 0) {
+                return response.status(200).json({ success: false, msg: languageMessage.userNotFound });
+            }
+            if (res[0].active_flag == 0) {
+                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
+            }
+            const unique_id = await generateid(10);
+            return response.status(200).json({ success: true, msg: languageMessage.dataFound, unique_id: unique_id });
+        });
+    }
+    catch (error) {
+        return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: error.message });
+    }
+}
+async function generateid(limit) {
+    var digits = 'ABCD0123456789';
+    let OTP = '';
+    for (let i = 0; i < limit; i++) {
+        OTP += digits[Math.floor(Math.random() * 10)];
+    }
+    return OTP;
+}
+// end
+
+
+// get token varible
+const getTokenVariable = async (request, response) => {
+    try {
+        const sql = 'SELECT token, variable FROM token_variable_master WHERE delete_flag = 0';
+        connection.query(sql, async (err, res) => {
+            if (err) {
+                return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err.message });
+            }
+            if (res.length == 0) {
+                return response.status(200).json({ success: false, msg: languageMessage.dataNotFound });
+            }
+            let data = {
+                token: res[0].token,
+                variable: res[0].variable.toString(),
+            }
+            return response.status(200).json({ success: true, msg: languageMessage.dataFound, data: data });
+        });
+    }
+    catch (error) {
+        return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: error.message });
+    }
+}
+// end
+
+
+
+// Get expert earning..
+async function getExpertEarningg(milestone_id, user_id) {
+
+    return new Promise((resolve, reject) => {
+        const sql = `
+      SELECT mm.job_post_id, mm.price, jm.assign_expert_id, um.gst_number  
+      FROM milestone_master mm 
+      JOIN job_post_master jm ON mm.job_post_id = jm.job_post_id 
+      JOIN user_master um ON jm.assign_expert_id = um.user_id 
+      WHERE mm.milestone_id = ? AND mm.delete_flag = 0 AND jm.delete_flag = 0
+  `;
+        connection.query(sql, [milestone_id], async (err, result) => {
+            if (err) {
+                reject(err);
+            }
+
+            if (result.length == 0) {
+                resolve('NA')
+            }
+
+            const sql1 = 'SELECT gst, tds, tcs, platform_fee, commission_percentage FROM commission_master WHERE delete_flag = 0';
+            connection.query(sql1, async (err1, res1) => {
+                if (err1) {
+                    reject(err1);
+                }
+                if (res1.length === 0) {
+                    resolve('NA')
+                }
+
+                let data = res1[0];
+                let gst = data.gst;
+                let tcs = data.tcs;
+                let tds = data.tds;
+                let platform_fee = data.platform_fee;
+                let commission_percentage = data.commission_percentage;
+
+                let info = result[0];
+                let expert_id = info.assign_expert_id;
+                let received_amount = info.price;
+
+
+                let admin_commission_amount = parseFloat((received_amount * commission_percentage / 100).toFixed(2));
+                let expert_earning = parseFloat((received_amount - admin_commission_amount).toFixed(2));
+                let platform_fee_amount = 0;
+                let platform_fee_gst_amount = 0;
+
+                let grand_total_earning = 0;
+                let net_amount = 0;
+                let gst_amount = 0;
+                let tds_amount = 0;
+                let tcs_amount = 0;
+
+                // If GST is registered
+                if (info.gst_number > 0) {
+                    gst_amount = parseFloat(((received_amount * gst) / (100 + gst)).toFixed(2));
+                    net_amount = parseFloat((received_amount - gst_amount).toFixed(2));
+
+                    platform_fee_amount = parseFloat((net_amount * platform_fee / 100).toFixed(2));
+                    platform_fee_gst_amount = parseFloat((platform_fee_amount * gst / 100).toFixed(2));
+
+                    tds_amount = parseFloat((net_amount * tds / 100).toFixed(2));
+                    tcs_amount = parseFloat((net_amount * tcs / 100).toFixed(2));
+
+                    grand_total_earning = parseFloat((platform_fee_amount + platform_fee_gst_amount - (tds_amount + tcs_amount)).toFixed(2));
+
+                    const sqlQuery = `
+                  INSERT INTO expert_earning_master 
+                  (type, user_id, expert_id, milestone_id, total_amount, commission_percentage, admin_commission_amount, expert_earning, expert_type, gst_per, gst_amt, net_expert_earning, tds_per, tds_amt, tcs_per, tcs_amt, platform_fees, platform_fees_gst_amt, grand_total_expert_earning, createtime, updatetime) 
+                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+              `;
+
+                    connection.query(sqlQuery, [0, user_id, expert_id, milestone_id, received_amount, commission_percentage, admin_commission_amount, expert_earning, 1, gst, gst_amount, net_amount, tds, tds_amount, tcs, tcs_amount, platform_fee_amount, platform_fee_gst_amount, grand_total_earning], (insertErr, insertRes) => {
+                        if (insertErr) {
+                            reject(insertErr);
+                        }
+                        if (insertRes.affectedRows == 0) {
+                            resolve('NA')
+                        }
+
+                        let expert_earning_id = insertRes.insertId;
+
+                        resolve(expert_earning_id);
+                    });
+
+                } else {
+                    // If GST is not registered
+                    net_amount = received_amount;
+                    platform_fee_amount = parseFloat((net_amount * platform_fee / 100).toFixed(2));
+                    let apply_gst_amount = parseFloat((platform_fee_amount * gst / 100).toFixed(2));
+                    let net_apply_gst_amount = apply_gst_amount / 2;
+                    grand_total_earning = parseFloat((platform_fee_amount - net_apply_gst_amount).toFixed(2));
+
+                    const insert = `
+                  INSERT INTO expert_earning_master 
+                  (type, user_id, expert_id, milestone_id, total_amount, commission_percentage, admin_commission_amount, expert_earning, expert_type, gst_per, gst_amt, net_expert_earning, tds_per, tds_amt, tcs_per, tcs_amt, platform_fees, platform_fees_gst_amt, grand_total_expert_earning, createtime, updatetime) 
+                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+              `;
+                    connection.query(insert, [0, user_id, expert_id, milestone_id, received_amount, commission_percentage, admin_commission_amount, expert_earning, 0, 0, 0, net_amount, 0, 0, 0, 0, platform_fee_amount, net_apply_gst_amount, grand_total_earning], (err3, res3) => {
+                        if (err3) {
+                            reject(err3);
+                        }
+                        if (res3.affectedRows === 0) {
+                            resolve('NA')
+                        }
+                        let expert_earning_id = res3.insertId;
+                        resolve(expert_earning_id);
+                    });
+                }
+            });
+        });
+    })
+};
+
+
+
+
+// complete job status 
+const completeJob = async (request, response) => {
+    const { user_id, job_post_id } = request.body;
+    try {
+        if (!user_id) {
+            return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'user_id' });
+        }
+        if (!job_post_id) {
+            return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'job_post_id' });
+        }
+
+        const checkUser = 'SELECT user_id, active_flag FROM user_master WHERE user_id = ? AND delete_flag = 0';
+        connection.query(checkUser, [user_id], async (err, res) => {
+            if (err) {
+                return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err.message });
+            }
+            if (res.length == 0) {
+                return response.status(200).json({ success: false, msg: languageMessage.userNotFound });
+            }
+            if (res[0].active_flag == 0) {
+                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
+            }
+            const sql = 'UPDATE job_post_master SET status = 3, updatetime = now() WHERE job_post_id = ? AND delete_flag = 0';
+            connection.query(sql, [job_post_id], async (err1, res1) => {
+                if (err1) {
+                    return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err1.message });
+                }
+                if (res1.affectedRows == 0) {
+                    return response.status(200).json({ success: false, msg: languageMessage.updateErr });
+                }
+
+                return response.status(200).json({ success: true, msg: languageMessage.JobCompleted });
+            });
+        });
+
+    }
+    catch (error) {
+        return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: error.message });
+    }
+}
+
+
+// get expert earning pdf function
+const getExpertEarningPdf = async (request, response) => {
+    const { expert_earning_id } = request.query;
+
+    try {
+        if (!expert_earning_id) {
+            return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'expert_earning_id' });
+        }
+
+        const sql = `SELECT em.milestone_id, em.total_amount, em.expert_id, em.commission_percentage, 
+            em.admin_commission_amount, em.expert_earning, em.expert_type, em.gst_amt, em.gst_per, 
+            em.net_expert_earning, em.tds_per, em.tds_amt, em.tcs_per, em.tcs_amt, em.platform_fees, 
+            em.platform_fees_gst_amt, em.grand_total_expert_earning, em.createtime, mm.milestone_number, um.name, um.email, um.address, um.city, cm.city_name	 
+            FROM expert_earning_master em 
+            JOIN milestone_master mm ON em.milestone_id = mm.milestone_id 
+            JOIN user_master um ON em.expert_id = um.user_id 
+            JOIN city_master cm ON um.city = cm.city_id
+            WHERE em.type = 0 AND em.expert_earning_id = ? AND em.delete_flag = 0`;
+
+        connection.query(sql, [expert_earning_id], async (err, res) => {
+            if (err) {
+                return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err.message });
+            }
+
+            if (res.length === 0) {
+                return response.status(200).json({ success: false, msg: languageMessage.dataNotFound });
+            }
+
+            try {
+                const filename = await generateInvoicePdf(res[0], expert_earning_id);
+
+                const invoiceUrl = filename;
+                const updateSql = 'UPDATE expert_earning_master SET invoice_url = ? WHERE expert_earning_id = ?';
+                connection.query(updateSql, [invoiceUrl, expert_earning_id], (updateErr) => {
+                    if (updateErr) {
+                        return response.status(200).json({ success: false, msg: languageMessage.ErrorUpdatingUrl, error: updateErr.message });
+                    }
+                    return response.status(200).json({ success: true, msg: languageMessage.PdfGeneratedSuccess, invoice_url: invoiceUrl });
+                });
+            } catch (pdfError) {
+                return response.status(200).json({ success: false, msg: languageMessage.ErrorGeneratingPdf, error: pdfError.message });
+            }
+        });
+    } catch (error) {
+        return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: error.message });
+    }
+};
+
+
+// AWS S3 Configuration
+const fs = require('fs');
+const pdf = require('html-pdf');
+const path = require('path');
+const { response } = require('express');
+
+const AWS = require('aws-sdk');
+const s3 = new AWS.S3({
+    accessKeyId: "AKIAUGO4KNQULGJQFZIA",
+    secretAccessKey: "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",
+    region: "ap-south-1",
+});
+
+// Generate Expert earning Invoice PDF and Upload to S3
+const generateInvoicePdf = async (invoiceData) => {
+    return new Promise((resolve, reject) => {
+        try {
+            // Generate a unique filename
+            const randomSuffix = Math.floor(Math.random() * 1000);
+            const filename = `invoice_${Date.now()}_${randomSuffix}.pdf`;
+
+            // HTML Content
+            const htmlContent = `
+ <!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Payment Receipt</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+      background: #f8f9fa;
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      color: #333;
+    }
+    .invoice-container {
+      max-width: 600px;
+      margin: 0 auto;
+      background: #fff;
+      padding: 25px;
+      border-radius: 5px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.05);
+    }
+    .logo {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+   .logo img {
+  max-width: 100px; 
+  height: auto; 
+}
+    .header, .section {
+      margin-bottom: 20px;
+    }
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 15px;
+    }
+    .info-block {
+      width: 48%;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 20px;
+    }
+    th, td {
+      padding: 10px;
+      border-bottom: 1px solid #eee;
+    }
+    th {
+      text-align: left;
+      text-transform: uppercase;
+      font-size: 0.8rem;
+      color: #666;
+    }
+    .amount {
+      text-align: right;
+    }
+    .total-section {
+      text-align: right;
+      font-weight: bold;
+    }
+    .text-muted {
+      color: #666;
+      font-size: 0.85rem;
+    }
+    .text-success {
+      color: #28a745;
+    }
+    @media (max-width: 480px) {
+      .info-row {
+        flex-direction: column;
+      }
+      .info-block {
+        width: 100%;
+        margin-bottom: 15px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="invoice-container">
+    <div class="logo">
+      <img src="https://xpertnowbucket.s3.ap-south-1.amazonaws.com/uploads/1743577170167-xpertlog.png" alt="Xpertnow logo"">
+    </div>
+    <div class="header">
+      <h4>Hey ${invoiceData.name},</h4>
+      <p>This is the receipt for a payment of <strong>₹${invoiceData.grand_total_expert_earning}</strong> you made to milestone.</p>
+    </div>
+    <div class="section">
+      <div class="info-row">
+        <div class="info-block">
+          <div class="text-muted">Milestone No.</div>
+          <div><strong>#${invoiceData.milestone_number}</strong></div>
+        </div>
+        <div class="info-block">
+          <div class="text-muted">Payment Date</div>
+          <div><strong>${moment(invoiceData.createtime).format("MMM DD, YYYY")}</strong></div>
+        </div>
+      </div>
+    </div>
+    <div class="section">
+      <div class="info-row">
+        <div class="info-block">
+          <div class="text-muted">Client</div>
+          <div><strong>John McCleane</strong></div>
+          <div>999 5th Avenue, New York, 55832</div>
+          <div><a href="mailto:client@example.com">client@example.com</a></div>
+        </div>
+        <div class="info-block">
+          <div class="text-muted">Payment To</div>
+          <div><strong>${invoiceData.name}</strong></div>
+          <div>${invoiceData.address}, ${invoiceData.city_name}</div>
+          <div><a href="mailto:${invoiceData.email}">${invoiceData.email}</a></div>
+        </div>
+      </div>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Description</th>
+          <th class="amount">Amount</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>GST (${invoiceData.gst_per}%)</td><td class="amount">₹${invoiceData.gst_amt}</td></tr>
+        <tr><td>Platform Fee</td><td class="amount">₹${invoiceData.platform_fees}</td></tr>
+        <tr><td>TCS (${invoiceData.tcs_per}%)</td><td class="amount">₹${invoiceData.tcs_amt}</td></tr>
+        <tr><td>TDS (${invoiceData.tds_per}%)</td><td class="amount">₹${invoiceData.tds_amt}</td></tr>
+      </tbody>
+    </table>
+    <div class="total-section">
+      <div>Total Amount: ₹${invoiceData.total_amount}</div>
+      <div>Net Amount: ₹${invoiceData.net_expert_earning}</div>
+      <div class="text-success">Grand Total: ₹${invoiceData.grand_total_expert_earning}</div>
+    </div>
+  </div>
+</body>
+</html>
+
+`;
+            // Generate PDF Buffer
+            pdf.create(htmlContent, { format: 'A4' }).toBuffer(async (err, buffer) => {
+                if (err) {
+                    reject(err);
+                    return;
+                }
+
+                // Upload to S3
+                const params = {
+                    Bucket: "xpertnowbucket",
+                    Key: `uploads/${filename}`,
+                    Body: buffer,
+                    ContentType: 'application/pdf',
+                    ACL: 'public-read',
+                };
+
+                try {
+                    const s3Data = await s3.upload(params).promise();
+                    resolve(s3Data.Location); // Return the S3 file URL
+                } catch (uploadError) {
+                    reject(uploadError);
+                }
+            });
+
+        } catch (error) {
+            reject(error);
+        }
+    });
+};
+
+
+
+// get wallet pdf
+const getWalletPdf = async( request, response) => {
+    const {transition_id} = request.query;
+    try{
+        if(!transition_id ){
+            return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key:'tranisition_id'});
+        }
+        const sql = 'SELECT wm.user_id, wm.expert_id, wm.amount, wm.wallet_balance, wm.status, wm.type, um.name, wm.createtime, wm.payment_transaction_id, um.email, um.address FROM wallet_master wm JOIN user_master um ON wm.user_id = um.user_id WHERE wm.transition_id = ? AND wm.delete_flag = 0';
+        connection.query(sql, [transition_id], async(err, res) => {
+            if(err){
+                return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err.message});
+            }
+            if(res.length == 0){
+                return response.status(200).json({ success: false, msg: languageMessage.dataFound});
+            }
+            try {
+                let type_label = res[0].type === 1 ? 'recharge' : res[0].type === 2 ? 'job' : 'consultation'
+                const filename = await generateWalletInvoice(res[0], type_label);
+
+                const invoiceUrl = filename;
+                const updateSql = 'UPDATE wallet_master SET invoice_url = ? WHERE transition_id = ?';
+                connection.query(updateSql, [invoiceUrl, transition_id], (updateErr) => {
+                    if (updateErr) {
+                        return response.status(200).json({ success: false, msg: languageMessage.ErrorUpdatingUrl, error: updateErr.message });
+                    }
+                    return response.status(200).json({ success: true, msg: languageMessage.PdfGeneratedSuccess, invoice_url: invoiceUrl });
+                });
+            } catch (pdfError) {
+                return response.status(200).json({ success: false, msg: languageMessage.ErrorGeneratingPdf, error: pdfError.message });
+            }         
+        });
+    }
+    catch(error){
+        return response.status(200).json({ success: false , msg: languageMessage.internalServerError, error: error.message});
+    }
+}
+// generate wallet invoice
+const generateWalletInvoice = async (invoiceData, type_label) => {
+    return new Promise((resolve, reject) => {
+        try {
+            // Generate a unique filename
+            const randomSuffix = Math.floor(Math.random() * 1000);
+            const filename = `invoice_${Date.now()}_${randomSuffix}.pdf`;
+       
+// HTML Template
+ const htmlContent = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Payment Receipt</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+      background: #f8f9fa;
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      color: #333;
+    }
+    .invoice-container {
+      width: 100%;
+      max-width: 700px;
+      margin: 0 auto;
+      background: #fff;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    .logo {
+      max-width: 150px;
+      margin-bottom: 10px;
+    }
+    h4 {
+      margin: 0;
+      font-size: 1.5rem;
+      font-weight: bold;
+    }
+    p {
+      margin-bottom: 10px;
+      font-size: 1rem;
+    }
+    .section {
+      margin-bottom: 20px;
+    }
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+    .info-block {
+      width: 48%;
+    }
+    .info-block div {
+      font-size: 1rem;
+    }
+    .text-muted {
+      color: #666;
+      font-size: 0.9rem;
+    }
+    .amount {
+      text-align: right;
+      font-size: 1rem;
+    }
+    .total-section {
+      text-align: right;
+      font-weight: bold;
+      font-size: 1.1rem;
+      margin-top: 20px;
+    }
+    .pay-btn {
+      display: block;
+      width: 100%;
+      padding: 10px;
+      background: #1e2e50;
+      color: white;
+      text-align: center;
+      text-decoration: none;
+      border-radius: 4px;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      font-size: 0.9rem;
+      border: none;
+      cursor: pointer;
+      margin-top: 25px;
+    }
+    @media (max-width: 480px) {
+      .info-row {
+        flex-direction: column;
+      }
+      .info-block {
+        width: 100%;
+        margin-bottom: 15px;
+      }
+      .invoice-container {
+        padding: 15px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="invoice-container">
+    <div class="header">
+      <img src="https://xpertnowbucket.s3.ap-south-1.amazonaws.com/uploads/1743577170167-xpertlog.png" alt="Xpertnow logo" class="logo">
+      <h4>Payment Receipt</h4>
+    </div>
+
+    <p>Hey ${invoiceData.name},</p>
+    <p>This is the receipt for a payment of <strong>₹${invoiceData.amount}</strong> you made to ${type_label}.</p>
+
+    <div class="section">
+      <div class="info-row">
+        <div class="info-block">
+          <div class="text-muted">Payment Date</div>
+          <div><strong>${moment(invoiceData.createtime).format("MMM DD, YYYY")}</strong></div>
+        </div>
+      </div>
+    </div>
+
+    <table style="width: 100%; margin-bottom: 20px;">
+      <thead>
+        <tr>
+          <th>Description</th>
+          <th class="amount">Amount</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>${type_label}</td>
+          <td class="amount">₹${invoiceData.amount}</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="total-section">
+      <div>Total Amount: ₹${invoiceData.amount}</div>
+    </div>
+
+    <div class="footer" style="text-align: center; margin-top: 20px; color: #888;">
+    
+    </div>
+  </div>
+</body>
+</html>
+`
+              // Generate PDF Buffer
+              pdf.create(htmlContent, { format: 'A4' }).toBuffer(async (err, buffer) => {
+                if (err) {
+                    reject(err);
+                    return;
+                }
+
+                // Upload to S3
+                const params = {
+                    Bucket: "xpertnowbucket",
+                    Key: `uploads/${filename}`,
+                    Body: buffer,
+                    ContentType: 'application/pdf',
+                    ACL: 'public-read',
+                };
+
+                try {
+                    const s3Data = await s3.upload(params).promise();
+                    resolve(s3Data.Location); // Return the S3 file URL
+                } catch (uploadError) {
+                    reject(uploadError);
+                }
+            });
+        } catch (error) {
+            reject(error);
+        }
+    });
+};
+
+
+// get expert all earning
+const getExpertAllEarningPdf = async( request, response) => {
+    const {expert_earning_id} = request.query;
+    try{
+        if(!expert_earning_id ){
+            return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key:'expert_earning_id'});
+        }
+        const sql = 'SELECT em.type,  em.expert_earning, em.createtime, um.name FROM expert_earning_master em JOIN user_master um ON em.expert_id = um.user_id WHERE em.expert_earning_id = ? AND em.delete_flag = 0';
+        connection.query(sql, [expert_earning_id], async(err, res) => {
+            if(err){
+                return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err.message});
+            }
+            if(res.length == 0){
+                return response.status(200).json({ success: false, msg: languageMessage.dataNotFound});
+            }
+            try {
+                let type_label = res[0].type === 1 ? 'consultant' : 'Subscription'
+                const filename = await generateExpertAllEarningPdf(res[0], type_label);
+
+                const invoiceUrl = filename;
+                const updateSql = 'UPDATE expert_earning_master SET invoice_url = ? WHERE expert_earning_id = ?';
+                connection.query(updateSql, [invoiceUrl, expert_earning_id], (updateErr) => {
+                    if (updateErr) {
+                        return response.status(200).json({ success: false, msg: languageMessage.ErrorUpdatingUrl, error: updateErr.message });
+                    }
+                    return response.status(200).json({ success: true, msg: languageMessage.PdfGeneratedSuccess, invoice_url: invoiceUrl });
+                });
+            } catch (pdfError) {
+                return response.status(200).json({ success: false, msg: languageMessage.ErrorGeneratingPdf, error: pdfError.message });
+            }         
+        });
+    }
+    catch(error){
+        return response.status(200).json({ success: false , msg: languageMessage.internalServerError, error: error.message});
+    }
+}
+const generateExpertAllEarningPdf = async (invoiceData, type_label) => {
+    return new Promise((resolve, reject) => {
+        try {
+            // Generate a unique filename
+            const randomSuffix = Math.floor(Math.random() * 1000);
+            const filename = `invoice_${Date.now()}_${randomSuffix}.pdf`;
+       
+// HTML Template
+ const htmlContent = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Payment Receipt</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+      background: #f8f9fa;
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      color: #333;
+      height: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .invoice-container {
+      width: 100%;
+      max-width: 800px;
+      background: #fff;
+      padding: 40px;
+      border-radius: 8px;
+      box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+
+    .logo {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+
+    .logo img {
+      max-width: 120px;
+      height: auto;
+    }
+
+    .header, .section {
+      margin-bottom: 25px;
+    }
+
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+
+    .info-block {
+      width: 48%;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 30px;
+    }
+
+    th, td {
+      padding: 12px;
+      border-bottom: 1px solid #eee;
+      text-align: left;
+    }
+
+    th {
+      text-transform: uppercase;
+      font-size: 0.9rem;
+      color: #666;
+    }
+
+    .amount {
+      text-align: right;
+    }
+
+    .total-section {
+      text-align: right;
+      font-weight: bold;
+    }
+
+    .text-muted {
+      color: #666;
+      font-size: 0.9rem;
+    }
+
+    .text-success {
+      color: #28a745;
+    }
+
+    .footer {
+      margin-top: auto;
+      text-align: center;
+      font-size: 0.85rem;
+      color: #888;
+      padding: 10px;
+    }
+
+    @media (max-width: 768px) {
+      .info-row {
+        flex-direction: column;
+      }
+
+      .info-block {
+        width: 100%;
+        margin-bottom: 15px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="invoice-container">
+    <div class="logo">
+      <img src="https://xpertnowbucket.s3.ap-south-1.amazonaws.com/uploads/1743577170167-xpertlog.png" alt="Xpertnow logo">
+    </div>
+    <div class="header">
+      <h4>Hey ${invoiceData.name},</h4>
+      <p>This is the receipt for a payment of <strong>₹${invoiceData.expert_earning}</strong> you made to ${type_label}.</p>
+    </div>
+    <div class="section">
+      <div class="info-row">
+        <div class="info-block">
+          <div class="text-muted">Payment Date</div>
+          <div><strong>${moment(invoiceData.createtime).format("MMM DD, YYYY")}</strong></div>
+        </div>
+      </div>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Description</th>
+          <th class="amount">Amount</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>${type_label}</td>
+          <td class="amount">₹${invoiceData.expert_earning}</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="total-section">
+      <div>Total Amount: ₹${invoiceData.expert_earning}</div>
+    </div>
+    <div class="footer">
+    </div>
+  </div>
+</body>
+</html>
+ `
+              // Generate PDF Buffer
+              pdf.create(htmlContent, { format: 'A4' }).toBuffer(async (err, buffer) => {
+                if (err) {
+                    reject(err);
+                    return;
+                }
+
+                // Upload to S3
+                const params = {
+                    Bucket: "xpertnowbucket",
+                    Key: `uploads/${filename}`,
+                    Body: buffer,
+                    ContentType: 'application/pdf',
+                    ACL: 'public-read',
+                };
+
+                try {
+                    const s3Data = await s3.upload(params).promise();
+                    resolve(s3Data.Location); // Return the S3 file URL
+                } catch (uploadError) {
+                    reject(uploadError);
+                }
+            });
+        } catch (error) {
+            reject(error);
+        }
+    });
+};
+
+
+
+// get customer milestone charge
+const getCustomerMilestoneCharge = async( request, response) => {
+    const {milestone_id} = request.query;
+    try{
+        if(!milestone_id ){
+            return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key:'milestone_id'});
+        }
+        const sql = 'SELECT em.grand_total_expert_earning, em.createtime, em.milestone_id, mm.milestone_number, em.expert_id, em.user_id AS customer_id, um.name, umm.name AS cust_name,  um.email, um.address, um.city FROM expert_earning_master em JOIN milestone_master mm ON em.milestone_id = mm.milestone_id JOIN user_master um ON em.expert_id = um.user_id JOIN city_master cm ON um.city = cm.city_id JOIN user_master umm ON em.user_id = umm.user_id WHERE em.milestone_id = ? AND em.delete_flag = 0';
+        connection.query(sql, [milestone_id], async(err, res) => {
+            if(err){
+                return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err.message});
+            }
+
+            if(res.length == 0){
+                return response.status(200).json({ success: false, msg: languageMessage.dataNotFound});
+            }
+
+            try {
+                const filename = await generateCustMilestonePdf(res[0]);
+                const invoiceUrl = filename;
+                 return response.status(200).json({ success: true, msg: languageMessage.PdfGeneratedSuccess, invoice_url: invoiceUrl });
+               
+            } catch (pdfError) {
+                return response.status(200).json({ success: false, msg: languageMessage.ErrorGeneratingPdf, error: pdfError.message });
+            }         
+        });
+    }
+    catch(error){
+        return response.status(200).json({ success: false , msg: languageMessage.internalServerError, error: error.message});
+    }
+}
+// get customer milestone pdf
+const generateCustMilestonePdf = async (invoiceData) => {
+    return new Promise((resolve, reject) => {
+        try {
+            // Generate a unique filename
+            const randomSuffix = Math.floor(Math.random() * 1000);
+            const filename = `invoice_${Date.now()}_${randomSuffix}.pdf`; 
+
+// HTML Template
+ const htmlContent = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Payment Receipt</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+      background: #f8f9fa;
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      color: #333;
+      height: 100%;
+    }
+
+    .invoice-container {
+      width: 100%;
+      height: 100%;
+      max-width: 800px;
+      margin: 0 auto;
+      background: #fff;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.1);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .logo {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+
+    .logo img {
+      max-width: 120px;
+      height: auto;
+    }
+
+    .header, .section {
+      margin-bottom: 20px;
+    }
+
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 15px;
+    }
+
+    .info-block {
+      width: 48%;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 20px;
+    }
+
+    th, td {
+      padding: 12px;
+      border-bottom: 1px solid #eee;
+      text-align: left;
+    }
+
+    th {
+      text-transform: uppercase;
+      font-size: 0.9rem;
+      color: #666;
+    }
+
+    .amount {
+      text-align: right;
+    }
+
+    .total-section {
+      text-align: right;
+      font-weight: bold;
+    }
+
+    .text-muted {
+      color: #666;
+      font-size: 0.9rem;
+    }
+
+    .text-success {
+      color: #28a745;
+    }
+
+    .footer {
+      margin-top: auto;
+      text-align: center;
+      font-size: 0.8rem;
+      color: #888;
+      padding: 10px;
+    }
+
+    @media (max-width: 768px) {
+      .info-row {
+        flex-direction: column;
+      }
+
+      .info-block {
+        width: 100%;
+        margin-bottom: 15px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="invoice-container">
+    <div class="logo">
+      <img src="https://xpertnowbucket.s3.ap-south-1.amazonaws.com/uploads/1743577170167-xpertlog.png" alt="Xpertnow logo">
+    </div>
+    <div class="header">
+      <h4>Hey ${invoiceData.cust_name},</h4>
+      <p>This is the receipt for a payment of <strong>₹${invoiceData.grand_total_expert_earning}</strong> you paid to ${invoiceData.name}.</p>
+    </div>
+    <div class="section">
+      <div class="info-row">
+        <div class="info-block">
+          <div class="text-muted">Milestone No.</div>
+          <div><strong>${invoiceData.milestone_number}</strong></div>
+        </div>
+        <div class="info-block">
+          <div class="text-muted">Payment Date</div>
+          <div><strong>${moment(invoiceData.createtime).format("MMM DD, YYYY")}</strong></div>
+        </div>
+      </div>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Description</th>
+          <th class="amount">Amount</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Milestone Payment</td>
+          <td class="amount">₹${invoiceData.grand_total_expert_earning}</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="total-section">
+      <div>Total Amount: ₹${invoiceData.grand_total_expert_earning}</div>
+    </div>
+    <div class="footer">
+     
+    </div>
+  </div>
+</body>
+</html>
+
+`
+              // Generate PDF Buffer
+              pdf.create(htmlContent, { format: 'A4' }).toBuffer(async (err, buffer) => {
+                if (err) {
+                    reject(err);
+                    return;
+                }
+
+                // Upload to S3
+                const params = {
+                    Bucket: "xpertnowbucket",
+                    Key: `uploads/${filename}`,
+                    Body: buffer,
+                    ContentType: 'application/pdf',
+                    ACL: 'public-read',
+                };
+
+                try {
+                    const s3Data = await s3.upload(params).promise();
+                    resolve(s3Data.Location); // Return the S3 file URL
+                } catch (uploadError) {
+                    reject(uploadError);
+                }
+            });
+        } catch (error) {
+            reject(error);
+        }
+    });
+};
+
+
+
+
+
+module.exports = { getExpertDetails, getExpertDetailsById, getExpertByRating, getMyJobs, getJobPostDetails, createJobPost, chatConsultationHistory, chatJobsHistory, callConsultationHistory, callJobsHistory, getExpertByFilter, walletRecharge, walletHistory, getExpertByName, getExpertEarning, withdrawRequest, withdrawHistory, expertCallConsultationHistory, expertCallJobsHistory, getJobPostsForExpert, getExpertEarningHistory, expertChatConsultationHistory, expertChatJobsHistory, getReviewsOfExpert, getExpertMyJobs, getBidsOfJobPost, hireTheExpert, createProjectCost, getSubscriptionPlans, buySubscription, reviewReply, rateExpert, ExpertBidJob, CustomerCallHistory, ExpertCallHistory, getExpertHomeJobs, bookMarkJob, reportOnJob, customerJobFilter, expertJobFilter, createJobCost, createJobMilestone, getJobWorkMilestone, acceptRejectMilestone, sentMilestoneRequest, checkMilestoneRequest, getExpertJobDetails, getUserProfile, downloadApp, deepLink, getExpertByFilterSubLabel, logOut, chatFileUpload, getExpertCompletedJobs, add_availability, edit_availability, get_available_slots, userBookSlot, getExpertScheduleSlot, convertIntoMilestone, updateJobMilestone, getWalletAmount, checkWalletAmount, debitWalletAmount, generateUniqueId, getTokenVariable, completeJob, getExpertEarningPdf, getWalletPdf , getExpertAllEarningPdf, getCustomerMilestoneCharge };

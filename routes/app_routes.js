@@ -2,13 +2,15 @@ const express = require('express');
 const upload = require('../middleware/multer');
 const { authenticateToken } = require('../shared functions/functions');
 const { signUp_1, signUp_2, getStates, getCities, getDegree, getCategoryDetails, getExpertLanguages, updateBankDetails, otpVerify, resendOtp, getSubCategoryDetails, getSubCategoryLevelDetails, getContent, usersignUp_1, userOtpVerify, userResendOtp, usersignUp_2, getExpertiseCategory, getSubExpertiseCategoryLevel, managePrivacy, deleteAccount, editProfile, getUserNotification, getCustomerSupport, getAllContentUrl, editCallCharge, editExpertiseAndExperience, editProfessionalDetails, editDocNumber, editProfileDetails, getExpertNotification, getExpertEye, deleteExpertAccount,getExpertByCatSubCat,deleteSingleNotification,deleteAllNotification,getSubLevelTwoCategory,getSubLevelThreeCategory } = require('../controller/user_controller');
+
 const {getExpertDetails,getExpertDetailsById,createJobPost,walletRecharge,getExpertByRating,getMyJobs,getJobPostDetails,chatConsultationHistory,chatJobsHistory,callConsultationHistory,callJobsHistory,getExpertByFilter,getExpertByName,walletHistory,getExpertEarning,withdrawRequest,withdrawHistory,expertCallConsultationHistory,expertCallJobsHistory,getJobPostsForExpert,getExpertEarningHistory,expertChatConsultationHistory,
 expertChatJobsHistory,getReviewsOfExpert,getExpertMyJobs,getBidsOfJobPost,hireTheExpert,createProjectCost,getSubscriptionPlans,buySubscription,
-reviewReply,rateExpert,CustomerCallHistory,ExpertCallHistory,ExpertBidJob,getExpertHomeJobs,bookMarkJob,reportOnJob,customerJobFilter,expertJobFilter,createJobCost,createJobMilestone,getJobWorkMilestone,updateMilestoneStatus,acceptRejectMilestone,sentMilestoneRequest,checkMilestoneRequest,getExpertJobDetails,getUserProfile,downloadApp,deepLink,getExpertByFilterSubLabel,logOut,chatFileUpload,getExpertCompletedJobs,add_availability,edit_availability,get_available_slots,userBookSlot,getExpertScheduleSlot,convertIntoMilestone,updateJobMilestone,getWalletAmount,checkWalletAmount,debitWalletAmount} = require("../controller/app_controller");
+reviewReply,rateExpert,CustomerCallHistory,ExpertCallHistory,ExpertBidJob,getExpertHomeJobs,bookMarkJob,reportOnJob,customerJobFilter,expertJobFilter,createJobCost,createJobMilestone,getJobWorkMilestone,updateMilestoneStatus,acceptRejectMilestone,sentMilestoneRequest,checkMilestoneRequest,getExpertJobDetails,getUserProfile,downloadApp,deepLink,getExpertByFilterSubLabel,logOut,chatFileUpload,getExpertCompletedJobs,add_availability,edit_availability,get_available_slots,userBookSlot,getExpertScheduleSlot,convertIntoMilestone,updateJobMilestone,getWalletAmount,checkWalletAmount,debitWalletAmount, generateUniqueId, getTokenVariable, completeJob, getExpertEarningPdf,getWalletPdf, getExpertAllEarningPdf, getCustomerMilestoneCharge } = require("../controller/app_controller");
+
 const {generateVideocallToken,VideoVoiceCallStart,VideoVoiceCallJoin,generateTokenByChannelName,VideoVoiceCallEnd,VideoVoiceCallReject,generatecallResourceId,startRecording,endRecording,getRecordingDetails,checkRecordingStatus} = require('../controller/call_controller');
 const router = express.Router();
 
-//Starting customer routes  
+//Starting customer routes
 router.post('/sign_up_1', upload.none(), usersignUp_1);
 router.post('/verifyotp',async (req, res, next) => {
   await authenticateToken(req, res, next);
@@ -102,9 +104,7 @@ router.get('/get_myjobs',async (req, res, next) => {
   await authenticateToken(req, res, next);
 }, upload.none(),  getMyJobs);
 
-router.get('/get_job_details',async (req, res, next) => {
-  await authenticateToken(req, res, next);
-}, upload.none(),  getJobPostDetails);
+router.get('/get_job_details', upload.none(),  getJobPostDetails);   //async (req, res, next) => {await authenticateToken(req, res, next);},
 
 router.get('/get_chat_consult_history',async (req, res, next) => {
   await authenticateToken(req, res, next);
@@ -266,7 +266,6 @@ router.post('/bid_on_job',async (req, res, next) => {
 router.get('/customer_call_history',async (req, res, next) => {
   await authenticateToken(req, res, next);
 }, upload.none(),  CustomerCallHistory);
-// comment
 
 router.get('/expert_call_history',async (req, res, next) => {
   await authenticateToken(req, res, next);
@@ -305,9 +304,7 @@ router.get('/get_expert_myjobs',async (req, res, next) => {
   await authenticateToken(req, res, next);
 }, upload.none(),  getExpertMyJobs);
 
-router.get('/expert_home_jobs',async (req, res, next) => {
-  await authenticateToken(req, res, next);
-}, upload.none(),  getExpertHomeJobs);
+router.get('/expert_home_jobs',  upload.none(),  getExpertHomeJobs);
 
 router.post('/bookmark_job',async (req, res, next) => {
   await authenticateToken(req, res, next);
@@ -341,9 +338,10 @@ router.post('/convert_into_milestone',async (req, res, next) => {
   await authenticateToken(req, res, next);
 }, upload.none(),convertIntoMilestone);
 
-router.get('/get_job_work_milestone',async (req, res, next) => {
+router.get('/get_job_work_milestone', async (req, res, next) => { 
   await authenticateToken(req, res, next);
 }, upload.none(),  getJobWorkMilestone);
+
 
 router.post('/accept_reject_milestone',async (req, res, next) => {
   await authenticateToken(req, res, next);
@@ -357,9 +355,7 @@ router.post('/check_milestone_request',async (req, res, next) => {
   await authenticateToken(req, res, next);
 }, upload.none(),  checkMilestoneRequest);
 
-router.get('/get_expert_job_details',async (req, res, next) => {
-  await authenticateToken(req, res, next);
-}, upload.none(),  getExpertJobDetails);
+router.get('/get_expert_job_details',upload.none(),  getExpertJobDetails);  // async (req, res, next) => { await authenticateToken(req, res, next);}, 
 
 router.get('/get_user_details',async (req, res, next) => {
   await authenticateToken(req, res, next);
@@ -455,6 +451,21 @@ router.post('/debit_wallet_amount', async (req, res, next) => {
   await authenticateToken(req, res, next);
 }, upload.none(), debitWalletAmount);
 
+router.get('/generate_unique_id', upload.none(), generateUniqueId);
+
+router.get('/get_token_variable', upload.none(), getTokenVariable);
+
+router.post('/complete_job', async (req, res, next) => {
+  await authenticateToken(req, res, next);
+}, upload.none(), completeJob);
+
+router.get('/get_expert_milestone_pdf', getExpertEarningPdf);
+
+router.get('/get_wallet_pdf', upload.none(), getWalletPdf);
+
+router.get('/get_expert_earning_pdf', upload.none(), getExpertAllEarningPdf);
+
+router.get('/get_customer_pdf', upload.none(), getCustomerMilestoneCharge);
 
 
 //end

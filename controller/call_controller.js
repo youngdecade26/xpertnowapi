@@ -7,6 +7,7 @@ const { generateToken,generateTokenByChannel,generateResourceId,getResourceId } 
 const languageMessage = require('../shared functions/languageMessage');
 const agoraCon = require('../shared functions/agora_confiq');
 const {getNotificationArrSingle,oneSignalNotificationSendCall} = require('./notification');
+const { error } = require('console');
 //generate token
 const generateVideocallToken = async (request, response) => {
     let {user_id} = request.body;
@@ -180,7 +181,6 @@ const VideoVoiceCallJoin = async (request, response) => {
         return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param,key:'video_call_id'});
     }
     
-    
     try {
         const query1 = "SELECT mobile, active_flag FROM user_master WHERE user_id = ? AND delete_flag = 0 ";
         const values1 = [user_id];
@@ -246,6 +246,7 @@ const VideoVoiceCallEnd = async (request, response) => {
             let selectquery;
             let selectvalues;
             if(result[0]?.user_type==1){
+
                 selectquery = "SELECT other_user_id FROM video_call_master WHERE video_call_id = ? AND delete_flag = 0 ";
                 selectvalues = [video_call_id];
             }else{
@@ -259,13 +260,22 @@ const VideoVoiceCallEnd = async (request, response) => {
                 if (selectresult.length === 0) {
                     return response.status(200).json({ success: false, msg: languageMessage.callIdFound });
                 }
+                let expert_id = selectresult[0].other_user_id;
                
                 const minutes = Math.ceil(duration / 60);
-                const updateQuery = `UPDATE video_call_master SET status  = 2,duration=?,price=?,updatetime=now() WHERE video_call_id = ?`;
-                    connection.query(updateQuery, [minutes,call_Charges,video_call_id], async (err, videoresult) => {
+                const updateQuery = `UPDATE video_call_master SET status  = 2,duration=?,price=?, updatetime=now() WHERE video_call_id = ?`;
+                    connection.query(updateQuery, [minutes,call_Charges, video_call_id], async (err, videoresult) => {
                         if (err) {
                             return response.status(200).json({ success: false, msg: languageMessage.videocallEndUnsuccess, key: err });
                         }
+
+                const updateExpertEarning = 'INSERT INTO expert_earning_master(type, user_id, expert_id, expert_earning, createtime, updatetime) VALUES(?, ?, ?, ?, NOW(), NOW())';
+                
+                connection.query(updateExpertEarning, [1, user_id, expert_id, call_Charges], async(earningErr, earningRes) => {
+                    if(earningErr){
+                        return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: earningErr.message});
+                    }
+    
                         if (videoresult.affectedRows > 0) {
                             const user_id_notification = user_id;
                             let other_user_type;
@@ -328,6 +338,7 @@ const VideoVoiceCallEnd = async (request, response) => {
                     });
                 });
             });
+        })
             
         }catch (err) {
             return response.status(200).json({ success: false, msg: languageMessage.videocallEndUnsuccess, key: err.message });
@@ -345,7 +356,6 @@ const VideoVoiceCallReject = async (request, response) => {
         return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param,key:'video_call_id'});
     }
    
-    
     try {
         const query1 = "SELECT mobile, active_flag FROM user_master WHERE user_id = ? AND delete_flag = 0 ";
         const values1 = [user_id];
@@ -374,6 +384,7 @@ const VideoVoiceCallReject = async (request, response) => {
                         if (err) {
                             return response.status(200).json({ success: false, msg: languageMessage.videocallRejectUnsuccess, key: err });
                         }
+                    
                         if (result.affectedRows > 0) {
                             const user_id_notification = user_id;
                             const other_user_id_notification = other_user_id;

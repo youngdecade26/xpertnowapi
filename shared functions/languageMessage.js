@@ -110,5 +110,15 @@ const messages = {
   convertMilestoneError: ["Work space converted into milestone unsuccessfully, please try again"],
   milestoneUpdatedSuccess: ["Work space updated successfully"],
   milestoneUpdatedUnsuccess: ["Work space updated unsuccessfully , please try again",],
+
+  ExpertRequestNotApproved:['Your request as expert is in being review, please wait for admin approval'],
+  ExpertRejected : ['Your request as expert has been rejected by admin'],
+
+  JobCompleted:['Job completed successfully'],
+  ErrorUpdatingUrl:['Error updating invoice url'],
+  PdfGeneratedSuccess : ['Invoice generated successfully'],
+  ErrorGeneratingPdf:['Error generating PDF'],
+  
+
 };
 module.exports = messages; 

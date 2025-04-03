@@ -7,6 +7,40 @@ const { fields } = require('../middleware/multer');
 const {getNotificationArrSingle,oneSignalNotificationSendCall} = require('./notification');
 const moment = require("moment");
 const SECRET_KEY = "TOKEN-KEY"; // Change to your secure secret
+
+// send otp on mobile function
+const https = require('https');
+async function otpSendMessage(mobile, otp) {
+  return new Promise((resolve, reject) => {
+    const options = {
+      method: 'POST',
+      hostname: 'control.msg91.com',
+      path: `/api/v5/otp?otp=${otp}&otp_length=6&otp_expiry=5&template_id=67e253a1d6fc050fad3baff4&mobile=91${mobile}&authkey=435272AT2B1NRQ67e38dbeP1`,
+      headers: { 'Content-Type': 'application/json' },
+    };
+
+    const req = https.request(options, (res) => {
+      let data = '';
+
+      res.on('data', (chunk) => {
+        data += chunk;
+      });
+
+      res.on('end', () => {
+        console.log('OTP API Response:', data);
+        resolve(JSON.parse(data));
+      });
+    });
+
+    req.on('error', (error) => {
+      reject(error);
+    });
+
+    req.end();
+  });
+}
+
+
 //Get content
 const getContent = async (request, response) => {
     const query = "SELECT content_id, content_type, content FROM content_master WHERE delete_flag = 0";
@@ -71,8 +105,21 @@ const usersignUp_1 = async (request, response) => {
     if (!device_id) {
         return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param });
     }
+      
+     
     // const otp = await generateOTP(6);
     const otp = 123456;
+
+    // const otp = Math.floor(100000 + Math.random() * 900000); // Generate a random OTP
+    // let notiSendStatus;
+    // try {
+    //     notiSendStatus = await otpSendMessage(mobile, otp);
+    // } catch (error) {
+    //     console.error('OTP Sending Failed:', error);
+    //     notiSendStatus = error;
+    // }
+
+
     try {
         const query1 = "SELECT user_id, active_flag, user_type FROM user_master WHERE mobile = ? AND delete_flag=0";
         const values1 = [mobile];
@@ -81,7 +128,6 @@ const usersignUp_1 = async (request, response) => {
                 return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
             }
             if (result.length > 0) {
-                
                 const user_id_get=result[0].user_id;
                 const newUserQuery = `UPDATE user_master SET otp = ? WHERE user_id = ? and delete_flag=0`;
                 connection.query(newUserQuery, [otp, result[0].user_id], async (err, result1) => {
@@ -115,22 +161,12 @@ const usersignUp_1 = async (request, response) => {
     
                 if (device_type === 'ios') { id = 1; }
     
-    
-    
                 const newUserQuery = `
     
                 INSERT INTO user_master (mobile, otp, user_type, player_id, device_type, createtime, updatetime,login_type,signup_step)
-    
                 VALUES (?, ?, ?, ?, ?, now(), now(),?,?)
-    
             `;
-    
-    
-    
                 const values = [mobile, otp, 1, player_id, id,0,0]
-    
-    
-    
                 connection.query(newUserQuery, values, async (err, result) => {
     
                     if (err) {
@@ -202,7 +238,6 @@ const userOtpVerify = async (request, response) => {
                 if (err) {
                     return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
                 }
-               
                 const userDetails = await getUserDetails(user_id);
                 return response.status(200).json({ success: true, msg: languageMessage.otpVerifiedSuccess, userDataArray: userDetails });
                 
@@ -213,6 +248,8 @@ const userOtpVerify = async (request, response) => {
     }
 }
 //end
+
+
 //customer Resend Otp
 const userResendOtp = async (request, response) => {
     let { user_id } = request.body;
@@ -234,6 +271,17 @@ const userResendOtp = async (request, response) => {
             }
             // const otp = await generateOTP(6);
             const otp = 123456;
+
+            // const mobile = result[0].mobile;
+            // const otp = Math.floor(100000 + Math.random() * 900000); // Generate a random OTP
+            // let notiSendStatus;
+            // try {
+            //     notiSendStatus = await otpSendMessage(mobile, otp);
+            // } catch (error) {
+            //     console.error('OTP Sending Failed:', error);
+            //     notiSendStatus = error;
+            // }
+        
             const clearOtpQuery = `
             UPDATE user_master 
             SET otp = ?
@@ -243,10 +291,8 @@ const userResendOtp = async (request, response) => {
                 if (err) {
                     return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
                 }
-               
                     const userDetails = await getUserDetails(user_id);
                     return response.status(200).json({ success: true, msg: languageMessage.otpSuccess, userDataArray: userDetails });
-                
             });
         });
     } catch (err) {
@@ -254,6 +300,7 @@ const userResendOtp = async (request, response) => {
     }
 }
 //end
+
 //customer Sign Up step 2
 const usersignUp_2 = async (request, response) => {
     let { user_id, name, email, dob, gender, pan_number, adhar_number, gst_number, pancard_front_image, pancard_back_image, adharcard_front_image, adharcard_back_image, gst_image, image } = request.body;
@@ -853,6 +900,8 @@ const signUp_1 = async (request, response) => {
     }
     // const otp = await generateOTP(6);
     const otp = 123456;
+   
+
     try {
         const query1 = "SELECT user_id, active_flag, user_type FROM user_master WHERE mobile = ? AND delete_flag=0";
         const values1 = [mobile];
@@ -864,6 +913,16 @@ const signUp_1 = async (request, response) => {
                 if (result[0].user_type === 1){
                     return response.status(200).json({ success: false, msg: languageMessage.alreadyUseNum });
                 }
+
+                //  var otp = Math.floor(100000 + Math.random() * 900000); // Generate a random OTP
+                // let notiSendStatus;
+                // try {
+                //     notiSendStatus = await otpSendMessage(mobile, otp);
+                // } catch (error) {
+                //     console.error('OTP Sending Failed:', error);
+                //     notiSendStatus = error;
+                // }
+               
                 const user_id_get=result[0].user_id;
                 const newUserQuery = `UPDATE user_master SET otp = ? WHERE user_id = ?`;
                 connection.query(newUserQuery, [otp, result[0].user_id], async (err, result1) => {
@@ -938,6 +997,7 @@ const signUp_1 = async (request, response) => {
     }
 }
 //end
+
 //Expert Verify Otp
 const otpVerify = async (request, response) => {
     let { user_id, otp } = request.body;
@@ -1005,6 +1065,15 @@ const resendOtp = async (request, response) => {
             }
             // const otp = await generateOTP(6);
             const otp = 123456;
+            // const mobile = result[0].mobile;
+            // const otp = Math.floor(100000 + Math.random() * 900000); // Generate a random OTP
+            // let notiSendStatus;
+            // try {
+            //     notiSendStatus = await otpSendMessage(mobile, otp);
+            // } catch (error) {
+            //     console.error('OTP Sending Failed:', error);
+            //     notiSendStatus = error;
+            // }
             const clearOtpQuery = `
             UPDATE user_master 
             SET otp = ?
@@ -1140,7 +1209,7 @@ const getDegree = async (request, response) => {
 const getCategoryDetails = async (request, response) => {
     // let { user_id } = request.query;
     try {
-        const query1 = "SELECT category_id, type_name, name, image, updatetime FROM categories_master WHERE delete_flag=0";
+        const query1 = "SELECT category_id, type_name, name, image, updatetime FROM categories_master WHERE delete_flag=0 ORDER BY createtime DESC";
         connection.query(query1, async (err, result) => {
             if (err) {
                 return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
@@ -2257,5 +2326,16 @@ const getSubLevelThreeCategory = async (request, response) => {
         return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
     }
 }
+
 //end
+
+
+
+
+
+
+
+
+
+
 module.exports = {signUp_2,signUp_1,getStates,getCities,getDegree,getCategoryDetails,getExpertLanguages,updateBankDetails,getSubCategoryDetails,getSubCategoryLevelDetails,otpVerify,resendOtp,getContent,getAllContentUrl,managePrivacy,deleteAccount,editProfile,getUserNotification,getCustomerSupport,editCallCharge,editExpertiseAndExperience,editProfessionalDetails,editDocNumber,editProfileDetails,getExpertEye,deleteExpertAccount,deleteSingleNotification,deleteAllNotification,usersignUp_1,userOtpVerify,userResendOtp,usersignUp_2,getExpertiseCategory,getSubExpertiseCategory,getSubExpertiseCategoryLevel,getExpertNotification,getExpertByCatSubCat,getSubLevelTwoCategory,getSubLevelThreeCategory}
