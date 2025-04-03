@@ -4883,13 +4883,12 @@ const generateInvoicePdf = async (invoiceData) => {
         };
 
         const s3Data = await s3.upload(params).promise();
-
         return s3Data.Location; // Return the S3 URL of the PDF
+
     } catch (error) {
         throw new Error("Error generating PDF: " + error.message);
     }
 };
-
 
 
 
