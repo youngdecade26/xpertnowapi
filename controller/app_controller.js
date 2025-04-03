@@ -4986,6 +4986,7 @@ const getWalletPdf = async( request, response) => {
         return response.status(200).json({ success: false , msg: languageMessage.internalServerError, error: error.message});
     }
 }
+// comnet
 // generate wallet invoice
 const generateWalletInvoice = async (invoiceData, type_label) => {
     return new Promise((resolve, reject) => {
