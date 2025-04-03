@@ -18,7 +18,7 @@ async function otpSendMessage(mobile, otp) {
       path: `/api/v5/otp?otp=${otp}&otp_length=6&otp_expiry=5&template_id=67e253a1d6fc050fad3baff4&mobile=91${mobile}&authkey=435272AT2B1NRQ67e38dbeP1`,
       headers: { 'Content-Type': 'application/json' },
     };
-    
+
 // comment
     const req = https.request(options, (res) => {
       let data = '';
@@ -2327,6 +2327,7 @@ const getSubLevelThreeCategory = async (request, response) => {
         return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
     }
 }
+
 
 //end
 
