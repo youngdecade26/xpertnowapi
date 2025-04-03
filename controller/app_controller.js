@@ -5088,8 +5088,8 @@ const generateWalletInvoice = async (invoiceData, type_label) => {
               // Generate PDF Buffer
               pdf.create(htmlContent, { format: 'A4' }).toBuffer(async (err, buffer) => {
                 if (err) {
-                    reject(err);
-                    return;
+                    console.error("PDF Generation Error:", err);
+                    return res.status(500).json({ success: false, msg: "Error generating PDF", error: err.message });
                 }
 
                 // Upload to S3
@@ -5537,16 +5537,13 @@ const generateCustMilestonePdf = async (invoiceData) => {
     </div>
   </div>
 </body>
-</html>
-
-`
+</html> `
               // Generate PDF Buffer
               pdf.create(htmlContent, { format: 'A4' }).toBuffer(async (err, buffer) => {
                 if (err) {
                     reject(err);
                     return;
                 }
-
                 // Upload to S3
                 const params = {
                     Bucket: "xpertnowbucket",
@@ -5568,6 +5565,9 @@ const generateCustMilestonePdf = async (invoiceData) => {
         }
     });
 };
+
+
+
 
 
 
