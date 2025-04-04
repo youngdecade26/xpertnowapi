@@ -4769,97 +4769,191 @@ const s3 = new AWS.S3({
   region: "ap-south-1",
 });
 
-const generateInvoicePdf = async (invoiceData) => {
-  try {
-    const randomSuffix = Math.floor(Math.random() * 1000);
-    const filename = `invoice_${Date.now()}_${randomSuffix}.pdf`;
-
-    // Generate HTML content
+const generateInvoicePdf = (invoiceData) => {
+    // HTML Content
     const htmlContent = `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>Invoice</title>
-  <style>
-    body { font-family: Arial, sans-serif; padding: 20px; background: #f9f9f9; color: #333; }
-    .container { max-width: 700px; margin: auto; background: #fff; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-    h2 { text-align: center; margin-bottom: 20px; }
-    .section { margin-bottom: 20px; }
-    table { width: 100%; border-collapse: collapse; }
-    th, td { padding: 10px; text-align: left; border-bottom: 1px solid #eee; }
-    .total { text-align: right; font-weight: bold; margin-top: 20px; }
-    .logo { text-align: center; margin-bottom: 20px; }
-    .logo img { max-width: 120px; }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <div class="logo">
-      <img src="https://xpertnowbucket.s3.ap-south-1.amazonaws.com/uploads/1743577170167-xpertlog.png" />
-    </div>
-    <h2>Payment Receipt</h2>
-    <p>Hello <strong>${invoiceData.name}</strong>,</p>
-    <p>Here is your receipt for ₹${invoiceData.grand_total_expert_earning} received for milestone #${invoiceData.milestone_number}.</p>
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="utf-8">
+      <title>Payment Receipt</title>
+      <meta name="viewport" content="width=device-width, initial-scale=1">
+      <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0/dist/css/bootstrap.min.css" rel="stylesheet">
+      <style>
+        body {
+          background: #f8f9fa;
+          font-family: Arial, sans-serif;
+          margin: 0;
+          padding: 0;
+          color: #333;
+        }
+        .invoice-container {
+          max-width: 700px;
+          margin: 20px auto;
+          background: #fff;
+          padding: 25px;
+          border-radius: 8px;
+          box-shadow: 0 0 10px rgba(0,0,0,0.05);
+          page-break-inside: avoid;
+        }
+        .header {
+          text-align: center;
+          margin-bottom: 20px;
+        }
+        .logo {
+          max-width: 140px;
+          margin-bottom: 10px;
+        }
+        h4 {
+          margin: 0;
+          font-size: 1.4rem;
+          font-weight: bold;
+        }
+        p {
+          margin-bottom: 10px;
+          font-size: 1rem;
+        }
+        .section {
+          margin-bottom: 15px;
+        }
+        .info-row {
+          display: flex;
+          justify-content: space-between;
+          flex-wrap: wrap;
+          margin-bottom: 10px;
+        }
+        .info-block {
+          width: 48%;
+          font-size: 0.95rem;
+        }
+        .text-muted {
+          color: #666;
+          font-size: 0.85rem;
+        }
+        table {
+          width: 100%;
+          font-size: 0.95rem;
+          margin-top: 10px;
+        }
+        th, td {
+          padding: 8px 0;
+        }
+        th {
+          border-bottom: 2px solid #ccc;
+        }
+        td {
+          border-bottom: 1px solid #e1e1e1;
+        }
+        .amount {
+          text-align: right;
+        }
+        .total-section {
+          text-align: right;
+          font-weight: bold;
+          font-size: 1rem;
+          margin-top: 15px;
+        }
+        .footer {
+          text-align: center;
+          color: #888;
+          font-size: 0.85rem;
+          margin-top: 20px;
+        }
+        @media (max-width: 480px) {
+          .info-row {
+            flex-direction: column;
+          }
+          .info-block {
+            width: 100%;
+            margin-bottom: 10px;
+          }
+          .invoice-container {
+            padding: 15px;
+          }
+        }
+      </style>
+    </head>
+    <body>
+      <div class="invoice-container">
+        <div class="header">
+          <img src="https://xpertnowbucket.s3.ap-south-1.amazonaws.com/uploads/1743577170167-xpertlog.png" alt="Xpertnow logo" class="logo">
+          <h4>Payment Receipt</h4>
+        </div>
 
-    <div class="section">
-      <strong>Payment Date:</strong> ${moment(invoiceData.createtime).format("MMM DD, YYYY")}<br/>
-      <strong>Client:</strong> John McCleane<br/>
-      <strong>Email:</strong> client@example.com<br/>
-      <strong>To:</strong> ${invoiceData.name}, ${invoiceData.address}, ${invoiceData.city_name}<br/>
-      <strong>Email:</strong> ${invoiceData.email}
-    </div>
+        <p>Hey ${invoiceData.name},</p>
+        <p>This is the receipt for a payment of <strong>₹${invoiceData.grand_total_expert_earning}</strong> you made to milestone.</p>
 
-    <table>
-      <thead>
-        <tr><th>Description</th><th>Amount (₹)</th></tr>
-      </thead>
-      <tbody>
-        <tr><td>GST (${invoiceData.gst_per}%)</td><td>${invoiceData.gst_amt}</td></tr>
-        <tr><td>Platform Fee</td><td>${invoiceData.platform_fees}</td></tr>
-        <tr><td>TCS (${invoiceData.tcs_per}%)</td><td>${invoiceData.tcs_amt}</td></tr>
-        <tr><td>TDS (${invoiceData.tds_per}%)</td><td>${invoiceData.tds_amt}</td></tr>
-      </tbody>
-    </table>
+        <div class="section">
+          <div class="info-row">
+            <div class="info-block">
+              <div class="text-muted">Milestone Number</div>
+              <div><strong>${invoiceData.milestone_number}</strong></div>
+            </div>
+            <div class="info-block">
+              <div class="text-muted">Payment Date</div>
+              <div><strong>${invoiceData.payment_date}</strong></div>
+            </div>
+          </div>
+        </div>
 
-    <div class="total">
-      <div>Total Amount: ₹${invoiceData.total_amount}</div>
-      <div>Net Amount: ₹${invoiceData.net_expert_earning}</div>
-      <div>Grand Total: ₹${invoiceData.grand_total_expert_earning}</div>
-    </div>
-  </div>
-</body>
-</html>
+        <div class="section">
+          <div class="info-row">
+            <div class="info-block">
+              <div class="text-muted">Client</div>
+              <div><strong>John McCleane</strong></div>
+              <div>999 5th Avenue, New York, 55832</div>
+              <div><a href="mailto:client@example.com">client@example.com</a></div>
+            </div>
+            <div class="info-block">
+              <div class="text-muted">Payment to</div>
+              <div><strong>${invoiceData.name}</strong></div>
+              <div>${invoiceData.address}, ${invoiceData.city_name}</div>
+              <div><a href="mailto:${invoiceData.email}">${invoiceData.email}</a></div>
+            </div>
+          </div>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Description</th>
+              <th class="amount">Amount (₹)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Total Amount</td>
+              <td class="amount">₹${invoiceData.total_amount}</td>
+            </tr>
+            <tr>
+              <td>Platform fee</td>
+              <td class="amount">₹${invoiceData.platform_fees}</td>
+            </tr>
+            <tr>
+              <td>GST (18%)</td>
+              <td class="amount">₹${invoiceData.gst_amt}</td>
+            </tr>
+            <tr>
+              <td>TCS (${invoiceData.tcs_per}%)</td>
+              <td class="amount">₹${invoiceData.tcs_amt}</td>
+            </tr>
+            <tr>
+              <td>TDS (${invoiceData.tds_per}%)</td>
+              <td class="amount">₹${invoiceData.tds_amt}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="total-section">
+          Grand Total: ₹${invoiceData.grand_total_expert_earning}
+        </div>
+      </div>
+    </body>
+    </html>
     `;
 
-    // Generate PDF using puppeteer
-    const browser = await puppeteer.launch({
-      headless: 'new',
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
-    });
-    const page = await browser.newPage();
-    await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
-    const pdfBuffer = await page.pdf({ format: 'A4' });
-    await browser.close();
-
-    // Upload to AWS S3
-    const s3Params = {
-      Bucket: 'xpertnowbucket',
-      Key: `uploads/${filename}`,
-      Body: pdfBuffer,
-      ContentType: 'application/pdf',
-      ACL: 'public-read',
-    };
-
-    const s3Upload = await s3.upload(s3Params).promise();
-    return s3Upload.Location;
-
-  } catch (error) {
-    console.error('PDF generation or S3 upload failed:', error);
-    throw error;
-  }
+    return htmlContent;
 };
-
 
 
 
