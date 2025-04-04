@@ -4754,108 +4754,113 @@ const getExpertEarningPdf = async (request, response) => {
 
 
 // AWS S3 Configuration
-const puppeteer = require("puppeteer");
-const AWS = require("aws-sdk");
+
 const PDFDocument = require("pdfkit");
 const pdf = require('html-pdf');
 
-// Configure AWS S3
+const puppeteer = require('puppeteer');
+const AWS = require('aws-sdk');
+const moment = require('moment');
+
+// AWS S3 Configuration
 const s3 = new AWS.S3({
-    accessKeyId: "AKIAUGO4KNQULGJQFZIA",
-    secretAccessKey: "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",
-    region: "ap-south-1",
+  accessKeyId: "AKIAUGO4KNQULGJQFZIA",
+  secretAccessKey:  "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",
+  region: "ap-south-1",
 });
 
-// Generate Expert earning Invoice PDF and Upload to S3
-async function generateInvoicePdf(invoiceData) {
-    return new Promise((resolve, reject) => {
-        try {
-            const doc = new PDFDocument({ margin: 50 });
-            let buffers = [];
+const generateInvoicePdf = async (invoiceData) => {
+  try {
+    const randomSuffix = Math.floor(Math.random() * 1000);
+    const filename = `invoice_${Date.now()}_${randomSuffix}.pdf`;
 
-            // Collect PDF data into a buffer
-            doc.on("data", buffers.push.bind(buffers));
-            doc.on("end", async () => {
-                const pdfBuffer = Buffer.concat(buffers);
+    // Generate HTML content
+    const htmlContent = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Invoice</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; background: #f9f9f9; color: #333; }
+    .container { max-width: 700px; margin: auto; background: #fff; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+    h2 { text-align: center; margin-bottom: 20px; }
+    .section { margin-bottom: 20px; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 10px; text-align: left; border-bottom: 1px solid #eee; }
+    .total { text-align: right; font-weight: bold; margin-top: 20px; }
+    .logo { text-align: center; margin-bottom: 20px; }
+    .logo img { max-width: 120px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="logo">
+      <img src="https://xpertnowbucket.s3.ap-south-1.amazonaws.com/uploads/1743577170167-xpertlog.png" />
+    </div>
+    <h2>Payment Receipt</h2>
+    <p>Hello <strong>${invoiceData.name}</strong>,</p>
+    <p>Here is your receipt for ₹${invoiceData.grand_total_expert_earning} received for milestone #${invoiceData.milestone_number}.</p>
 
-                // Generate a unique filename
-                const randomSuffix = Math.floor(Math.random() * 1000);
-                const filename = `invoice_${Date.now()}_${randomSuffix}.pdf`;
-                // const filename = `invoice_${Date.now()}.pdf`;
+    <div class="section">
+      <strong>Payment Date:</strong> ${moment(invoiceData.createtime).format("MMM DD, YYYY")}<br/>
+      <strong>Client:</strong> John McCleane<br/>
+      <strong>Email:</strong> client@example.com<br/>
+      <strong>To:</strong> ${invoiceData.name}, ${invoiceData.address}, ${invoiceData.city_name}<br/>
+      <strong>Email:</strong> ${invoiceData.email}
+    </div>
 
-                // Upload PDF to S3
-                const params = {
-                    Bucket: "xpertnowbucket",
-                    Key: `uploads/${filename}`,
-                    Body: pdfBuffer,
-                    ContentType: "application/pdf",
-                    ACL: "public-read",
-                };
+    <table>
+      <thead>
+        <tr><th>Description</th><th>Amount (₹)</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>GST (${invoiceData.gst_per}%)</td><td>${invoiceData.gst_amt}</td></tr>
+        <tr><td>Platform Fee</td><td>${invoiceData.platform_fees}</td></tr>
+        <tr><td>TCS (${invoiceData.tcs_per}%)</td><td>${invoiceData.tcs_amt}</td></tr>
+        <tr><td>TDS (${invoiceData.tds_per}%)</td><td>${invoiceData.tds_amt}</td></tr>
+      </tbody>
+    </table>
 
-                const s3Data = await s3.upload(params).promise();
-                resolve(s3Data.Location); // Return the S3 URL of the PDF
-            });
+    <div class="total">
+      <div>Total Amount: ₹${invoiceData.total_amount}</div>
+      <div>Net Amount: ₹${invoiceData.net_expert_earning}</div>
+      <div>Grand Total: ₹${invoiceData.grand_total_expert_earning}</div>
+    </div>
+  </div>
+</body>
+</html>
+    `;
 
-            // **1️⃣ Add Logo**
-            const logoUrl = "https://xpertnowbucket.s3.ap-south-1.amazonaws.com/uploads/1743577170167-xpertlog.png";
-            doc.image(logoUrl, 50, 30, { width: 100 });
-
-            // **2️⃣ Invoice Title**
-            doc.fontSize(20).text("Payment Receipt", { align: "center" }).moveDown(2);
-
-            // **3️⃣ Invoice Details**
-            doc.fontSize(12).text(`Hey ${invoiceData.name},`, { align: "left" });
-            doc.text(`This is the receipt for a payment of ₹${invoiceData.grand_total_expert_earning} made to milestone.`);
-            doc.moveDown();
-
-            // **4️⃣ Invoice Info**
-            doc.text(`Milestone No.: #${invoiceData.milestone_number}`);
-            doc.text(`Payment Date: ${new Date(invoiceData.createtime).toDateString()}`);
-            doc.moveDown();
-
-            // **5️⃣ Payment & Client Details**
-            doc.text("Client Details:", { underline: true }).moveDown(0.5);
-            doc.text("John McCleane");
-            doc.text("999 5th Avenue, New York, 55832");
-            doc.text("client@example.com");
-            doc.moveDown();
-
-            doc.text("Payment To:", { underline: true }).moveDown(0.5);
-            doc.text(invoiceData.name);
-            doc.text(`${invoiceData.address}, ${invoiceData.city_name}`);
-            doc.text(invoiceData.email);
-            doc.moveDown(2);
-
-            // **6️⃣ Fees Breakdown Table**
-            doc.fontSize(12).text("Invoice Breakdown", { underline: true }).moveDown(0.5);
-            const fees = [
-                { label: `GST (${invoiceData.gst_per}%)`, amount: `₹${invoiceData.gst_amt}` },
-                { label: "Platform Fee", amount: `₹${invoiceData.platform_fees}` },
-                { label: `TCS (${invoiceData.tcs_per}%)`, amount: `₹${invoiceData.tcs_amt}` },
-                { label: `TDS (${invoiceData.tds_per}%)`, amount: `₹${invoiceData.tds_amt}` },
-            ];
-
-            fees.forEach(fee => {
-                doc.text(fee.label, { width: 300, continued: true }).text(fee.amount, { align: "right" });
-            });
-
-            doc.moveDown(2);
-
-            // **7️⃣ Total Summary**
-            doc.text("Total Amount:", { width: 300, continued: true }).text(`₹${invoiceData.total_amount}`, { align: "right" });
-            doc.text("Net Amount:", { width: 300, continued: true }).text(`₹${invoiceData.net_expert_earning}`, { align: "right" });
-
-            doc.fontSize(14).fillColor("green").text("Grand Total:", { width: 300, continued: true }).text(`₹${invoiceData.grand_total_expert_earning}`, { align: "right" });
-
-            doc.moveDown(2);
-            doc.fontSize(10).fillColor("black").text("Thank you for your business!", { align: "center" });
-
-            doc.end();
-        } catch (error) {
-            reject("Error generating PDF: " + error.message);
-        }
+    // Generate PDF using puppeteer
+    const browser = await puppeteer.launch({
+      headless: 'new',
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
     });
-}
+    const page = await browser.newPage();
+    await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
+    const pdfBuffer = await page.pdf({ format: 'A4' });
+    await browser.close();
+
+    // Upload to AWS S3
+    const s3Params = {
+      Bucket: 'xpertnowbucket',
+      Key: `uploads/${filename}`,
+      Body: pdfBuffer,
+      ContentType: 'application/pdf',
+      ACL: 'public-read',
+    };
+
+    const s3Upload = await s3.upload(s3Params).promise();
+    return s3Upload.Location;
+
+  } catch (error) {
+    console.error('PDF generation or S3 upload failed:', error);
+    throw error;
+  }
+};
+
+
 
 
 // get wallet pdf
