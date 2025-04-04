@@ -4779,7 +4779,9 @@ async function generateInvoicePdf(invoiceData) {
                 const pdfBuffer = Buffer.concat(buffers);
 
                 // Generate a unique filename
-                const filename = `invoice_${Date.now()}.pdf`;
+                const randomSuffix = Math.floor(Math.random() * 1000);
+                const filename = `invoice_${Date.now()}_${randomSuffix}.pdf`;
+                // const filename = `invoice_${Date.now()}.pdf`;
 
                 // Upload PDF to S3
                 const params = {
