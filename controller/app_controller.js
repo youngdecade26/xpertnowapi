@@ -5059,7 +5059,7 @@ const generateWalletInvoice = async (invoiceData, type_label) => {
               pdf.create(htmlContent, { format: 'A4' }).toBuffer(async (err, buffer) => {
                 if (err) {
                     console.error("PDF Generation Error:", err);
-                    return res.status(500).json({ success: false, msg: "Error generating PDF", error: err.message });
+                    reject(err);
                 }
 
                 // Upload to S3
