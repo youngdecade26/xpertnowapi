@@ -4781,54 +4781,11 @@ const generateInvoicePdf = async (invoiceData) => {
 <head>
   <meta charset="UTF-8">
   <title>Invoice</title>
-  <style>
-    body { font-family: Arial, sans-serif; padding: 20px; background: #f9f9f9; color: #333; }
-    .container { max-width: 700px; margin: auto; background: #fff; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-    h2 { text-align: center; margin-bottom: 20px; }
-    .section { margin-bottom: 20px; }
-    table { width: 100%; border-collapse: collapse; }
-    th, td { padding: 10px; text-align: left; border-bottom: 1px solid #eee; }
-    .total { text-align: right; font-weight: bold; margin-top: 20px; }
-    .logo { text-align: center; margin-bottom: 20px; }
-    .logo img { max-width: 120px; }
-  </style>
+ 
 </head>
 <body>
-  <div class="container">
-    <div class="logo">
-      <img src="https://xpertnowbucket.s3.ap-south-1.amazonaws.com/uploads/1743577170167-xpertlog.png" />
-    </div>
-    <h2>Payment Receipt</h2>
-    <p>Hello <strong>${invoiceData.name}</strong>,</p>
-    <p>Here is your receipt for ₹${invoiceData.grand_total_expert_earning} received for milestone #${invoiceData.milestone_number}.</p>
-
-    <div class="section">
-      <strong>Payment Date:</strong> ${moment(invoiceData.createtime).format("MMM DD, YYYY")}<br/>
-      <strong>Client:</strong> John McCleane<br/>
-      <strong>Email:</strong> client@example.com<br/>
-      <strong>To:</strong> ${invoiceData.name}, ${invoiceData.address}, ${invoiceData.city_name}<br/>
-      <strong>Email:</strong> ${invoiceData.email}
-    </div>
-
-    <table>
-      <thead>
-        <tr><th>Description</th><th>Amount (₹)</th></tr>
-      </thead>
-      <tbody>
-        <tr><td>GST (${invoiceData.gst_per}%)</td><td>${invoiceData.gst_amt}</td></tr>
-        <tr><td>Platform Fee</td><td>${invoiceData.platform_fees}</td></tr>
-        <tr><td>TCS (${invoiceData.tcs_per}%)</td><td>${invoiceData.tcs_amt}</td></tr>
-        <tr><td>TDS (${invoiceData.tds_per}%)</td><td>${invoiceData.tds_amt}</td></tr>
-      </tbody>
-    </table>
-
-    <div class="total">
-      <div>Total Amount: ₹${invoiceData.total_amount}</div>
-      <div>Net Amount: ₹${invoiceData.net_expert_earning}</div>
-      <div>Grand Total: ₹${invoiceData.grand_total_expert_earning}</div>
-    </div>
-  </div>
-</body>
+<h4> Payment Invoice </h4>
+  </body>
 </html>
     `;
 
