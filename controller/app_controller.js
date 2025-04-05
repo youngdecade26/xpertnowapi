@@ -4960,12 +4960,75 @@ const getCustomerMilestoneCharge = async( request, response) => {
 
 
 // schedule notification
-const scheduleNotification = async(request, response) => {
-    try{
-         const sql = 'SELECT expert_id FROM slot_schedule_master WHERE time < ='
+const scheduleNotification = () => {
+  const currentDate = moment().format('YYYY-MM-DD');
+  const oneHourLater = moment().add(1, 'hour').format('HH:mm:ss');
+
+  const sql = `
+    SELECT sm.user_id, sm.expert_id, sm.slot_id, sm.date, s.start_time, us.token 
+    FROM slot_schedule_master sm
+    JOIN slot_master s ON sm.slot_id = s.slot_id
+    JOIN user_sessions us ON sm.user_id = us.user_id
+    WHERE sm.delete_flag = 0 AND sm.date = ? AND s.start_time = ?
+  `;
+
+  connection.query(sql, [currentDate, oneHourLater], async (err, results) => {
+    if (err) {
+      console.error("DB Error:", err.message);
+      return;
     }
-}
+
+    if (results.length === 0) {
+      console.log("No upcoming calls in next hour.");
+      return;
+    }
+
+    for (let data of results) {
+      const user_id_notification = data.user_id;
+      const other_user_id_notification = data.expert_id;
+      const action_id = data.slot_id;
+      const action = "Upcoming call";
+      const title = "Upcoming Call";
+      const message = `Reminder: Your call is scheduled at ${moment(data.start_time, 'HH:mm:ss').format('hh:mm A')}`;
+      const action_data = {
+        user_id: user_id_notification,
+        other_user_id: other_user_id_notification,
+        action_id,
+        action
+      };
+
+      await getNotificationArrSingle(
+        user_id_notification,
+        other_user_id_notification,
+        action,
+        action_id,
+        title, title, title, title,
+        message, message, message, message,
+        action_data,
+        async (notification_arr_check) => {
+          const finalArr = [notification_arr_check];
+          if (finalArr.length > 0) {
+            await oneSignalNotificationSendCall(finalArr);
+            console.log(`Notification sent to user_id: ${user_id_notification}`);
+          } else {
+            console.log("Notification array is empty");
+          }
+        }
+      );
+    }
+  });
+};
 
 
 
-module.exports = { getExpertDetails, getExpertDetailsById, getExpertByRating, getMyJobs, getJobPostDetails, createJobPost, chatConsultationHistory, chatJobsHistory, callConsultationHistory, callJobsHistory, getExpertByFilter, walletRecharge, walletHistory, getExpertByName, getExpertEarning, withdrawRequest, withdrawHistory, expertCallConsultationHistory, expertCallJobsHistory, getJobPostsForExpert, getExpertEarningHistory, expertChatConsultationHistory, expertChatJobsHistory, getReviewsOfExpert, getExpertMyJobs, getBidsOfJobPost, hireTheExpert, createProjectCost, getSubscriptionPlans, buySubscription, reviewReply, rateExpert, ExpertBidJob, CustomerCallHistory, ExpertCallHistory, getExpertHomeJobs, bookMarkJob, reportOnJob, customerJobFilter, expertJobFilter, createJobCost, createJobMilestone, getJobWorkMilestone, acceptRejectMilestone, sentMilestoneRequest, checkMilestoneRequest, getExpertJobDetails, getUserProfile, downloadApp, deepLink, getExpertByFilterSubLabel, logOut, chatFileUpload, getExpertCompletedJobs, add_availability, edit_availability, get_available_slots, userBookSlot, getExpertScheduleSlot, convertIntoMilestone, updateJobMilestone, getWalletAmount, checkWalletAmount, debitWalletAmount, generateUniqueId, getTokenVariable, completeJob, getExpertEarningPdf, getWalletPdf , getExpertAllEarningPdf, getCustomerMilestoneCharge };
+
+
+
+
+
+
+
+
+
+
+module.exports = { getExpertDetails, getExpertDetailsById, getExpertByRating, getMyJobs, getJobPostDetails, createJobPost, chatConsultationHistory, chatJobsHistory, callConsultationHistory, callJobsHistory, getExpertByFilter, walletRecharge, walletHistory, getExpertByName, getExpertEarning, withdrawRequest, withdrawHistory, expertCallConsultationHistory, expertCallJobsHistory, getJobPostsForExpert, getExpertEarningHistory, expertChatConsultationHistory, expertChatJobsHistory, getReviewsOfExpert, getExpertMyJobs, getBidsOfJobPost, hireTheExpert, createProjectCost, getSubscriptionPlans, buySubscription, reviewReply, rateExpert, ExpertBidJob, CustomerCallHistory, ExpertCallHistory, getExpertHomeJobs, bookMarkJob, reportOnJob, customerJobFilter, expertJobFilter, createJobCost, createJobMilestone, getJobWorkMilestone, acceptRejectMilestone, sentMilestoneRequest, checkMilestoneRequest, getExpertJobDetails, getUserProfile, downloadApp, deepLink, getExpertByFilterSubLabel, logOut, chatFileUpload, getExpertCompletedJobs, add_availability, edit_availability, get_available_slots, userBookSlot, getExpertScheduleSlot, convertIntoMilestone, updateJobMilestone, getWalletAmount, checkWalletAmount, debitWalletAmount, generateUniqueId, getTokenVariable, completeJob, getExpertEarningPdf, getWalletPdf , getExpertAllEarningPdf, getCustomerMilestoneCharge, scheduleNotification };

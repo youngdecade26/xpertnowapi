@@ -2289,7 +2289,8 @@ const getSubLevelTwoCategory = async (request, response) => {
     }
 }
 //end
-//customer Get sub Expertise Categories level
+
+//sub Expertise Categories level
 const getSubLevelThreeCategory = async (request, response) => {
     let { user_id, sub_two_level_category_id } = request.query;
     if (!user_id || !sub_two_level_category_id) {
