@@ -4994,161 +4994,162 @@ const getWalletPdf = async( request, response) => {
         return response.status(200).json({ success: false , msg: languageMessage.internalServerError, error: error.message});
     }
 }
+
 // generate wallet invoice
-const generateWalletInvoice = async (invoiceData, type_label) => {
-    return new Promise((resolve, reject) => {
-        try {
-            // Generate a unique filename
-            const randomSuffix = Math.floor(Math.random() * 1000);
-            const filename = `invoice_${Date.now()}_${randomSuffix}.pdf`;
+// const generateWalletInvoice = async (invoiceData, type_label) => {
+//     return new Promise((resolve, reject) => {
+//         try {
+//             // Generate a unique filename
+//             const randomSuffix = Math.floor(Math.random() * 1000);
+//             const filename = `invoice_${Date.now()}_${randomSuffix}.pdf`;
        
-// HTML Template
- const htmlContent = `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <title>Payment Receipt</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0/dist/css/bootstrap.min.css" rel="stylesheet">
-  <style>
-    body {
-      background: #f8f9fa;
-      font-family: Arial, sans-serif;
-      margin: 0;
-      padding: 0;
-      color: #333;
-    }
-    .invoice-container {
-      width: 100%;
-      max-width: 700px;
-      margin: 0 auto;
-      background: #fff;
-      padding: 30px;
-      border-radius: 8px;
-      box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
-    }
-    .header {
-      text-align: center;
-      margin-bottom: 30px;
-    }
-    .logo {
-      max-width: 150px;
-      margin-bottom: 10px;
-    }
-    h4 {
-      margin: 0;
-      font-size: 1.5rem;
-      font-weight: bold;
-    }
-    p {
-      margin-bottom: 10px;
-      font-size: 1rem;
-    }
-    .section {
-      margin-bottom: 20px;
-    }
-    .info-row {
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 20px;
-    }
-    .info-block {
-      width: 48%;
-    }
-    .info-block div {
-      font-size: 1rem;
-    }
-    .text-muted {
-      color: #666;
-      font-size: 0.9rem;
-    }
-    .amount {
-      text-align: right;
-      font-size: 1rem;
-    }
-    .total-section {
-      text-align: right;
-      font-weight: bold;
-      font-size: 1.1rem;
-      margin-top: 20px;
-    }
-    .pay-btn {
-      display: block;
-      width: 100%;
-      padding: 10px;
-      background: #1e2e50;
-      color: white;
-      text-align: center;
-      text-decoration: none;
-      border-radius: 4px;
-      font-weight: bold;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      font-size: 0.9rem;
-      border: none;
-      cursor: pointer;
-      margin-top: 25px;
-    }
-    @media (max-width: 480px) {
-      .info-row {
-        flex-direction: column;
-      }
-      .info-block {
-        width: 100%;
-        margin-bottom: 15px;
-      }
-      .invoice-container {
-        padding: 15px;
-      }
-    }
-  </style>
-</head>
-<body>
-  <div class="invoice-container">
-    <div class="header">
-      <img src="https://xpertnowbucket.s3.ap-south-1.amazonaws.com/uploads/1743577170167-xpertlog.png" alt="Xpertnow logo" class="logo">
-      <h4>Payment Receipt</h4>
-    </div>
+// // HTML Template
+//  const htmlContent = `
+// <!DOCTYPE html>
+// <html lang="en">
+// <head>
+//   <meta charset="utf-8">
+//   <title>Payment Receipt</title>
+//   <meta name="viewport" content="width=device-width, initial-scale=1">
+//   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0/dist/css/bootstrap.min.css" rel="stylesheet">
+//   <style>
+//     body {
+//       background: #f8f9fa;
+//       font-family: Arial, sans-serif;
+//       margin: 0;
+//       padding: 0;
+//       color: #333;
+//     }
+//     .invoice-container {
+//       width: 100%;
+//       max-width: 700px;
+//       margin: 0 auto;
+//       background: #fff;
+//       padding: 30px;
+//       border-radius: 8px;
+//       box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+//     }
+//     .header {
+//       text-align: center;
+//       margin-bottom: 30px;
+//     }
+//     .logo {
+//       max-width: 150px;
+//       margin-bottom: 10px;
+//     }
+//     h4 {
+//       margin: 0;
+//       font-size: 1.5rem;
+//       font-weight: bold;
+//     }
+//     p {
+//       margin-bottom: 10px;
+//       font-size: 1rem;
+//     }
+//     .section {
+//       margin-bottom: 20px;
+//     }
+//     .info-row {
+//       display: flex;
+//       justify-content: space-between;
+//       margin-bottom: 20px;
+//     }
+//     .info-block {
+//       width: 48%;
+//     }
+//     .info-block div {
+//       font-size: 1rem;
+//     }
+//     .text-muted {
+//       color: #666;
+//       font-size: 0.9rem;
+//     }
+//     .amount {
+//       text-align: right;
+//       font-size: 1rem;
+//     }
+//     .total-section {
+//       text-align: right;
+//       font-weight: bold;
+//       font-size: 1.1rem;
+//       margin-top: 20px;
+//     }
+//     .pay-btn {
+//       display: block;
+//       width: 100%;
+//       padding: 10px;
+//       background: #1e2e50;
+//       color: white;
+//       text-align: center;
+//       text-decoration: none;
+//       border-radius: 4px;
+//       font-weight: bold;
+//       text-transform: uppercase;
+//       letter-spacing: 1px;
+//       font-size: 0.9rem;
+//       border: none;
+//       cursor: pointer;
+//       margin-top: 25px;
+//     }
+//     @media (max-width: 480px) {
+//       .info-row {
+//         flex-direction: column;
+//       }
+//       .info-block {
+//         width: 100%;
+//         margin-bottom: 15px;
+//       }
+//       .invoice-container {
+//         padding: 15px;
+//       }
+//     }
+//   </style>
+// </head>
+// <body>
+//   <div class="invoice-container">
+//     <div class="header">
+//       <img src="https://xpertnowbucket.s3.ap-south-1.amazonaws.com/uploads/1743577170167-xpertlog.png" alt="Xpertnow logo" class="logo">
+//       <h4>Payment Receipt</h4>
+//     </div>
 
-    <p>Hey ${invoiceData.name},</p>
-    <p>This is the receipt for a payment of <strong>₹${invoiceData.amount}</strong> you made to ${type_label}.</p>
+//     <p>Hey ${invoiceData.name},</p>
+//     <p>This is the receipt for a payment of <strong>₹${invoiceData.amount}</strong> you made to ${type_label}.</p>
 
-    <div class="section">
-      <div class="info-row">
-        <div class="info-block">
-          <div class="text-muted">Payment Date</div>
-          <div><strong>${moment(invoiceData.createtime).format("MMM DD, YYYY")}</strong></div>
-        </div>
-      </div>
-    </div>
+//     <div class="section">
+//       <div class="info-row">
+//         <div class="info-block">
+//           <div class="text-muted">Payment Date</div>
+//           <div><strong>${moment(invoiceData.createtime).format("MMM DD, YYYY")}</strong></div>
+//         </div>
+//       </div>
+//     </div>
 
-    <table style="width: 100%; margin-bottom: 20px;">
-      <thead>
-        <tr>
-          <th>Description</th>
-          <th class="amount">Amount</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>${type_label}</td>
-          <td class="amount">₹${invoiceData.amount}</td>
-        </tr>
-      </tbody>
-    </table>
+//     <table style="width: 100%; margin-bottom: 20px;">
+//       <thead>
+//         <tr>
+//           <th>Description</th>
+//           <th class="amount">Amount</th>
+//         </tr>
+//       </thead>
+//       <tbody>
+//         <tr>
+//           <td>${type_label}</td>
+//           <td class="amount">₹${invoiceData.amount}</td>
+//         </tr>
+//       </tbody>
+//     </table>
 
-    <div class="total-section">
-      <div>Total Amount: ₹${invoiceData.amount}</div>
-    </div>
+//     <div class="total-section">
+//       <div>Total Amount: ₹${invoiceData.amount}</div>
+//     </div>
 
-    <div class="footer" style="text-align: center; margin-top: 20px; color: #888;">
+//     <div class="footer" style="text-align: center; margin-top: 20px; color: #888;">
     
-    </div>
-  </div>
-</body>
-</html>
-`
+//     </div>
+//   </div>
+// </body>
+// </html>
+// `
               // Generate PDF Buffer
     //           pdf.create(htmlContent, { format: 'A4' }).toBuffer(async (err, buffer) => {
     //             if (err) {
@@ -5176,7 +5177,9 @@ const generateWalletInvoice = async (invoiceData, type_label) => {
     //         reject(error);
     //     }
     // });
-};
+// };
+
+
 
 
 
@@ -5217,6 +5220,7 @@ const getExpertAllEarningPdf = async( request, response) => {
         return response.status(200).json({ success: false , msg: languageMessage.internalServerError, error: error.message});
     }
 }
+
 const generateExpertAllEarningPdf = async (invoiceData, type_label) => {
     return new Promise((resolve, reject) => {
         try {
@@ -5632,7 +5636,7 @@ const generateCustMilestonePdf = async (invoiceData) => {
         }
     });
 };
-// comment
+
 
 
 
