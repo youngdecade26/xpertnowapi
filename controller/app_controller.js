@@ -4958,7 +4958,6 @@ const generateInvoicePdf = (invoiceData) => {
                         reject(err);
                     }
                    resolve(htmlContent);
-
     });
 };
 
