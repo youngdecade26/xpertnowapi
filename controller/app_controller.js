@@ -4733,9 +4733,10 @@ const getExpertEarningPdf = async (request, response) => {
             }
 
             try {
-                const filename = await generatePDFfromHTML(res[0], expert_earning_id);
-
-                const invoiceUrl = filename;
+                // const filename = await generatePDFfromHTML(res[0], expert_earning_id);
+                const filename = `invoice_${expert_earning_id}.pdf`;
+                // const invoiceUrl = filename;
+                const invoiceUrl = await generateInvoicePdf(res[0], filename);
                 const updateSql = 'UPDATE expert_earning_master SET invoice_url = ? WHERE expert_earning_id = ?';
                 connection.query(updateSql, [invoiceUrl, expert_earning_id], (updateErr) => {
                     if (updateErr) {
@@ -4758,57 +4759,85 @@ const getExpertEarningPdf = async (request, response) => {
 // generate pdf 
 const puppeteer = require('puppeteer');
 const AWS = require('aws-sdk');
-// const moment = require('moment');
 
-// AWS S3 Configuration
+
+const fs = require('fs');
+const path = require('path');
+const AWS = require('aws-sdk');
+const { JSDOM } = require('jsdom');
+const { jsPDF } = require('jspdf');
+const htmlToImage = require('html-to-image');
+const { createCanvas, loadImage } = require('canvas');
+
+// S3 Config
 const s3 = new AWS.S3({
   accessKeyId: "AKIAUGO4KNQULGJQFZIA",
-  secretAccessKey:  "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",
-  region: "ap-south-1",
+  secretAccessKey: "uED2kfGmnJFGL/86NjfcBcISMVr8ayQ36QM3/dV5",
+  region: "ap-south-1", // Adjust region if needed
 });
 
+const BUCKET_NAME = "xpertnowbucket";
+const BASE_S3_URL = 'https://xpertnowbucket.s3.ap-south-1.amazonaws.com/uploads/';
 
-async function generatePDFfromHTML(htmlContent, outputPath) {
-
-    const browser = await puppeteer.launch({
-        executablePath: '/usr/bin/google-chrome', // or chromium path
-        headless: 'new', // headless mode
-      });
-
-    const page = await browser.newPage();
-    await page.setContent(htmlContent,  { waitUntil: 'networkidle0' });
-    await page.pdf({ path: outputPath, format: 'A4' });
-    await browser.close();
-  }
-    
-const generateInvoicePdf = (invoiceData) => {
-    // HTML Content
-    const htmlContent = `
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-      <meta charset="utf-8">
-      <title>Payment Receipt</title>
-      <meta name="viewport" content="width=device-width, initial-scale=1">
-      <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0/dist/css/bootstrap.min.css" rel="stylesheet">
-      
-    </head>
-    <body>
-      <div class="invoice-container">
-        <div class="header">
-          <img src="https://xpertnowbucket.s3.ap-south-1.amazonaws.com/uploads/1743577170167-xpertlog.png" alt="Xpertnow logo" class="logo">
-          <h4>Payment Receipt</h4>
+async function generateInvoicePdf(invoiceData, fileName) {
+  const htmlContent = `
+    <html>
+      <head>
+        <style>
+          body { font-family: Arial, sans-serif; }
+          .invoice-container { padding: 20px; }
+          .header { text-align: center; margin-bottom: 20px; }
+          .logo { height: 50px; }
+        </style>
+      </head>
+      <body>
+        <div class="invoice-container">
+          <div class="header">
+            <img src="https://xpertnowbucket.s3.ap-south-1.amazonaws.com/uploads/1743577170167-xpertlog.png" class="logo" />
+            <h4>Payment Receipt</h4>
+          </div>
+          <p>Hey ${invoiceData.name},</p>
+          <p>This is the receipt for a payment of <strong>₹${invoiceData.grand_total_expert_earning}</strong> you made to milestone.</p>
         </div>
+      </body>
+    </html>
+  `;
 
-        <p>Hey ${invoiceData.name},</p>
-        <p>This is the receipt for a payment of <strong>₹${invoiceData.grand_total_expert_earning}</strong> you made to milestone.</p>
+  const dom = new JSDOM(htmlContent);
+  const node = dom.window.document.body;
 
-    `;
-    generatePDFfromHTML(htmlContent, 'custom.pdf')
-    .then(() => console.log('PDF generated successfully'))
-    .catch(err => console.error('Error generating PDF:', err));
+  // Convert HTML to Image using node-canvas
+  const dataUrl = await htmlToImage.toPng(node, {
+    canvas: createCanvas,
+    loadImage: loadImage,
+  });
+
+  // Generate PDF from image
+  const pdf = new jsPDF();
+  const imgProps = pdf.getImageProperties(dataUrl);
+  const pdfWidth = pdf.internal.pageSize.getWidth();
+  const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+
+  pdf.addImage(dataUrl, 'PNG', 0, 0, pdfWidth, pdfHeight);
+
+  // Get PDF buffer
+  const pdfBuffer = Buffer.from(pdf.output('arraybuffer'));
+
+  // Upload to S3
+  const s3Key = `uploads/${fileName}`;
+  const uploadParams = {
+    Bucket: BUCKET_NAME,
+    Key: s3Key,
+    Body: pdfBuffer,
+    ContentType: 'application/pdf',
+    ACL: 'public-read',
   };
 
+  await s3.upload(uploadParams).promise();
+
+  // Return public S3 URL
+  return `${BASE_S3_URL}${fileName}`;
+}
 
 
 
@@ -4823,7 +4852,13 @@ const generateInvoicePdf = (invoiceData) => {
 
 
 
-// get wallet pdf
+
+
+
+
+
+
+  // get wallet pdf
 const getWalletPdf = async( request, response) => {
     const {transition_id} = request.query;
     try{
