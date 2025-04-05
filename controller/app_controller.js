@@ -4959,6 +4959,7 @@ const generateInvoicePdf = (invoiceData) => {
                     }
                    resolve(htmlContent);
     });
+    
 };
 
 
