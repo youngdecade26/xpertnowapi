@@ -4770,10 +4770,15 @@ const s3 = new AWS.S3({
 
 
 async function generatePDFfromHTML(htmlContent, outputPath) {
-    const browser = await puppeteer.launch();
+
+    const browser = await puppeteer.launch({
+        executablePath: '/usr/bin/google-chrome', // or chromium path
+        headless: 'new', // headless mode
+      });
+
     const page = await browser.newPage();
-    await page.setContent(htmlContent);
-    await page.pdf({ path: outputPath, format: 'A4' });
+    await page.setContent(htmlContent,  { waitUntil: 'networkidle0' });
+    await page.pdf({ path: uploads123/${fileName}, format: 'A4' });
     await browser.close();
   }
   
