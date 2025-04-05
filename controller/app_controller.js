@@ -4733,7 +4733,7 @@ const getExpertEarningPdf = async (request, response) => {
             }
 
             try {
-                const filename = await generateInvoicePdf(res[0], expert_earning_id);
+                const filename = await generatePDFfromHTML(res[0], expert_earning_id);
 
                 const invoiceUrl = filename;
                 const updateSql = 'UPDATE expert_earning_master SET invoice_url = ? WHERE expert_earning_id = ?';
@@ -4755,8 +4755,7 @@ const getExpertEarningPdf = async (request, response) => {
 
 // AWS S3 Configuration
 
-const PDFDocument = require("pdfkit");
-const pdf = require('html-pdf');
+
 
 const puppeteer = require('puppeteer');
 const AWS = require('aws-sdk');
@@ -4768,6 +4767,19 @@ const s3 = new AWS.S3({
   secretAccessKey:  "uED2kfGmnJFGL/86NjfcBcISMVr8ayQ36QM3/dV5",
   region: "ap-south-1",
 });
+
+
+async function generatePDFfromHTML(htmlContent, outputPath) {
+    const browser = await puppeteer.launch();
+    const page = await browser.newPage();
+    await page.setContent(htmlContent);
+    await page.pdf({ path: outputPath, format: 'A4' });
+    await browser.close();
+  }
+  
+  // Usage
+//   const htmlContent = '<h1>Hello World</h1><p>This is custom HTML content.</p>';
+
 
 const generateInvoicePdf = (invoiceData) => {
     // HTML Content
@@ -4951,16 +4963,10 @@ const generateInvoicePdf = (invoiceData) => {
     </body>
     </html>
     `;
-
-    pdf.create(htmlContent, { format: 'A4' }).toBuffer(async (err, buffer) => {
-                    if (err) {
-                        console.error("PDF Generation Error:", err);
-                        reject(err);
-                    }
-                   resolve(htmlContent);
-    });
-    
-};
+    generatePDFfromHTML(htmlContent, 'custom.pdf')
+    .then(() => console.log('PDF generated successfully'))
+    .catch(err => console.error('Error generating PDF:', err));
+  };
 
 
 
