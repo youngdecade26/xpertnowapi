@@ -5150,32 +5150,32 @@ const generateWalletInvoice = async (invoiceData, type_label) => {
 </html>
 `
               // Generate PDF Buffer
-              pdf.create(htmlContent, { format: 'A4' }).toBuffer(async (err, buffer) => {
-                if (err) {
-                    console.error("PDF Generation Error:", err);
-                    reject(err);
-                }
+    //           pdf.create(htmlContent, { format: 'A4' }).toBuffer(async (err, buffer) => {
+    //             if (err) {
+    //                 console.error("PDF Generation Error:", err);
+    //                 reject(err);
+    //             }
 
-                // Upload to S3
-                const params = {
-                    Bucket: "xpertnowbucket",
-                    Key: `uploads/${filename}`,
-                    Body: buffer,
-                    ContentType: 'application/pdf',
-                    ACL: 'public-read',
-                };
+    //             // Upload to S3
+    //             const params = {
+    //                 Bucket: "xpertnowbucket",
+    //                 Key: `uploads/${filename}`,
+    //                 Body: buffer,
+    //                 ContentType: 'application/pdf',
+    //                 ACL: 'public-read',
+    //             };
 
-                try {
-                    const s3Data = await s3.upload(params).promise();
-                    resolve(s3Data.Location); // Return the S3 file URL
-                } catch (uploadError) {
-                    reject(uploadError);
-                }
-            });
-        } catch (error) {
-            reject(error);
-        }
-    });
+    //             try {
+    //                 const s3Data = await s3.upload(params).promise();
+    //                 resolve(s3Data.Location); // Return the S3 file URL
+    //             } catch (uploadError) {
+    //                 reject(uploadError);
+    //             }
+    //         });
+    //     } catch (error) {
+    //         reject(error);
+    //     }
+    // });
 };
 
 
