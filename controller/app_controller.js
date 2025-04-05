@@ -4853,11 +4853,6 @@ async function generateInvoicePdf(invoiceData, fileName) {
 
 
 
-
-
-
-
-
   // get wallet pdf
 const getWalletPdf = async( request, response) => {
     const {transition_id} = request.query;
