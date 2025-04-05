@@ -4952,8 +4952,26 @@ const generateInvoicePdf = (invoiceData) => {
     </html>
     `;
 
-    return htmlContent;
+    pdf.create(htmlContent, { format: 'A4' }).toBuffer(async (err, buffer) => {
+                    if (err) {
+                        console.error("PDF Generation Error:", err);
+                        reject(err);
+                    }
+                   resolve(htmlContent);
+
+    });
 };
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4994,6 +5012,8 @@ const getWalletPdf = async( request, response) => {
         return response.status(200).json({ success: false , msg: languageMessage.internalServerError, error: error.message});
     }
 }
+
+
 
 // generate wallet invoice
 // const generateWalletInvoice = async (invoiceData, type_label) => {
