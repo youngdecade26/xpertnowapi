@@ -4753,10 +4753,9 @@ const getExpertEarningPdf = async (request, response) => {
 };
 
 
-// AWS S3 Configuration
 
 
-
+// generate pdf 
 const puppeteer = require('puppeteer');
 const AWS = require('aws-sdk');
 // const moment = require('moment');
@@ -4778,12 +4777,10 @@ async function generatePDFfromHTML(htmlContent, outputPath) {
 
     const page = await browser.newPage();
     await page.setContent(htmlContent,  { waitUntil: 'networkidle0' });
-    await page.pdf({ path: uploads123/${fileName}, format: 'A4' });
+    await page.pdf({ path: outputPath, format: 'A4' });
     await browser.close();
   }
-  
- 
-
+    
 const generateInvoicePdf = (invoiceData) => {
     // HTML Content
     const htmlContent = `
