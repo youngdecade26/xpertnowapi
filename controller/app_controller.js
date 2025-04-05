@@ -4757,13 +4757,13 @@ const getExpertEarningPdf = async (request, response) => {
 
 
 // generate pdf 
-const puppeteer = require('puppeteer');
+// const puppeteer = require('puppeteer');
 const AWS = require('aws-sdk');
 
 
 const fs = require('fs');
 const path = require('path');
-const AWS = require('aws-sdk');
+// const AWS = require('aws-sdk');
 const { JSDOM } = require('jsdom');
 const { jsPDF } = require('jspdf');
 const htmlToImage = require('html-to-image');
