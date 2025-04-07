@@ -4782,11 +4782,13 @@ function generateUniqueFilename(prefix = 'receipt') {
 
 
 // ... (same AWS & imports as before)
+// ... (same AWS & imports as before)
+
 async function generateInvoicePdf(invoiceData) {
     return new Promise(async (resolve, reject) => {
       const fileName = generateUniqueFilename();
   
-      const doc = new PDFDocument({ size: 'A4', margin: 40 });
+      const doc = new PDFDocument({ size: 'A4', margin: 50 });
       const buffers = [];
   
       doc.on('data', buffers.push.bind(buffers));
@@ -4815,48 +4817,51 @@ async function generateInvoicePdf(invoiceData) {
         const imageResponse = await axios.get(imageUrl, { responseType: 'arraybuffer' });
         const imageBuffer = Buffer.from(imageResponse.data, 'binary');
   
-        // Logo
-        doc.image(imageBuffer, doc.page.width / 2 - 60, 30, { width: 120 });
-        doc.moveDown(4); // add enough space below logo
+        // Add Logo
+        doc.image(imageBuffer, doc.page.width / 2 - 75, 30, { width: 150 });
   
-        // Greeting & Receipt Info
+        doc.moveDown(5);
+  
+        // Title
         doc
           .font('Helvetica-Bold')
-          .fontSize(16)
-          .text(`Hey ${invoiceData.name},`, { align: 'left' })
-          .moveDown(0.5)
+          .fontSize(26)
+          .text('', { align: 'center' });
+  
+        doc.moveDown(2);
+  
+        // Greeting & Intro
+        doc
           .font('Helvetica')
-          .fontSize(14)
-          .text(`This is the receipt for a payment of Rs ${invoiceData.grand_total_expert_earning} you made to milestone.`)
+          .fontSize(16)
+          .text(`Hey ${invoiceData.name},`)
+          .moveDown(0.5)
+          .text(`This is the receipt for a payment of ₹${invoiceData.grand_total_expert_earning} you made to milestone.`)
           .moveDown(2);
   
         // Milestone Number
         doc
-          .font('Helvetica-Bold')
           .fontSize(14)
+          .font('Helvetica-Bold')
           .text('Milestone Number:')
           .font('Helvetica')
-          .fontSize(13)
           .text(invoiceData.milestone_number)
           .moveDown(1);
   
         // Payment Date
         doc
           .font('Helvetica-Bold')
-          .fontSize(14)
           .text('Payment Date:')
           .font('Helvetica')
-          .fontSize(13)
           .text(moment(invoiceData.createtime).format("MMM DD, YYYY"))
-          .moveDown(1.5);
+          .moveDown(2);
   
-        // Client Info
+        // Client
         doc
-          .font('Helvetica-Bold')
           .fontSize(14)
+          .font('Helvetica-Bold')
           .text('Client:')
           .font('Helvetica')
-          .fontSize(13)
           .text('John McCleane')
           .text('999 5th Avenue, New York, 55832')
           .text('client@example.com')
@@ -4865,10 +4870,8 @@ async function generateInvoicePdf(invoiceData) {
         // Payment To
         doc
           .font('Helvetica-Bold')
-          .fontSize(14)
           .text('Payment To:')
           .font('Helvetica')
-          .fontSize(13)
           .text(invoiceData.name)
           .text(`${invoiceData.address}, ${invoiceData.city_name}`)
           .text(invoiceData.email)
@@ -4883,30 +4886,29 @@ async function generateInvoicePdf(invoiceData) {
           [`TDS (${invoiceData.tds_per}%)`, invoiceData.tds_amt],
         ];
   
-        const descX = 50;
-        const amountX = 400;
+        const startX = 50;
+        let startY = doc.y;
   
-        doc
-          .font('Helvetica-Bold')
-          .fontSize(14)
-          .text('Description', descX)
-          .text('Amount (Rs)', amountX, undefined, { align: 'right' })
-          .moveDown(0.5)
-          .font('Helvetica')
-          .fontSize(13);
+        doc.fontSize(14).font('Helvetica-Bold');
+        doc.text('Description', startX, startY);
+        doc.text('Amount (₹)', 400, startY, { align: 'right' });
+        doc.font('Helvetica');
+        doc.moveDown(0.8);
   
-        tableData.forEach(([label, value]) => {
-          doc.text(label, descX);
-          doc.text(`Rs ${value}`, amountX, doc.y, { align: 'right' });
-          doc.moveDown(0.5);
-        });
+        for (let i = 0; i < tableData.length; i++) {
+          const y = doc.y;
+          doc.text(tableData[i][0], startX, y);
+          doc.text(`₹${tableData[i][1]}`, 400, y, { align: 'right' });
+          doc.moveDown(0.8);
+        }
+  
+        doc.moveDown(1.5);
   
         // Grand Total
         doc
-          .moveDown(1)
           .font('Helvetica-Bold')
-          .fontSize(15)
-          .text(`Grand Total: Rs ${invoiceData.grand_total_expert_earning}`, { align: 'right' });
+          .fontSize(16)
+          .text(`Grand Total: ₹${invoiceData.grand_total_expert_earning}`, { align: 'right' });
   
         doc.end();
   
@@ -4915,6 +4917,7 @@ async function generateInvoicePdf(invoiceData) {
       }
     });
   }
+  
   
 
 
@@ -4959,6 +4962,7 @@ const getWalletPdf = async( request, response) => {
         return response.status(200).json({ success: false , msg: languageMessage.internalServerError, error: error.message});
     }
 }
+
 
 // get expert all earning
 const getExpertAllEarningPdf = async( request, response) => {
@@ -5092,7 +5096,6 @@ const scheduleNotification = () => {
     return response.status(200).json({ success: true, msg: languageMessage.NotificationSend})
   });
 };
-
 
 
 
