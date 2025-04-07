@@ -4761,8 +4761,8 @@ const AWS = require('aws-sdk');
 const fs = require('fs');
 const axios = require('axios');
 const PDFDocument = require('pdfkit');
+const moment = require('moment');
 
-// S3 Config
 const s3 = new AWS.S3({
   accessKeyId: "AKIAUGO4KNQULGJQFZIA",
   secretAccessKey: "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",
@@ -4799,27 +4799,92 @@ async function generateInvoicePdf(invoiceData, fileName) {
     });
 
     try {
-      // Fetch the logo image from S3
       const imageUrl = 'https://xpertnowbucket.s3.ap-south-1.amazonaws.com/uploads/1743577170167-xpertlog.png';
       const imageResponse = await axios.get(imageUrl, { responseType: 'arraybuffer' });
       const imageBuffer = Buffer.from(imageResponse.data, 'binary');
 
-      // Add image to PDF
-      doc.image(imageBuffer, { fit: [100, 100], align: 'center' }).moveDown(1.5);
+      // Logo
+      doc.image(imageBuffer, doc.page.width / 2 - 50, 30, { width: 100 }).moveDown();
 
-      // Add text
+      // Title
       doc
-        .fontSize(20)
+        .fontSize(22)
         .text('Payment Receipt', { align: 'center' })
+        .moveDown(1);
+
+      // Intro
+      doc
+        .fontSize(12)
+        .text(`Hey ${invoiceData.name},`, { align: 'left' })
+        .moveDown(0.5)
+        .text(`This is the receipt for a payment of ₹${invoiceData.grand_total_expert_earning} you made to milestone.`)
+        .moveDown();
+
+      // Milestone and Payment Date
+      doc
+        .fontSize(10)
+        .text(`Milestone Number: ${invoiceData.milestone_number}`, { continued: true })
+        .text(`    Payment Date: ${moment(invoiceData.createtime).format("MMM DD, YYYY")}`)
+        .moveDown();
+
+      // Client and Payment To
+      doc
+        .fontSize(10)
+        .text('Client:', { underline: true })
+        .text('John McCleane')
+        .text('999 5th Avenue, New York, 55832')
+        .text('client@example.com')
         .moveDown();
 
       doc
+        .text('Payment to:', { underline: true })
+        .text(invoiceData.name)
+        .text(`${invoiceData.address}, ${invoiceData.city_name}`)
+        .text(invoiceData.email)
+        .moveDown();
+
+      // Charges Table
+      doc
         .fontSize(12)
-        .text(`Hey ${invoiceData.name},`)
+        .text('Payment Breakdown:', { underline: true })
         .moveDown(0.5);
 
+      const tableData = [
+        ['Description', 'Amount (₹)'],
+        ['Total Amount', invoiceData.total_amount],
+        ['Platform Fee', invoiceData.platform_fees],
+        ['GST (18%)', invoiceData.gst_amt],
+        [`TCS (${invoiceData.tcs_per}%)`, invoiceData.tcs_amt],
+        [`TDS (${invoiceData.tds_per}%)`, invoiceData.tds_amt],
+      ];
+
+      const startX = 50;
+      let startY = doc.y;
+
+      // Table Header
+      doc.font('Helvetica-Bold').fontSize(10);
+      doc.text(tableData[0][0], startX, startY);
+      doc.text(tableData[0][1], 400, startY, { align: 'right' });
+      doc.moveDown(0.5);
+      doc.font('Helvetica');
+
+      for (let i = 1; i < tableData.length; i++) {
+        const y = doc.y;
+        doc.text(tableData[i][0], startX, y);
+        doc.text(`₹${tableData[i][1]}`, 400, y, { align: 'right' });
+        doc.moveDown(0.5);
+      }
+
+      doc.moveDown();
+      doc.font('Helvetica-Bold').text(`Grand Total: ₹${invoiceData.grand_total_expert_earning}`, { align: 'right' });
+      doc.moveDown(2);
+
+      // Footer
       doc
-        .text(`This is the receipt for a payment of ₹${invoiceData.grand_total_expert_earning} you made to milestone.`);
+        .font('Helvetica')
+        .fontSize(9)
+        .fillColor('#666')
+        .text('Thank you for using Xpertnow!', { align: 'center' });
 
       doc.end();
 
@@ -4828,7 +4893,6 @@ async function generateInvoicePdf(invoiceData, fileName) {
     }
   });
 }
-
 
 
 
