@@ -5005,17 +5005,17 @@ const generateWalletInvoice = async (invoiceData, type_label) => {
 
       // Greeting
       doc.fontSize(14).font('Helvetica').text(`Hey ${invoiceData.name},`);
-      doc.moveDown(0.5);
+      doc.moveDown(1.5);
       doc.text(`This is the receipt for a payment of Rs${invoiceData.amount} you made to ${type_label}.`);
       doc.moveDown(1.5);
 
       // Payment Info
-      doc.fontSize(12).font('Helvetica-Bold').text('Payment Date:');
+      doc.fontSize(16).font('Helvetica-Bold').text('Payment Date:');
       doc.font('Helvetica').text(moment(invoiceData.createtime).format("MMM DD, YYYY"));
       doc.moveDown(2);
 
       // Charges Table
-      doc.fontSize(14).font('Helvetica-Bold');
+      doc.fontSize(16).font('Helvetica-Bold');
       doc.text('Description', 50);
       doc.text('Amount (Rs)', 400, doc.y, { align: 'right' });
       doc.moveDown(0.5);
@@ -5026,7 +5026,7 @@ const generateWalletInvoice = async (invoiceData, type_label) => {
       doc.moveDown(2);
 
       // Total
-      doc.font('Helvetica-Bold').fontSize(14);
+      doc.font('Helvetica-Bold').fontSize(16);
       doc.text(`Total Amount: Rs ${invoiceData.amount}`, { align: 'right' });
 
       doc.end();
