@@ -4816,26 +4816,29 @@ async function generateInvoicePdf(invoiceData) {
         // Add Logo
         doc.image(imageBuffer, doc.page.width / 2 - 75, 30, { width: 150 });
   
-        doc.moveDown(5);
+        doc.moveDown(4);
   
-      
         // Greeting & Intro
         doc
+          .font('Helvetica-Bold')
+          .fontSize(14)
+          .text(`Hey ${invoiceData.name},`, { align: 'left' })
+          .moveDown(0.3);
+  
+        doc
           .font('Helvetica')
-          .fontSize(16)
-          .text(`Hey ${invoiceData.name},`)
-          .moveDown(0.5)
+          .fontSize(13)
           .text(`This is the receipt for a payment of Rs ${invoiceData.grand_total_expert_earning} you made to milestone.`)
-          .moveDown(4);
+          .moveDown(1.5);
   
         // Milestone Number
         doc
-          .fontSize(14)
+          .fontSize(13)
           .font('Helvetica-Bold')
           .text('Milestone Number:')
           .font('Helvetica')
           .text(invoiceData.milestone_number)
-          .moveDown(1);
+          .moveDown(0.8);
   
         // Payment Date
         doc
@@ -4843,11 +4846,10 @@ async function generateInvoicePdf(invoiceData) {
           .text('Payment Date:')
           .font('Helvetica')
           .text(moment(invoiceData.createtime).format("MMM DD, YYYY"))
-          .moveDown(2);
+          .moveDown(1.5);
   
         // Client
         doc
-          .fontSize(14)
           .font('Helvetica-Bold')
           .text('Client:')
           .font('Helvetica')
@@ -4864,7 +4866,7 @@ async function generateInvoicePdf(invoiceData) {
           .text(invoiceData.name)
           .text(`${invoiceData.address}, ${invoiceData.city_name}`)
           .text(invoiceData.email)
-          .moveDown(2);
+          .moveDown(1.5);
   
         // Charges Table
         const tableData = [
@@ -4876,28 +4878,28 @@ async function generateInvoicePdf(invoiceData) {
         ];
   
         const startX = 50;
-        let startY = doc.y;
   
-        doc.fontSize(14).font('Helvetica-Bold');
-        doc.text('Description', startX, startY);
-        doc.text('Amount (Rs)', 400, startY, { align: 'right' });
-        doc.font('Helvetica');
-        doc.moveDown(0.8);
+        doc.font('Helvetica-Bold').fontSize(13);
+        doc.text('Description', startX);
+        doc.text('Amount (Rs)', 400, doc.y, { align: 'right' });
+        doc.moveDown(0.5);
   
-        for (let i = 0; i < tableData.length; i++) {
+        doc.font('Helvetica').fontSize(12);
+  
+        tableData.forEach(([label, value]) => {
           const y = doc.y;
-          doc.text(tableData[i][0], startX, y);
-          doc.text(` ${tableData[i][1]}`, 400, y, { align: 'right' });
-          doc.moveDown(0.8);
-        }
+          doc.text(label, startX, y);
+          doc.text(`Rs${value}`, 400, y, { align: 'right' });
+          doc.moveDown(0.4);
+        });
   
-        doc.moveDown(1.5);
+        doc.moveDown(1);
   
-        // Grand Total
+        // Grand Total - Single Line with Rs
         doc
           .font('Helvetica-Bold')
           .fontSize(14)
-          .text(`Grand Total: ${invoiceData.grand_total_expert_earning}`, { align: 'right' });
+          .text(`Grand Total: Rs${invoiceData.grand_total_expert_earning}`, 50, doc.y, { align: 'right' });
   
         doc.end();
   
