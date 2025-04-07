@@ -4779,12 +4779,11 @@ function generateUniqueFilename(prefix = 'receipt') {
 }
 
 // ... (same AWS & imports as before)
-
 async function generateInvoicePdf(invoiceData) {
     return new Promise(async (resolve, reject) => {
       const fileName = generateUniqueFilename();
   
-      const doc = new PDFDocument({ size: 'A4', margin: 50 });
+      const doc = new PDFDocument({ size: 'A4', margin: 40 }); // tighter margin
       const buffers = [];
   
       doc.on('data', buffers.push.bind(buffers));
@@ -4813,40 +4812,40 @@ async function generateInvoicePdf(invoiceData) {
         const imageResponse = await axios.get(imageUrl, { responseType: 'arraybuffer' });
         const imageBuffer = Buffer.from(imageResponse.data, 'binary');
   
-        // Add Logo
-        doc.image(imageBuffer, doc.page.width / 2 - 75, 30, { width: 150 });
+        // Logo
+        doc.image(imageBuffer, doc.page.width / 2 - 60, 30, { width: 120 });
+        doc.moveDown(3);
   
-        doc.moveDown(5);
-      
         // Greeting & Intro
         doc
-          .font('Helvetica')
+          .font('Helvetica-Bold')
           .fontSize(16)
-          .text(`Hey ${invoiceData.name},`)
-          .moveDown(0.5)
-          .text(`This is the receipt for a payment of Rs ${invoiceData.grand_total_expert_earning} you made to milestone.`)
-          .moveDown(4);
+          .text(`Hey ${invoiceData.name},`, { align: 'left' })
+          .moveDown(0.3)
+          .font('Helvetica')
+          .fontSize(14)
+          .text(`This is the receipt for a payment of ₹${invoiceData.grand_total_expert_earning} you made to milestone.`)
+          .moveDown(2);
   
         // Milestone Number
         doc
-          .fontSize(14)
+          .fontSize(15)
           .font('Helvetica-Bold')
-          .text('Milestone Number:')
+          .text('Milestone Number:', { continued: true })
           .font('Helvetica')
-          .text(invoiceData.milestone_number)
-          .moveDown(1);
+          .text(` ${invoiceData.milestone_number}`)
+          .moveDown(0.8);
   
         // Payment Date
         doc
           .font('Helvetica-Bold')
-          .text('Payment Date:')
+          .text('Payment Date:', { continued: true })
           .font('Helvetica')
-          .text(moment(invoiceData.createtime).format("MMM DD, YYYY"))
-          .moveDown(2);
+          .text(` ${moment(invoiceData.createtime).format("MMM DD, YYYY")}`)
+          .moveDown(1.5);
   
         // Client
         doc
-          .fontSize(14)
           .font('Helvetica-Bold')
           .text('Client:')
           .font('Helvetica')
@@ -4863,7 +4862,7 @@ async function generateInvoicePdf(invoiceData) {
           .text(invoiceData.name)
           .text(`${invoiceData.address}, ${invoiceData.city_name}`)
           .text(invoiceData.email)
-          .moveDown(2);
+          .moveDown(1.5);
   
         // Charges Table
         const tableData = [
@@ -4875,28 +4874,24 @@ async function generateInvoicePdf(invoiceData) {
         ];
   
         const startX = 50;
-        let startY = doc.y;
-  
         doc.fontSize(14).font('Helvetica-Bold');
-        doc.text('Description', startX, startY);
-        doc.text('Amount (Rs)', 400, startY, { align: 'right' });
+        doc.text('Description', startX);
+        doc.text('Amount (₹)', 400, doc.y, { align: 'right' });
+        doc.moveDown(0.5);
         doc.font('Helvetica');
-        doc.moveDown(0.8);
   
-        for (let i = 0; i < tableData.length; i++) {
-          const y = doc.y;
-          doc.text(tableData[i][0], startX, y);
-          doc.text(` ${tableData[i][1]}`, 400, y, { align: 'right' });
-          doc.moveDown(0.8);
+        for (const row of tableData) {
+          doc.text(row[0], startX);
+          doc.text(`₹${row[1]}`, 400, doc.y, { align: 'right' });
+          doc.moveDown(0.5);
         }
-  
-        doc.moveDown(1.5);
   
         // Grand Total
         doc
+          .moveDown(1)
           .font('Helvetica-Bold')
-          .fontSize(14)
-          .text(`Grand Total: ${invoiceData.grand_total_expert_earning}`, { align: 'right' });
+          .fontSize(16)
+          .text(`Grand Total: ₹${invoiceData.grand_total_expert_earning}`, { align: 'right' });
   
         doc.end();
   
@@ -4905,6 +4900,9 @@ async function generateInvoicePdf(invoiceData) {
       }
     });
   }
+  
+
+
 
 
 
