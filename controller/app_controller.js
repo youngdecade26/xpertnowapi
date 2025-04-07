@@ -4939,7 +4939,7 @@ const getWalletPdf = async( request, response) => {
                 return response.status(200).json({ success: false, msg: languageMessage.dataFound});
             }
             try {
-                let type_label = res[0].type === 1 ? 'recharge' : res[0].type === 2 ? 'job' : 'consultation'
+                let type_label = res[0].type === 1 ? 'Recharge' : res[0].type === 2 ? 'Job' : 'Consultation'
                 const filename = await generateWalletInvoice(res[0], type_label);
 
                 const invoiceUrl = filename;
@@ -5001,10 +5001,7 @@ const generateWalletInvoice = async (invoiceData, type_label) => {
       // Move below image for greeting
       doc.moveDown(5);
 
-    //   doc.fontSize(14).font('Helvetica').text(`Hey ${invoiceData.name},`);
-    //   doc.moveDown(1.5);
-    //   doc.text(`This is the receipt for a payment of Rs ${invoiceData.amount} you made to ${type_label}.`);
-    //   doc.moveDown(2);
+  
     doc
       .font('Helvetica-Bold')
       .fontSize(26)
@@ -5017,7 +5014,7 @@ const generateWalletInvoice = async (invoiceData, type_label) => {
      .font('Helvetica')
      .fontSize(16)
      .text(`Hey ${invoiceData.name},`)
-    .moveDown(0.5)
+    .moveDown(2)
     .text(`This is the receipt for a payment of Rs ${invoiceData.amount} you made to ${type_label}.`)
     .moveDown(2);
 
@@ -5026,19 +5023,6 @@ const generateWalletInvoice = async (invoiceData, type_label) => {
       doc.font('Helvetica').text(moment(invoiceData.createtime).format("MMM DD, YYYY"));
       doc.moveDown(2);
 
-
-      // Charges Table
-    //   doc.fontSize(14).font('Helvetica-Bold');
-    //   const descriptionX = 50;
-    //   const amountX = 400;
-    //   const rowGap = 24;
-
-    //   // Table headers
-    //   doc.text('Description', descriptionX);
-    //   doc.text('Amount (Rs)', amountX, doc.y, { align: 'right' });
-    //   doc.moveDown(0.5);
-    //   doc.font('Helvetica');
-      
 
     const startX = 50;
     let startY = doc.y;
@@ -5055,12 +5039,6 @@ const generateWalletInvoice = async (invoiceData, type_label) => {
       doc.text(`Rs ${invoiceData.amount}`, 400, y, { align: 'right' });
       doc.moveDown(0.8);
 
-    //   // Table row
-    //   doc.text(type_label, descriptionX);
-    //   doc.text(`Rs ${invoiceData.amount}`, amountX, doc.y, { align: 'right' });
-    //   doc.moveDown(2);
-
-
       // Total
       doc.font('Helvetica-Bold').fontSize(14);
       doc.text(`Total Amount: Rs ${invoiceData.amount}`, { align: 'right' });
@@ -5072,6 +5050,7 @@ const generateWalletInvoice = async (invoiceData, type_label) => {
     }
   });
 };
+
 
 
 
@@ -5094,7 +5073,7 @@ const getExpertAllEarningPdf = async( request, response) => {
                 return response.status(200).json({ success: false, msg: languageMessage.dataNotFound});
             }
             try {
-                let type_label = res[0].type === 1 ? 'consultant' : 'Subscription'
+                let type_label = res[0].type === 1 ? 'Consultant' : 'Subscription'
                 const filename = await generateExpertAllEarningPdf(res[0], type_label);
 
                 const invoiceUrl = filename;
