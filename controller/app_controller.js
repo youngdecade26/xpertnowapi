@@ -5026,22 +5026,40 @@ const generateWalletInvoice = async (invoiceData, type_label) => {
       doc.font('Helvetica').text(moment(invoiceData.createtime).format("MMM DD, YYYY"));
       doc.moveDown(2);
 
-      // Charges Table
-      doc.fontSize(14).font('Helvetica-Bold');
-      const descriptionX = 50;
-      const amountX = 400;
-      const rowGap = 24;
 
-      // Table headers
-      doc.text('Description', descriptionX);
-      doc.text('Amount (Rs)', amountX, doc.y, { align: 'right' });
-      doc.moveDown(0.5);
-      doc.font('Helvetica');
+      // Charges Table
+    //   doc.fontSize(14).font('Helvetica-Bold');
+    //   const descriptionX = 50;
+    //   const amountX = 400;
+    //   const rowGap = 24;
+
+    //   // Table headers
+    //   doc.text('Description', descriptionX);
+    //   doc.text('Amount (Rs)', amountX, doc.y, { align: 'right' });
+    //   doc.moveDown(0.5);
+    //   doc.font('Helvetica');
       
-      // Table row
-      doc.text(type_label, descriptionX);
-      doc.text(`Rs ${invoiceData.amount}`, amountX, doc.y, { align: 'right' });
-      doc.moveDown(2);
+
+    const startX = 50;
+    let startY = doc.y;
+
+    doc.fontSize(14).font('Helvetica-Bold');
+    doc.text('Description', startX, startY);
+    doc.text('Amount (Rs)', 400, startY, { align: 'right' });
+    doc.font('Helvetica');
+    doc.moveDown(0.8);
+
+   
+      const y = doc.y;
+      doc.text(type_label, startX, y);
+      doc.text(`Rs ${invoiceData.amount}`, 400, y, { align: 'right' });
+      doc.moveDown(0.8);
+
+    //   // Table row
+    //   doc.text(type_label, descriptionX);
+    //   doc.text(`Rs ${invoiceData.amount}`, amountX, doc.y, { align: 'right' });
+    //   doc.moveDown(2);
+
 
       // Total
       doc.font('Helvetica-Bold').fontSize(14);
@@ -5054,8 +5072,6 @@ const generateWalletInvoice = async (invoiceData, type_label) => {
     }
   });
 };
-
-
 
 
 
