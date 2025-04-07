@@ -4816,29 +4816,25 @@ async function generateInvoicePdf(invoiceData) {
         // Add Logo
         doc.image(imageBuffer, doc.page.width / 2 - 75, 30, { width: 150 });
   
-        doc.moveDown(4);
-  
+        doc.moveDown(5);
+      
         // Greeting & Intro
         doc
-          .font('Helvetica-Bold')
-          .fontSize(14)
-          .text(`Hey ${invoiceData.name},`, { align: 'left' })
-          .moveDown(0.3);
-  
-        doc
           .font('Helvetica')
-          .fontSize(13)
+          .fontSize(16)
+          .text(`Hey ${invoiceData.name},`)
+          .moveDown(0.5)
           .text(`This is the receipt for a payment of Rs ${invoiceData.grand_total_expert_earning} you made to milestone.`)
-          .moveDown(1.5);
+          .moveDown(4);
   
         // Milestone Number
         doc
-          .fontSize(13)
+          .fontSize(14)
           .font('Helvetica-Bold')
           .text('Milestone Number:')
           .font('Helvetica')
           .text(invoiceData.milestone_number)
-          .moveDown(0.8);
+          .moveDown(1);
   
         // Payment Date
         doc
@@ -4846,10 +4842,11 @@ async function generateInvoicePdf(invoiceData) {
           .text('Payment Date:')
           .font('Helvetica')
           .text(moment(invoiceData.createtime).format("MMM DD, YYYY"))
-          .moveDown(1.5);
+          .moveDown(2);
   
         // Client
         doc
+          .fontSize(14)
           .font('Helvetica-Bold')
           .text('Client:')
           .font('Helvetica')
@@ -4866,7 +4863,7 @@ async function generateInvoicePdf(invoiceData) {
           .text(invoiceData.name)
           .text(`${invoiceData.address}, ${invoiceData.city_name}`)
           .text(invoiceData.email)
-          .moveDown(1.5);
+          .moveDown(2);
   
         // Charges Table
         const tableData = [
@@ -4878,28 +4875,28 @@ async function generateInvoicePdf(invoiceData) {
         ];
   
         const startX = 50;
+        let startY = doc.y;
   
-        doc.font('Helvetica-Bold').fontSize(13);
-        doc.text('Description', startX);
-        doc.text('Amount (Rs)', 400, doc.y, { align: 'right' });
-        doc.moveDown(0.5);
+        doc.fontSize(14).font('Helvetica-Bold');
+        doc.text('Description', startX, startY);
+        doc.text('Amount (Rs)', 400, startY, { align: 'right' });
+        doc.font('Helvetica');
+        doc.moveDown(0.8);
   
-        doc.font('Helvetica').fontSize(12);
-  
-        tableData.forEach(([label, value]) => {
+        for (let i = 0; i < tableData.length; i++) {
           const y = doc.y;
-          doc.text(label, startX, y);
-          doc.text(`Rs${value}`, 400, y, { align: 'right' });
-          doc.moveDown(0.4);
-        });
+          doc.text(tableData[i][0], startX, y);
+          doc.text(` ${tableData[i][1]}`, 400, y, { align: 'right' });
+          doc.moveDown(0.8);
+        }
   
-        doc.moveDown(1);
+        doc.moveDown(1.5);
   
-        // Grand Total - Single Line with Rs
+        // Grand Total
         doc
           .font('Helvetica-Bold')
           .fontSize(14)
-          .text(`Grand Total: Rs${invoiceData.grand_total_expert_earning}`, 50, doc.y, { align: 'right' });
+          .text(`Grand Total: ${invoiceData.grand_total_expert_earning}`, { align: 'right' });
   
         doc.end();
   
@@ -4908,7 +4905,7 @@ async function generateInvoicePdf(invoiceData) {
       }
     });
   }
-  
+
 
 
 
@@ -4948,85 +4945,6 @@ const getWalletPdf = async( request, response) => {
         return response.status(200).json({ success: false , msg: languageMessage.internalServerError, error: error.message});
     }
 }
-
-// wallet invoice
-const generateWalletInvoice = async (invoiceData, type_label) => {
-  return new Promise(async (resolve, reject) => {
-    try {
-      const filename = `invoice_${Date.now()}_${Math.floor(Math.random() * 1000)}.pdf`;
-
-      const doc = new PDFDocument({ size: 'A4', margin: 50 });
-      const buffers = [];
-
-      doc.on('data', buffers.push.bind(buffers));
-      doc.on('end', async () => {
-        const pdfBuffer = Buffer.concat(buffers);
-
-        const s3Key = `uploads/${filename}`;
-        const uploadParams = {
-          Bucket: 'xpertnowbucket',
-          Key: s3Key,
-          Body: pdfBuffer,
-          ContentType: 'application/pdf',
-          ACL: 'public-read',
-        };
-
-        try {
-          const uploadResult = await s3.upload(uploadParams).promise();
-          resolve(uploadResult.Location);
-        } catch (uploadErr) {
-          reject(uploadErr);
-        }
-      });
-
-      // Load logo
-      const imageUrl = 'https://xpertnowbucket.s3.ap-south-1.amazonaws.com/uploads/1743577170167-xpertlog.png';
-      const imageResponse = await axios.get(imageUrl, { responseType: 'arraybuffer' });
-      const imageBuffer = Buffer.from(imageResponse.data, 'binary');
-
-      // Draw logo
-      doc.image(imageBuffer, doc.page.width / 2 - 75, 30, { width: 150 });
-      doc.moveDown(4);
-
-      // Header
-      doc.font('Helvetica-Bold').fontSize(16).text('Payment Receipt', { align: 'center' });
-      doc.moveDown(2);
-
-      // Greeting
-      doc.font('Helvetica-Bold').fontSize(13).text(`Hey ${invoiceData.name},`);
-      doc.moveDown(0.3);
-      doc.font('Helvetica').fontSize(12).text(`This is the receipt for a payment of Rs ${invoiceData.amount} you made to ${type_label}.`);
-      doc.moveDown(1.5);
-
-      // Payment Date
-      doc.font('Helvetica-Bold').text('Payment Date:');
-      doc.font('Helvetica').text(moment(invoiceData.createtime).format('MMM DD, YYYY'));
-      doc.moveDown(1.5);
-
-      // Table Headers
-      doc.font('Helvetica-Bold').fontSize(13);
-      doc.text('Description', 50);
-      doc.text('Amount (Rs)', 400, doc.y, { align: 'right' });
-      doc.moveDown(0.5);
-
-      // Table Content
-      doc.font('Helvetica').fontSize(12);
-      doc.text(type_label, 50);
-      doc.text(`Rs${invoiceData.amount}`, 400, doc.y, { align: 'right' });
-      doc.moveDown(1.5);
-
-      // Total
-      doc.font('Helvetica-Bold').fontSize(14).text(`Total Amount: Rs${invoiceData.amount}`, 50, doc.y, { align: 'right' });
-
-      doc.end();
-    } catch (error) {
-      reject(`Error generating wallet invoice PDF: ${error.message}`);
-    }
-  });
-};
-
-
-
 
 // get expert all earning
 const getExpertAllEarningPdf = async( request, response) => {
