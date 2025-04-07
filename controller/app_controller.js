@@ -4822,20 +4822,20 @@ async function generateInvoicePdf(invoiceData) {
         .fontSize(20)
         .text('Payment Receipt', { align: 'center' });
 
-      doc.moveDown(2);
+      doc.moveDown(5);
 
       // Greeting & Intro
       doc
         .font('Helvetica')
-        .fontSize(12)
+        .fontSize(15)
         .text(`Hey ${invoiceData.name},`)
         .moveDown(0.5)
-        .text(`This is the receipt for a payment of ₹${invoiceData.grand_total_expert_earning} you made to milestone.`)
+        .text(`This is the receipt for a payment of Rs${invoiceData.grand_total_expert_earning} you made to milestone.`)
         .moveDown(1);
 
       // Milestone Number
       doc
-        .fontSize(10)
+        .fontSize(15)
         .text(`Milestone Number: ${invoiceData.milestone_number}`)
         .moveDown(0.5);
 
@@ -4846,7 +4846,7 @@ async function generateInvoicePdf(invoiceData) {
 
       // Client Details
       doc
-        .fontSize(10)
+        .fontSize(15)
         .font('Helvetica-Bold')
         .text('Client:')
         .font('Helvetica')
@@ -4880,14 +4880,14 @@ async function generateInvoicePdf(invoiceData) {
       doc.moveDown(1);
       doc.fontSize(10).font('Helvetica-Bold');
       doc.text('Description', startX, startY);
-      doc.text('Amount (₹)', 400, startY, { align: 'right' });
+      doc.text('Amount (Rs)', 400, startY, { align: 'right' });
       doc.font('Helvetica');
       doc.moveDown(0.5);
 
       for (let i = 0; i < tableData.length; i++) {
         const y = doc.y;
         doc.text(tableData[i][0], startX, y);
-        doc.text(`₹${tableData[i][1]}`, 400, y, { align: 'right' });
+        doc.text(`Rs${tableData[i][1]}`, 400, y, { align: 'right' });
         doc.moveDown(0.5);
       }
 
