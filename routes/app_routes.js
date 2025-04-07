@@ -467,7 +467,9 @@ router.get('/get_expert_earning_pdf', upload.none(), getExpertAllEarningPdf);
 
 router.get('/get_customer_pdf', upload.none(), getCustomerMilestoneCharge);
 
+
 router.get('/schedule_notification', upload.none(), scheduleNotification);
+
 
 
 

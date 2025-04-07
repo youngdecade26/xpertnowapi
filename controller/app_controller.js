@@ -4800,13 +4800,6 @@ async function generateInvoicePdf(invoiceData, fileName) {
     });
 
     // Draw content
-    doc
-      .image('https://xpertnowbucket.s3.ap-south-1.amazonaws.com/uploads/1743577170167-xpertlog.png', {
-        fit: [100, 100],
-        align: 'center',
-        valign: 'center'
-      })
-      .moveDown(1.5);
 
     doc
       .fontSize(20)
@@ -5005,6 +4998,7 @@ const scheduleNotification = () => {
         }
       );
     }
+    return response.status(200).json({ success: true, msg: languageMessage.NotificationSend})
   });
 };
 
