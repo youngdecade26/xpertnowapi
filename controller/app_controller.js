@@ -4901,12 +4901,13 @@ async function generateInvoicePdf(invoiceData) {
           doc.moveDown(0.8);
         }
   
-        doc.moveDown(1.5);
+        // doc.moveDown(1.5);
   
         // Grand Total
         doc
+          .moveDown(1)
           .font('Helvetica-Bold')
-          .fontSize(1)
+          .fontSize(14)
           .text(`Grand Total: Rs${invoiceData.grand_total_expert_earning}`, { align: 'right' });
   
         doc.end();
