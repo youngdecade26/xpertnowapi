@@ -4906,7 +4906,7 @@ async function generateInvoicePdf(invoiceData) {
         // Grand Total
         doc
           .font('Helvetica-Bold')
-          .fontSize(16)
+          .fontSize(1)
           .text(`Grand Total: Rs${invoiceData.grand_total_expert_earning}`, { align: 'right' });
   
         doc.end();
@@ -4918,8 +4918,6 @@ async function generateInvoicePdf(invoiceData) {
   }
   
   
-
-
 
 
 
