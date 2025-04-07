@@ -4923,8 +4923,7 @@ async function generateInvoicePdf(invoiceData) {
 
 
 
-
-  // get wallet pdf
+// get wallet pdf
 const getWalletPdf = async( request, response) => {
     const {transition_id} = request.query;
     try{
@@ -4960,6 +4959,8 @@ const getWalletPdf = async( request, response) => {
         return response.status(200).json({ success: false , msg: languageMessage.internalServerError, error: error.message});
     }
 }
+
+
 
 
 // get expert all earning
@@ -4998,6 +4999,7 @@ const getExpertAllEarningPdf = async( request, response) => {
         return response.status(200).json({ success: false , msg: languageMessage.internalServerError, error: error.message});
     }
 }
+
 
 
 // get customer milestone charge
@@ -5094,10 +5096,6 @@ const scheduleNotification = () => {
     return response.status(200).json({ success: true, msg: languageMessage.NotificationSend})
   });
 };
-
-
-
-
 
 
 
