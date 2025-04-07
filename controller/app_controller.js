@@ -5000,10 +5000,26 @@ const generateWalletInvoice = async (invoiceData, type_label) => {
 
       // Move below image for greeting
       doc.moveDown(5);
-      doc.fontSize(14).font('Helvetica').text(`Hey ${invoiceData.name},`);
-      doc.moveDown(0.5);
-      doc.text(`This is the receipt for a payment of Rs ${invoiceData.amount} you made to ${type_label}.`);
-      doc.moveDown(2);
+
+    //   doc.fontSize(14).font('Helvetica').text(`Hey ${invoiceData.name},`);
+    //   doc.moveDown(1.5);
+    //   doc.text(`This is the receipt for a payment of Rs ${invoiceData.amount} you made to ${type_label}.`);
+    //   doc.moveDown(2);
+    doc
+      .font('Helvetica-Bold')
+      .fontSize(26)
+      .text('', { align: 'center' });
+
+  doc.moveDown(2);
+
+  // Greeting & Intro
+  doc
+     .font('Helvetica')
+     .fontSize(16)
+     .text(`Hey ${invoiceData.name},`)
+    .moveDown(0.5)
+    .text(`This is the receipt for a payment of Rs ${invoiceData.grand_total_expert_earning} you made to milestone.`)
+    .moveDown(2);
 
       // Payment Info
       doc.fontSize(14).font('Helvetica-Bold').text('Payment Date:');
