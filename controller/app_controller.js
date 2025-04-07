@@ -4761,7 +4761,7 @@ const AWS = require('aws-sdk');
 const fs = require('fs');
 const axios = require('axios');
 const PDFDocument = require('pdfkit');
-const moment = require('moment');
+
 
 const s3 = new AWS.S3({
   accessKeyId: "AKIAUGO4KNQULGJQFZIA",
@@ -4824,7 +4824,7 @@ async function generateInvoicePdf(invoiceData, fileName) {
       doc
         .fontSize(10)
         .text(`Milestone Number: ${invoiceData.milestone_number}`, { continued: true })
-        .text(`    Payment Date: ${moment(invoiceData.createtime).format("MMM DD, YYYY")}`)
+        .text(`Payment Date: ${moment(invoiceData.createtime).format("MMM DD, YYYY")}`)
         .moveDown();
 
       // Client and Payment To
