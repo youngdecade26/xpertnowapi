@@ -5018,7 +5018,7 @@ const generateWalletInvoice = async (invoiceData, type_label) => {
      .fontSize(16)
      .text(`Hey ${invoiceData.name},`)
     .moveDown(0.5)
-    .text(`This is the receipt for a payment of Rs ${invoiceData.grand_total_expert_earning} you made to milestone.`)
+    .text(`This is the receipt for a payment of Rs ${invoiceData.amount} you made to ${type_label}.`)
     .moveDown(2);
 
       // Payment Info
