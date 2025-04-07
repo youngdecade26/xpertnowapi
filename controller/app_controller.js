@@ -5130,13 +5130,16 @@ const generateExpertAllEarningPdf = async (invoiceData, type_label) => {
 
       // Logo
       doc.image(imageBuffer, doc.page.width / 2 - 60, 40, { width: 120 });
-      doc.moveDown(4);
+      doc.moveDown(6);
 
       // Greeting
-      doc.fontSize(14).font('Helvetica').text(`Hey ${invoiceData.name},`, { align: 'left' });
-      doc.moveDown(0.5);
-      doc.text(`This is the receipt for a payment of ₹${invoiceData.expert_earning} you made to ${type_label}.`);
-      doc.moveDown(2);
+      doc
+     .font('Helvetica')
+     .fontSize(16)
+     .text(`Hey ${invoiceData.name},`)
+    .moveDown(0.5)
+    .text(`This is the receipt for a payment of Rs ${invoiceData.expert_earning} you made to ${type_label}.`)
+    .moveDown(2);
 
       // Payment Info
       doc.fontSize(12).font('Helvetica-Bold').text('Payment Date:');
@@ -5144,22 +5147,25 @@ const generateExpertAllEarningPdf = async (invoiceData, type_label) => {
       doc.moveDown(2);
 
       // Table headers
-      const descriptionX = 50;
-      const amountX = 400;
-
-      doc.fontSize(12).font('Helvetica-Bold');
-      doc.text('Description', descriptionX);
-      doc.text('Amount (₹)', amountX, doc.y, { align: 'right' });
-
+    
+      const startX = 50;
+      let startY = doc.y;
+  
+      doc.fontSize(14).font('Helvetica-Bold');
+      doc.text('Description', startX, startY);
+      doc.text('Amount (Rs)', 400, startY, { align: 'right' });
+      doc.font('Helvetica');
+      doc.moveDown(0.8);
+  
+     
+        const y = doc.y;
+        doc.text(type_label, startX, y);
+        doc.text(`Rs ${invoiceData.expert_earning}`, 400, y, { align: 'right' });
+        doc.moveDown(0.8);
+             
       // Line below headers
       doc.moveTo(descriptionX, doc.y + 5).lineTo(doc.page.width - 50, doc.y + 5).stroke();
       doc.moveDown(1);
-
-      // Table row
-      doc.font('Helvetica').fontSize(12);
-      doc.text(type_label, descriptionX);
-      doc.text(`₹${invoiceData.expert_earning}`, amountX, doc.y, { align: 'right' });
-      doc.moveDown(2);
 
       // Total section
       doc.font('Helvetica-Bold').fontSize(13);
