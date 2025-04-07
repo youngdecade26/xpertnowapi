@@ -4949,7 +4949,6 @@ const getWalletPdf = async( request, response) => {
     }
 }
 
-
 // wallet invoice
 const generateWalletInvoice = async (invoiceData, type_label) => {
   return new Promise(async (resolve, reject) => {
