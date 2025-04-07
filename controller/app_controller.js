@@ -5056,7 +5056,6 @@ const generateWalletInvoice = async (invoiceData, type_label) => {
 
 
 
-
 // get expert all earning
 const getExpertAllEarningPdf = async( request, response) => {
     const {expert_earning_id} = request.query;
@@ -5093,6 +5092,87 @@ const getExpertAllEarningPdf = async( request, response) => {
         return response.status(200).json({ success: false , msg: languageMessage.internalServerError, error: error.message});
     }
 }
+
+
+// get expert all earning invoice
+const generateExpertAllEarningPdf = async (invoiceData, type_label) => {
+  return new Promise(async (resolve, reject) => {
+    const filename = `invoice_${Date.now()}_${Math.floor(Math.random() * 1000)}.pdf`;
+
+    const doc = new PDFDocument({ size: 'A4', margin: 50 });
+    const buffers = [];
+
+    doc.on('data', buffers.push.bind(buffers));
+    doc.on('end', async () => {
+      const pdfBuffer = Buffer.concat(buffers);
+
+      const params = {
+        Bucket: BUCKET_NAME,
+        Key: `uploads/${filename}`,
+        Body: pdfBuffer,
+        ContentType: 'application/pdf',
+        ACL: 'public-read',
+      };
+
+      try {
+        const s3Data = await s3.upload(params).promise();
+        resolve(s3Data.Location);
+      } catch (err) {
+        reject(err);
+      }
+    });
+
+    try {
+      // Load logo image from S3
+      const logoUrl = 'https://xpertnowbucket.s3.ap-south-1.amazonaws.com/uploads/1743577170167-xpertlog.png';
+      const imageResponse = await axios.get(logoUrl, { responseType: 'arraybuffer' });
+      const imageBuffer = Buffer.from(imageResponse.data, 'binary');
+
+      // Logo
+      doc.image(imageBuffer, doc.page.width / 2 - 60, 40, { width: 120 });
+      doc.moveDown(4);
+
+      // Greeting
+      doc.fontSize(14).font('Helvetica').text(`Hey ${invoiceData.name},`, { align: 'left' });
+      doc.moveDown(0.5);
+      doc.text(`This is the receipt for a payment of ₹${invoiceData.expert_earning} you made to ${type_label}.`);
+      doc.moveDown(2);
+
+      // Payment Info
+      doc.fontSize(12).font('Helvetica-Bold').text('Payment Date:');
+      doc.font('Helvetica').text(moment(invoiceData.createtime).format('MMM DD, YYYY'));
+      doc.moveDown(2);
+
+      // Table headers
+      const descriptionX = 50;
+      const amountX = 400;
+
+      doc.fontSize(12).font('Helvetica-Bold');
+      doc.text('Description', descriptionX);
+      doc.text('Amount (₹)', amountX, doc.y, { align: 'right' });
+
+      // Line below headers
+      doc.moveTo(descriptionX, doc.y + 5).lineTo(doc.page.width - 50, doc.y + 5).stroke();
+      doc.moveDown(1);
+
+      // Table row
+      doc.font('Helvetica').fontSize(12);
+      doc.text(type_label, descriptionX);
+      doc.text(`₹${invoiceData.expert_earning}`, amountX, doc.y, { align: 'right' });
+      doc.moveDown(2);
+
+      // Total section
+      doc.font('Helvetica-Bold').fontSize(13);
+      doc.text(`Total Amount: ₹${invoiceData.expert_earning}`, { align: 'right' });
+
+      doc.end();
+
+    } catch (error) {
+      reject(`PDF generation error: ${error.message}`);
+    }
+  });
+};
+
 
 
 
