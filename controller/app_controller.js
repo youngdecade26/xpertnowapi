@@ -4761,79 +4761,68 @@ const getExpertEarningPdf = async (request, response) => {
 const AWS = require('aws-sdk');
 const fs = require('fs');
 const path = require('path');
-const { JSDOM } = require('jsdom');
-const { jsPDF } = require('jspdf');
-const htmlToImage = require('html-to-image');
-const { createCanvas, loadImage } = require('canvas');
+const PDFDocument = require('pdfkit');
 
 // S3 Config
 const s3 = new AWS.S3({
   accessKeyId: "AKIAUGO4KNQULGJQFZIA",
   secretAccessKey: "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",
-  region: "ap-south-1", // Adjust region if needed
+  region: "ap-south-1",
 });
 
 const BUCKET_NAME = "xpertnowbucket";
 const BASE_S3_URL = 'https://xpertnowbucket.s3.ap-south-1.amazonaws.com/uploads/';
 
 async function generateInvoicePdf(invoiceData, fileName) {
-  const htmlContent = `
-    <html>
-      <head>
-        <style>
-          body { font-family: Arial, sans-serif; }
-          .invoice-container { padding: 20px; }
-          .header { text-align: center; margin-bottom: 20px; }
-          .logo { height: 50px; }
-        </style>
-      </head>
-      <body>
-        <div class="invoice-container">
-          <div class="header">
-            <img src="https://xpertnowbucket.s3.ap-south-1.amazonaws.com/uploads/1743577170167-xpertlog.png" class="logo" />
-            <h4>Payment Receipt</h4>
-          </div>
-          <p>Hey ${invoiceData.name},</p>
-          <p>This is the receipt for a payment of <strong>₹${invoiceData.grand_total_expert_earning}</strong> you made to milestone.</p>
-        </div>
-      </body>
-    </html>
-  `;
+  return new Promise((resolve, reject) => {
+    const doc = new PDFDocument({ size: 'A4', margin: 50 });
 
-  const dom = new JSDOM(htmlContent);
-  const node = dom.window.document.body;
+    const buffers = [];
+    doc.on('data', buffers.push.bind(buffers));
+    doc.on('end', async () => {
+      const pdfBuffer = Buffer.concat(buffers);
 
-  // Convert HTML to Image using node-canvas
-  const dataUrl = await htmlToImage.toPng(node, {
-    canvas: createCanvas,
-    loadImage: loadImage,
+      const s3Key = `uploads/${fileName}`;
+      const uploadParams = {
+        Bucket: BUCKET_NAME,
+        Key: s3Key,
+        Body: pdfBuffer,
+        ContentType: 'application/pdf',
+        ACL: 'public-read',
+      };
+
+      try {
+        await s3.upload(uploadParams).promise();
+        resolve(`${BASE_S3_URL}${fileName}`);
+      } catch (err) {
+        reject(err);
+      }
+    });
+
+    // Draw content
+    doc
+      .image('https://xpertnowbucket.s3.ap-south-1.amazonaws.com/uploads/1743577170167-xpertlog.png', {
+        fit: [100, 100],
+        align: 'center',
+        valign: 'center'
+      })
+      .moveDown(1.5);
+
+    doc
+      .fontSize(20)
+      .text('Payment Receipt', { align: 'center' })
+      .moveDown();
+
+    doc
+      .fontSize(12)
+      .text(`Hey ${invoiceData.name},`)
+      .moveDown(0.5);
+
+    doc
+      .text(`This is the receipt for a payment of ₹${invoiceData.grand_total_expert_earning} you made to milestone.`);
+
+    doc.end();
   });
-
-  // Generate PDF from image
-  const pdf = new jsPDF();
-  const imgProps = pdf.getImageProperties(dataUrl);
-  const pdfWidth = pdf.internal.pageSize.getWidth();
-  const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-
-  pdf.addImage(dataUrl, 'PNG', 0, 0, pdfWidth, pdfHeight);
-
-  // Get PDF buffer
-  const pdfBuffer = Buffer.from(pdf.output('arraybuffer'));
-
-  // Upload to S3
-  const s3Key = `uploads/${fileName}`;
-  const uploadParams = {
-    Bucket: BUCKET_NAME,
-    Key: s3Key,
-    Body: pdfBuffer,
-    ContentType: 'application/pdf',
-    ACL: 'public-read',
-  };
-
-  await s3.upload(uploadParams).promise();
-
-  // Return public S3 URL
-  return `${BASE_S3_URL}${fileName}`;
 }
 
 
