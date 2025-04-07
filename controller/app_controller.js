@@ -5159,7 +5159,7 @@ const generateExpertAllEarningPdf = async (invoiceData, type_label) => {
   
      
         const y = doc.y;
-        doc.text(type_label, startX, y);
+        doc.text(${type_label}, startX, y);
         doc.text(`Rs ${invoiceData.expert_earning}`, 400, y, { align: 'right' });
         doc.moveDown(0.8);
              
