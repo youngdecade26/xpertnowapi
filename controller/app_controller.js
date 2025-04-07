@@ -4911,7 +4911,7 @@ async function generateInvoicePdf(invoiceData) {
           .text(`Grand Total: Rs${invoiceData.grand_total_expert_earning}`, { align: 'right' });
   
         doc.end();
-  
+
       } catch (error) {
         reject(`Error generating PDF: ${error.message}`);
       }
@@ -4995,38 +4995,40 @@ const generateWalletInvoice = async (invoiceData, type_label) => {
       const imageResponse = await axios.get(logoUrl, { responseType: 'arraybuffer' });
       const imageBuffer = Buffer.from(imageResponse.data, 'binary');
 
-      // Header
-      doc.image(imageBuffer, doc.page.width / 2 - 75, 30, { width: 150 });
-      doc.moveDown(4);
+      // Header logo
+      doc.image(imageBuffer, doc.page.width / 2 - 75, 40, { width: 150 });
 
-      // Title
-      doc.fontSize(20).font('Helvetica-Bold').text('', { align: 'center' });
+      // Move below image for greeting
+      doc.moveDown(5);
+      doc.fontSize(14).font('Helvetica').text(`Hey ${invoiceData.name},`);
+      doc.moveDown(0.5);
+      doc.text(`This is the receipt for a payment of Rs ${invoiceData.amount} you made to ${type_label}.`);
       doc.moveDown(2);
 
-      // Greeting
-      doc.fontSize(14).font('Helvetica').text(`Hey ${invoiceData.name},`);
-      doc.moveDown(1.5);
-      doc.text(`This is the receipt for a payment of Rs${invoiceData.amount} you made to ${type_label}.`);
-      doc.moveDown(1.5);
-
       // Payment Info
-      doc.fontSize(16).font('Helvetica-Bold').text('Payment Date:');
+      doc.fontSize(14).font('Helvetica-Bold').text('Payment Date:');
       doc.font('Helvetica').text(moment(invoiceData.createtime).format("MMM DD, YYYY"));
       doc.moveDown(2);
 
       // Charges Table
-      doc.fontSize(16).font('Helvetica-Bold');
-      doc.text('Description', 50);
-      doc.text('Amount (Rs)', 400, doc.y, { align: 'right' });
-      doc.moveDown(0.5);
+      doc.fontSize(14).font('Helvetica-Bold');
+      const descriptionX = 50;
+      const amountX = 400;
+      const rowGap = 24;
 
+      // Table headers
+      doc.text('Description', descriptionX);
+      doc.text('Amount (Rs)', amountX, doc.y, { align: 'right' });
+      doc.moveDown(0.5);
       doc.font('Helvetica');
-      doc.text(type_label, 50);
-      doc.text(`${invoiceData.amount}`, 400, doc.y, { align: 'right' });
+      
+      // Table row
+      doc.text(type_label, descriptionX);
+      doc.text(`Rs ${invoiceData.amount}`, amountX, doc.y, { align: 'right' });
       doc.moveDown(2);
 
       // Total
-      doc.font('Helvetica-Bold').fontSize(16);
+      doc.font('Helvetica-Bold').fontSize(14);
       doc.text(`Total Amount: Rs ${invoiceData.amount}`, { align: 'right' });
 
       doc.end();
@@ -5036,9 +5038,6 @@ const generateWalletInvoice = async (invoiceData, type_label) => {
     }
   });
 };
-
-
-
 
 
 
