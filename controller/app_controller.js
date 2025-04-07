@@ -4832,7 +4832,7 @@ async function generateInvoicePdf(invoiceData) {
           .fontSize(16)
           .text(`Hey ${invoiceData.name},`)
           .moveDown(0.5)
-          .text(`This is the receipt for a payment of ₹${invoiceData.grand_total_expert_earning} you made to milestone.`)
+          .text(`This is the receipt for a payment of Rs ${invoiceData.grand_total_expert_earning} you made to milestone.`)
           .moveDown(2);
   
         // Milestone Number
@@ -4887,14 +4887,14 @@ async function generateInvoicePdf(invoiceData) {
   
         doc.fontSize(14).font('Helvetica-Bold');
         doc.text('Description', startX, startY);
-        doc.text('Amount (₹)', 400, startY, { align: 'right' });
+        doc.text('Amount (Rs)', 400, startY, { align: 'right' });
         doc.font('Helvetica');
         doc.moveDown(0.8);
   
         for (let i = 0; i < tableData.length; i++) {
           const y = doc.y;
           doc.text(tableData[i][0], startX, y);
-          doc.text(`₹${tableData[i][1]}`, 400, y, { align: 'right' });
+          doc.text(`Rs ${tableData[i][1]}`, 400, y, { align: 'right' });
           doc.moveDown(0.8);
         }
   
@@ -4904,7 +4904,7 @@ async function generateInvoicePdf(invoiceData) {
         doc
           .font('Helvetica-Bold')
           .fontSize(16)
-          .text(`Grand Total: ₹${invoiceData.grand_total_expert_earning}`, { align: 'right' });
+          .text(`Grand Total: Rs ${invoiceData.grand_total_expert_earning}`, { align: 'right' });
   
         doc.end();
   
