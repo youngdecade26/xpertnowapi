@@ -4757,10 +4757,9 @@ const getExpertEarningPdf = async (request, response) => {
 
 
 // generate pdf 
-
 const AWS = require('aws-sdk');
 const fs = require('fs');
-const path = require('path');
+const axios = require('axios');
 const PDFDocument = require('pdfkit');
 
 // S3 Config
@@ -4774,10 +4773,10 @@ const BUCKET_NAME = "xpertnowbucket";
 const BASE_S3_URL = 'https://xpertnowbucket.s3.ap-south-1.amazonaws.com/uploads/';
 
 async function generateInvoicePdf(invoiceData, fileName) {
-  return new Promise((resolve, reject) => {
+  return new Promise(async (resolve, reject) => {
     const doc = new PDFDocument({ size: 'A4', margin: 50 });
-
     const buffers = [];
+
     doc.on('data', buffers.push.bind(buffers));
     doc.on('end', async () => {
       const pdfBuffer = Buffer.concat(buffers);
@@ -4799,35 +4798,36 @@ async function generateInvoicePdf(invoiceData, fileName) {
       }
     });
 
-    // Draw content
+    try {
+      // Fetch the logo image from S3
+      const imageUrl = 'https://xpertnowbucket.s3.ap-south-1.amazonaws.com/uploads/1743577170167-xpertlog.png';
+      const imageResponse = await axios.get(imageUrl, { responseType: 'arraybuffer' });
+      const imageBuffer = Buffer.from(imageResponse.data, 'binary');
 
-    doc
-      .fontSize(20)
-      .text('Payment Receipt', { align: 'center' })
-      .moveDown();
+      // Add image to PDF
+      doc.image(imageBuffer, { fit: [100, 100], align: 'center' }).moveDown(1.5);
 
-    doc
-      .fontSize(12)
-      .text(`Hey ${invoiceData.name},`)
-      .moveDown(0.5);
+      // Add text
+      doc
+        .fontSize(20)
+        .text('Payment Receipt', { align: 'center' })
+        .moveDown();
 
-    doc
-      .text(`This is the receipt for a payment of ₹${invoiceData.grand_total_expert_earning} you made to milestone.`);
+      doc
+        .fontSize(12)
+        .text(`Hey ${invoiceData.name},`)
+        .moveDown(0.5);
 
-    doc.end();
+      doc
+        .text(`This is the receipt for a payment of ₹${invoiceData.grand_total_expert_earning} you made to milestone.`);
+
+      doc.end();
+
+    } catch (error) {
+      reject(`Error generating PDF: ${error.message}`);
+    }
   });
 }
-
-
-
-
-
-
-
-
-
-
-
 
 
 
