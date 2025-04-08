@@ -5276,7 +5276,7 @@ const generateCustMilestonePdf = async (invoiceData) => {
     //  milestone number 
       doc.fontSize(14).font('Helvetica-Bold').text('Milestone No.');
       doc.font('Helvetica').text(invoiceData.milestone_number);
-      doc.moveDown(2);
+      doc.moveDown(1);
 
       // Payment Info
       doc.fontSize(14).font('Helvetica-Bold').text('Payment Date:');
@@ -5300,7 +5300,7 @@ const generateCustMilestonePdf = async (invoiceData) => {
       doc.moveDown(0.8);
 
       // Total
-      doc.font('Helvetica-Bold').fontSize(14);
+      doc.font('Helvetica-Bold').fontSize(12);
       doc.text(`Total Amount: Rs ${invoiceData.grand_total_expert_earning}`, { align: 'right' });
 
       doc.end();
