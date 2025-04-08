@@ -4853,7 +4853,7 @@ async function generateInvoicePdf(invoiceData) {
           .text('Payment Date:')
           .font('Helvetica')
           .text(moment(invoiceData.createtime).format("MMM DD, YYYY"))
-          .moveDown(2);
+          .moveDown(1);
   
         // Client
         doc
@@ -4898,7 +4898,7 @@ async function generateInvoicePdf(invoiceData) {
           const y = doc.y;
           doc.text(tableData[i][0], startX, y);
           doc.text(`${tableData[i][1]}`, 400, y, { align: 'right' });
-          doc.moveDown(0.6);
+          doc.moveDown(0.8);
         }
   
         // doc.moveDown(1.5);
