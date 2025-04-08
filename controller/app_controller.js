@@ -4772,7 +4772,7 @@ const s3 = new AWS.S3({
 const BUCKET_NAME = "xpertnowbucket";
 const BASE_S3_URL = 'https://xpertnowbucket.s3.ap-south-1.amazonaws.com/uploads/';
 
-function generateUniqueFilename(prefix = 'receipt') {
+function generateUniqueFilename(prefix = 'invoice') {
   const timestamp = Date.now();
   const random = Math.floor(Math.random() * 100000);
   return `${prefix}-${timestamp}-${random}.pdf`;
@@ -5176,8 +5176,6 @@ const generateExpertAllEarningPdf = async (invoiceData, type_label) => {
     }
   });
 };
-
-
 
 
 
