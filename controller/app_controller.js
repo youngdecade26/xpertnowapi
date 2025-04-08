@@ -5302,7 +5302,6 @@ const generateCustMilestonePdf = async (invoiceData) => {
       // Total
       doc.font('Helvetica-Bold').fontSize(14);
       doc.text(`Total Amount: Rs ${invoiceData.grand_total_expert_earning}`, { align: 'right' });
-
       doc.end();
 
     } catch (error) {
@@ -5310,8 +5309,6 @@ const generateCustMilestonePdf = async (invoiceData) => {
     }
   });
 };
-
-
 
 
 
