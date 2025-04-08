@@ -5014,7 +5014,7 @@ const generateWalletInvoice = async (invoiceData, type_label) => {
      .font('Helvetica')
      .fontSize(16)
      .text(`Hey ${invoiceData.name},`)
-    .moveDown(2)
+    .moveDown(0.5)
     .text(`This is the receipt for a payment of Rs ${invoiceData.amount} you made to ${type_label}.`)
     .moveDown(2);
 
@@ -5094,7 +5094,7 @@ const getExpertAllEarningPdf = async( request, response) => {
 }
 
 
-// get expert all earning pdf
+// get expert all earning pdf/ invoice
 const generateExpertAllEarningPdf = async (invoiceData, type_label) => {
   return new Promise(async (resolve, reject) => {
     const fileName = `invoice_${Date.now()}_${Math.floor(Math.random() * 1000)}.pdf`;
@@ -5132,21 +5132,20 @@ const generateExpertAllEarningPdf = async (invoiceData, type_label) => {
 
       // Move below image for greeting
       doc.moveDown(5);
-
+ 
+     doc
+          .font('Helvetica-Bold')
+          .fontSize(26)
+          .text('', { align: 'center' });
   
-    doc
-      .font('Helvetica-Bold')
-      .fontSize(26)
-      .text('', { align: 'center' });
-
-  doc.moveDown(2);
+        doc.moveDown(2);
 
   // Greeting & Intro
   doc
      .font('Helvetica')
      .fontSize(16)
      .text(`Hey ${invoiceData.name},`)
-    .moveDown(2)
+    .moveDown(0.5)
     .text(`This is the receipt for a payment of Rs ${invoiceData.expert_earning} you made to ${type_label}.`)
     .moveDown(2);
 
@@ -5154,7 +5153,6 @@ const generateExpertAllEarningPdf = async (invoiceData, type_label) => {
       doc.fontSize(14).font('Helvetica-Bold').text('Payment Date:');
       doc.font('Helvetica').text(moment(invoiceData.createtime).format("MMM DD, YYYY"));
       doc.moveDown(2);
-
 
     const startX = 50;
     let startY = doc.y;
@@ -5218,6 +5216,8 @@ const getCustomerMilestoneCharge = async( request, response) => {
         return response.status(200).json({ success: false , msg: languageMessage.internalServerError, error: error.message});
     }
 }
+
+
 
 
 
