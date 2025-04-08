@@ -4827,7 +4827,7 @@ async function generateInvoicePdf(invoiceData) {
           .fontSize(26)
           .text('', { align: 'center' });
   
-        doc.moveDown(4);
+        doc.moveDown(3);
   
         // Greeting & Intro
         doc
@@ -5089,7 +5089,6 @@ const getExpertAllEarningPdf = async( request, response) => {
     }
 }
 
-
 // get expert all earning pdf/ invoice
 const generateExpertAllEarningPdf = async (invoiceData, type_label) => {
   return new Promise(async (resolve, reject) => {
@@ -5276,7 +5275,7 @@ const generateCustMilestonePdf = async (invoiceData) => {
 
     //  milestone number 
       doc.fontSize(14).font('Helvetica-Bold').text('Milestone No.');
-      doc.font('Helvetica').text(moment(invoiceData.milestone_number).format("MMM DD, YYYY"));
+      doc.font('Helvetica').text(invoiceData.milestone_number);
       doc.moveDown(2);
 
       // Payment Info
