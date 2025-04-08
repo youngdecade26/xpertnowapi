@@ -5007,7 +5007,7 @@ const generateWalletInvoice = async (invoiceData, type_label) => {
       .fontSize(26)
       .text('', { align: 'center' });
 
-  doc.moveDown(2);
+  doc.moveDown(4);
 
   // Greeting & Intro
   doc
