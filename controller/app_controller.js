@@ -5094,10 +5094,10 @@ const getExpertAllEarningPdf = async( request, response) => {
 }
 
 
-// get expert all earning invoice
+// get expert all earning pdf
 const generateExpertAllEarningPdf = async (invoiceData, type_label) => {
   return new Promise(async (resolve, reject) => {
-    const filename = `invoice_${Date.now()}_${Math.floor(Math.random() * 1000)}.pdf`;
+    const fileName = `invoice_${Date.now()}_${Math.floor(Math.random() * 1000)}.pdf`;
 
     const doc = new PDFDocument({ size: 'A4', margin: 50 });
     const buffers = [];
@@ -5105,17 +5105,16 @@ const generateExpertAllEarningPdf = async (invoiceData, type_label) => {
     doc.on('data', buffers.push.bind(buffers));
     doc.on('end', async () => {
       const pdfBuffer = Buffer.concat(buffers);
-
-      const params = {
+      const uploadParams = {
         Bucket: BUCKET_NAME,
-        Key: `uploads/${filename}`,
+        Key: `uploads/${fileName}`,
         Body: pdfBuffer,
         ContentType: 'application/pdf',
         ACL: 'public-read',
       };
 
       try {
-        const s3Data = await s3.upload(params).promise();
+        const s3Data = await s3.upload(uploadParams).promise();
         resolve(s3Data.Location);
       } catch (err) {
         reject(err);
@@ -5123,61 +5122,67 @@ const generateExpertAllEarningPdf = async (invoiceData, type_label) => {
     });
 
     try {
-      // Load logo image from S3
+      // Fetch logo
       const logoUrl = 'https://xpertnowbucket.s3.ap-south-1.amazonaws.com/uploads/1743577170167-xpertlog.png';
       const imageResponse = await axios.get(logoUrl, { responseType: 'arraybuffer' });
       const imageBuffer = Buffer.from(imageResponse.data, 'binary');
 
-      // Logo
-      doc.image(imageBuffer, doc.page.width / 2 - 60, 40, { width: 120 });
-      doc.moveDown(6);
+      // Header logo
+      doc.image(imageBuffer, doc.page.width / 2 - 75, 40, { width: 150 });
 
-      // Greeting
-      doc
+      // Move below image for greeting
+      doc.moveDown(5);
+
+  
+    doc
+      .font('Helvetica-Bold')
+      .fontSize(26)
+      .text('', { align: 'center' });
+
+  doc.moveDown(2);
+
+  // Greeting & Intro
+  doc
      .font('Helvetica')
      .fontSize(16)
      .text(`Hey ${invoiceData.name},`)
-    .moveDown(0.5)
+    .moveDown(2)
     .text(`This is the receipt for a payment of Rs ${invoiceData.expert_earning} you made to ${type_label}.`)
     .moveDown(2);
 
       // Payment Info
-      doc.fontSize(12).font('Helvetica-Bold').text('Payment Date:');
-      doc.font('Helvetica').text(moment(invoiceData.createtime).format('MMM DD, YYYY'));
+      doc.fontSize(14).font('Helvetica-Bold').text('Payment Date:');
+      doc.font('Helvetica').text(moment(invoiceData.createtime).format("MMM DD, YYYY"));
       doc.moveDown(2);
 
-      // Table headers
-    
-      const startX = 50;
-      let startY = doc.y;
-  
-      doc.fontSize(14).font('Helvetica-Bold');
-      doc.text('Description', startX, startY);
-      doc.text('Amount (Rs)', 400, startY, { align: 'right' });
-      doc.font('Helvetica');
-      doc.moveDown(0.8);
-  
-     
-        const y = doc.y;
-        doc.text(${type_label}, startX, y);
-        doc.text(`Rs ${invoiceData.expert_earning}`, 400, y, { align: 'right' });
-        doc.moveDown(0.8);
-             
-      // Line below headers
-      doc.moveTo(descriptionX, doc.y + 5).lineTo(doc.page.width - 50, doc.y + 5).stroke();
-      doc.moveDown(1);
 
-      // Total section
-      doc.font('Helvetica-Bold').fontSize(13);
-      doc.text(`Total Amount: ₹${invoiceData.expert_earning}`, { align: 'right' });
+    const startX = 50;
+    let startY = doc.y;
+
+    doc.fontSize(14).font('Helvetica-Bold');
+    doc.text('Description', startX, startY);
+    doc.text('Amount (Rs)', 400, startY, { align: 'right' });
+    doc.font('Helvetica');
+    doc.moveDown(0.8);
+
+   
+      const y = doc.y;
+      doc.text(type_label, startX, y);
+      doc.text(`Rs ${invoiceData.expert_earning}`, 400, y, { align: 'right' });
+      doc.moveDown(0.8);
+
+      // Total
+      doc.font('Helvetica-Bold').fontSize(14);
+      doc.text(`Total Amount: Rs ${invoiceData.expert_earning}`, { align: 'right' });
 
       doc.end();
 
     } catch (error) {
-      reject(`PDF generation error: ${error.message}`);
+      reject(`Error generating PDF: ${error.message}`);
     }
   });
 };
+
 
 
 
