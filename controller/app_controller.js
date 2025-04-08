@@ -4904,12 +4904,8 @@ async function generateInvoicePdf(invoiceData) {
         // doc.moveDown(1.5);
   
         // Grand Total
-        doc
-          .moveDown(1)
-          .font('Helvetica-Bold')
-          .fontSize(14)
-          .text(`Grand Total: Rs${invoiceData.grand_total_expert_earning}`, { align: 'right' });
-  
+        doc.font('Helvetica-Bold').fontSize(14);
+        doc.text(`Grand Total: Rs ${invoiceData.grand_total_expert_earning}`, { align: 'right' });
         doc.end();
 
       } catch (error) {
