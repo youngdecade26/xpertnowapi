@@ -4827,7 +4827,7 @@ async function generateInvoicePdf(invoiceData) {
           .fontSize(26)
           .text('', { align: 'center' });
   
-        doc.moveDown(2);
+        doc.moveDown(4);
   
         // Greeting & Intro
         doc
@@ -5128,13 +5128,14 @@ const generateExpertAllEarningPdf = async (invoiceData, type_label) => {
 
       // Move below image for greeting
       doc.moveDown(5);
- 
-     doc
-          .font('Helvetica-Bold')
-          .fontSize(26)
-          .text('', { align: 'center' });
+
   
-        doc.moveDown(2);
+    doc
+      .font('Helvetica-Bold')
+      .fontSize(26)
+      .text('', { align: 'center' });
+
+  doc.moveDown(4);
 
   // Greeting & Intro
   doc
@@ -5149,6 +5150,7 @@ const generateExpertAllEarningPdf = async (invoiceData, type_label) => {
       doc.fontSize(14).font('Helvetica-Bold').text('Payment Date:');
       doc.font('Helvetica').text(moment(invoiceData.createtime).format("MMM DD, YYYY"));
       doc.moveDown(2);
+
 
     const startX = 50;
     let startY = doc.y;
@@ -5176,6 +5178,11 @@ const generateExpertAllEarningPdf = async (invoiceData, type_label) => {
     }
   });
 };
+
+
+
+
+
 
 
 
@@ -5210,6 +5217,101 @@ const getCustomerMilestoneCharge = async( request, response) => {
         return response.status(200).json({ success: false , msg: languageMessage.internalServerError, error: error.message});
     }
 }
+
+// generate customer milestone invoice
+const generateCustMilestonePdf = async (invoiceData) => {
+  return new Promise(async (resolve, reject) => {
+    const fileName = `invoice_${Date.now()}_${Math.floor(Math.random() * 1000)}.pdf`;
+
+    const doc = new PDFDocument({ size: 'A4', margin: 50 });
+    const buffers = [];
+
+    doc.on('data', buffers.push.bind(buffers));
+    doc.on('end', async () => {
+      const pdfBuffer = Buffer.concat(buffers);
+      const uploadParams = {
+        Bucket: BUCKET_NAME,
+        Key: `uploads/${fileName}`,
+        Body: pdfBuffer,
+        ContentType: 'application/pdf',
+        ACL: 'public-read',
+      };
+
+      try {
+        const s3Data = await s3.upload(uploadParams).promise();
+        resolve(s3Data.Location);
+      } catch (err) {
+        reject(err);
+      }
+    });
+
+    try {
+      // Fetch logo
+      const logoUrl = 'https://xpertnowbucket.s3.ap-south-1.amazonaws.com/uploads/1743577170167-xpertlog.png';
+      const imageResponse = await axios.get(logoUrl, { responseType: 'arraybuffer' });
+      const imageBuffer = Buffer.from(imageResponse.data, 'binary');
+
+      // Header logo
+      doc.image(imageBuffer, doc.page.width / 2 - 75, 40, { width: 150 });
+
+      // Move below image for greeting
+      doc.moveDown(5);
+
+  
+    doc
+      .font('Helvetica-Bold')
+      .fontSize(26)
+      .text('', { align: 'center' });
+
+  doc.moveDown(4);
+
+  // Greeting & Intro
+  doc
+     .font('Helvetica')
+     .fontSize(16)
+     .text(`Hey ${invoiceData.cust_name},`)
+    .moveDown(0.5)
+    .text(`This is the receipt for a payment of Rs ${invoiceData.grand_total_expert_earning} you paid to ${invoiceData.name}.`)
+    .moveDown(2);
+
+    //  milestone number 
+      doc.fontSize(14).font('Helvetica-Bold').text('Milestone No.');
+      doc.font('Helvetica').text(moment(invoiceData.milestone_number).format("MMM DD, YYYY"));
+      doc.moveDown(2);
+
+      // Payment Info
+      doc.fontSize(14).font('Helvetica-Bold').text('Payment Date:');
+      doc.font('Helvetica').text(moment(invoiceData.createtime).format("MMM DD, YYYY"));
+      doc.moveDown(2);
+
+
+    const startX = 50;
+    let startY = doc.y;
+
+    doc.fontSize(14).font('Helvetica-Bold');
+    doc.text('Description', startX, startY);
+    doc.text('Amount (Rs)', 400, startY, { align: 'right' });
+    doc.font('Helvetica');
+    doc.moveDown(0.8);
+
+   
+      const y = doc.y;
+      doc.text('Milestone Payment', startX, y);
+      doc.text(`Rs ${invoiceData.grand_total_expert_earning}`, 400, y, { align: 'right' });
+      doc.moveDown(0.8);
+
+      // Total
+      doc.font('Helvetica-Bold').fontSize(14);
+      doc.text(`Total Amount: Rs ${invoiceData.grand_total_expert_earning}`, { align: 'right' });
+
+      doc.end();
+
+    } catch (error) {
+      reject(`Error generating PDF: ${error.message}`);
+    }
+  });
+};
+
 
 
 
