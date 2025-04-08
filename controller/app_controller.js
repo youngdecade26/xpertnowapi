@@ -5296,7 +5296,7 @@ const generateCustMilestonePdf = async (invoiceData) => {
    
       const y = doc.y;
       doc.text('Milestone Payment', startX, y);
-      doc.text(`Rs ${invoiceData.grand_total_expert_earning}`, 400, y, { align: 'right' });
+      doc.text(` ${invoiceData.grand_total_expert_earning}`, 400, y, { align: 'right' });
       doc.moveDown(0.8);
 
       // Total
