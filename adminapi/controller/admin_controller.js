@@ -35,7 +35,7 @@ const { request } = require("http");
 const FetchUser = async (request, response) => {
   try {
     const fetchDetails =
-      "SELECT user_id, f_name, l_name, name, image, email, mobile, dob, address, bio, gender, createtime, active_flag, gst_number, adhar_number, pan_number, phone_code, delete_flag, delete_reason,inactive_customer,inactive_date_time,bank_user_name,bank_name,bank_account_no,bank_branch,ifsc_code,last_login_date_time FROM user_master WHERE delete_flag = 0 AND user_type = 1 AND profile_completed=1  order by user_id desc";
+      "SELECT user_id, f_name, l_name, name, image, email, mobile, dob, address, bio, gender, createtime, active_flag, gst_number, adhar_number, pan_number, phone_code, delete_flag, delete_reason,inactive_customer,inactive_date_time,bank_user_name,bank_name,bank_account_no,bank_branch,ifsc_code,last_login_date_time FROM user_master WHERE delete_flag = 0 AND user_type = 1 AND profile_completed=1  ORDER BY name ASE";
     connection.query(fetchDetails, (err, res) => {
       if (err) {
         return response
