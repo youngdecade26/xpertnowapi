@@ -9613,8 +9613,11 @@ LEFT JOIN sub_level_categories_master slcm
    LEFT JOIN file_master fm 
     ON um.user_id = fm.user_id
 WHERE 
-    um.user_type = 2  
-    AND um.profile_completed = 1  AND um.user_id NOT IN (?)
+    um.user_type = 2 
+    AND um.active_flag = 0
+    AND um.delete_flag = 0  
+    AND um.profile_completed = 1  
+    AND um.user_id NOT IN (?)
     GROUP BY 
     um.user_id
 ORDER BY 
