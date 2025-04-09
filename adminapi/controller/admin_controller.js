@@ -7933,6 +7933,7 @@ const getInactiveUserTabularReport = async (req, res) => {
       WHERE 
         delete_flag = 0 
         AND user_type = 1
+        AND active_flag = 0
         AND profile_completed = 1 
         AND user_id NOT IN (?)
       ORDER BY 
