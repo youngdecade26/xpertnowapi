@@ -1173,7 +1173,7 @@ const AddCategory = async (request, response) => {
 
       let Insert =
         "INSERT INTO categories_master(name, type_name,category_type, image, createtime) VALUES(?, ?, ?, ?, now())";
-      let values = [name, type_name, 3, image ];
+      let values = [name, type_name, 3, image];
       // Check if image exists
       // if (image) {
       //   Insert += ", image"; // Add image column to the query
@@ -1311,12 +1311,12 @@ const UpdateCategory = (req, res) => {
       }
       // Proceed to update brand detailsconst { blog_id, action, category_id, title, description }
       let updateQuery = "UPDATE categories_master SET name = ?,  updatetime = ?";
-      let queryValues = [name,  updatetime];
+      let queryValues = [name, updatetime];
       // Check if an image was uploaded
       if (image) {
-      //   // Include image update in the query
-      //   let imageKey = req.file.key;
-      //   const imageName = imageKey ? path.basename(imageKey) : null;
+        //   // Include image update in the query
+        //   let imageKey = req.file.key;
+        //   const imageName = imageKey ? path.basename(imageKey) : null;
         updateQuery += ", image = ?";
         queryValues.push(image);
       }
@@ -4430,7 +4430,7 @@ const UpdateSubCategory = (req, res) => {
   }
 };
 
- 
+
 //Fetch SubCategory
 const FetchSubLevelCategory = async (request, response) => {
   var FetchSubCategory =
@@ -8295,7 +8295,26 @@ const getEarningTabularReport = async (request, response) => {
 const ManageEarnings = async (request, response) => {
 
   var Fetchpost =
-    "SELECT em.expert_earning_id, em.type,em.subscription_type, em.user_id,um.name, em.expert_id, em.milestone_id, em.total_amount, em.commission_percentage, em.admin_commission_amount, em.expert_earning, em.transition_id, em.invoice_url, em.delete_flag, em.createtime,ms.milestone_number,ms.price as milestone_price,ms.duration,ms.status,ms.description,ms.release_status, ms.released_date_time, ms.file, jps.job_post_id ,jps.user_id as job_post_user_id, jps.assign_expert_id as job_post_expert_id,   jps.status as job_post_status, jps.title as job_post_title,  jps.max_price, jps.min_price, jps.duration as job_post_duration, jps.description as job_post_description, jps.file as job_post_file, jps.nda_status, jps.project_cost,em.gst_per,em.tds_per,em.tcs_per,em.expert_type,em.gst_amt,em.tds_amt,em.tcs_amt,em.grand_total_expert_earning,em.platform_fees_gst_amt,em.platform_fees,em.	net_expert_earning FROM expert_earning_master as em JOIN user_master um ON em.user_id= um.user_id join milestone_master ms ON ms.milestone_id=em.milestone_id join job_post_master jps ON jps.job_post_id = ms.job_post_id  WHERE em.delete_flag = 0 order by em.expert_earning_id desc";
+    `SELECT em.expert_earning_id, em.type,em.subscription_type, em.user_id,um.name, em.expert_id, em.milestone_id, em.total_amount, em.commission_percentage, em.admin_commission_amount, em.expert_earning, em.transition_id, em.invoice_url, em.delete_flag, em.createtime,ms.milestone_number,ms.price as milestone_price,ms.duration,ms.status,ms.description,ms.release_status, ms.released_date_time, ms.file, jps.job_post_id ,jps.user_id as job_post_user_id, jps.assign_expert_id as job_post_expert_id,   jps.status as job_post_status, jps.title as job_post_title,  jps.max_price, jps.min_price, jps.duration as job_post_duration, jps.description as job_post_description, jps.file as job_post_file, jps.nda_status, jps.project_cost,em.gst_per,em.tds_per,em.tcs_per,em.expert_type,em.gst_amt,em.tds_amt,em.tcs_amt,em.grand_total_expert_earning,em.platform_fees_gst_amt,em.platform_fees,em.net_expert_earning 
+    FROM 
+    expert_earning_master as em 
+    JOIN 
+    user_master um 
+    ON 
+    em.user_id= um.user_id 
+    join 
+    milestone_master ms 
+    ON 
+    ms.milestone_id=em.milestone_id 
+    join 
+    job_post_master jps 
+    ON 
+    jps.job_post_id = ms.job_post_id  
+    WHERE 
+    em.delete_flag = 0 
+    order by 
+    em.expert_earning_id 
+    desc`;
   try {
     connection.query(Fetchpost, async (err, posts) => {
       if (err) {
@@ -8318,17 +8337,24 @@ const ManageEarnings = async (request, response) => {
             // Fetch Expert Name
             if (post.expert_id) {
               const GetExpertName =
-                "SELECT name FROM user_master WHERE delete_flag = 0 AND user_id = ?";
-              post.expert_name = await new Promise((resolve) => {
+                "SELECT u.name AS expert_name, c.name AS category_name FROM user_master AS u LEFT JOIN categories_master AS c ON u.category = c.category_id WHERE u.delete_flag = 0 AND user_id = ?";
+              const { expert_name, category_name } = await new Promise((resolve) => {
                 connection.query(
                   GetExpertName,
                   [post.expert_id],
                   (err, result) => {
-                    if (err || result.length === 0) resolve("NA");
-                    else resolve(result[0].name);
+                    if (err || result.length === 0) resolve({ expert_name: "NA", category_name: "NA" });
+                    else resolve({
+                      expert_name: result[0].expert_name || "NA",
+                      category_name: result[0].category_name || "NA",
+                    });
                   }
                 );
               });
+
+              post.expert_name = expert_name;
+              post.category_name = category_name;
+
             } else {
               post.expert_name = "NA";
             }
@@ -9615,26 +9641,26 @@ ORDER BY
 
 
 //adin details 
-const adminDetails = async( request, response) =>{
-   const { user_id} = request.query;
-   if(!user_id){
+const adminDetails = async (request, response) => {
+  const { user_id } = request.query;
+  if (!user_id) {
     return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param });
-   }
+  }
 
-   const checkUser = 'SELECT user_id, active_flag FROM user_master WHERE user_id = ? AND delete_flag = 0';
-    connection.query(checkUser, [user_id], async(err, result) => {
-      if(err){
-        return response.status(200).json({ success: false, msg: languageMessage.internalServerError });
-      }
-      if(result.length == 0){
-        return response.status(200).json({ success: false, msg: languageMessage.msgUserNotFound });
-      }
-      if(result[0].active_flag == 0){
-        return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated});
-      }
+  const checkUser = 'SELECT user_id, active_flag FROM user_master WHERE user_id = ? AND delete_flag = 0';
+  connection.query(checkUser, [user_id], async (err, result) => {
+    if (err) {
+      return response.status(200).json({ success: false, msg: languageMessage.internalServerError });
+    }
+    if (result.length == 0) {
+      return response.status(200).json({ success: false, msg: languageMessage.msgUserNotFound });
+    }
+    if (result[0].active_flag == 0) {
+      return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated });
+    }
 
-      return response.status(200).json({ success: true, msg: languageMessage.msgDataFound, data: result})
-    })
+    return response.status(200).json({ success: true, msg: languageMessage.msgDataFound, data: result })
+  })
 }
 
 module.exports = {
