@@ -95,7 +95,7 @@ async function getUserDetails(user_id){
                   dob_new = moment(userData.dob).format('MMM DD, YYYY');
                   formattedDob = moment(userData.dob).format('YYYY-MM-DD');
                 }
-                //earning amount
+                // earning amount
                 if (userData.user_id) {
                     try {
                         earningResult = await getExpertTotalEarning(userData.user_id); // Wait for the promise to resolve
@@ -112,7 +112,7 @@ async function getUserDetails(user_id){
                         
                         
                     } catch (err) {
-                        console.log("Error fetching category name:", err.message);
+                        console.log("Error fetching exoert earning :", err.message);
                     }
                 }
                 //wallet amount
@@ -1391,7 +1391,7 @@ async function getUserTotalWallet(user_id) {
 async function getExpertTotalEarning(user_id) {
     return new Promise((resolve, reject) => {
         connection.query(
-            `SELECT SUM(expert_earning) AS expert_earning FROM wallet_master WHERE expert_id = ? AND delete_flag = 0`,
+            `SELECT SUM(amount) AS expert_earning FROM wallet_master WHERE expert_id = ? AND delete_flag = 0`,
             [user_id],
             (error, rows) => {
                 if (error) {
@@ -1410,6 +1410,7 @@ async function getExpertTotalEarning(user_id) {
         );
     });
 }
+
 async function getExpertTotalWithdrawl(user_id) {
     return new Promise((resolve, reject) => {
         connection.query(

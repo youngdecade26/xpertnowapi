@@ -118,7 +118,8 @@ const messages = {
   ErrorUpdatingUrl:['Error updating invoice url'],
   PdfGeneratedSuccess : ['Invoice generated successfully'],
   ErrorGeneratingPdf:['Error generating PDF'],
-  CallScheduled:['Call scheduled successfully']
+  CallScheduled:['Call scheduled successfully'],
+  NotificationSend:['Notification sent successfully']
   
 
 };

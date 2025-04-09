@@ -4733,9 +4733,10 @@ const getExpertEarningPdf = async (request, response) => {
             }
 
             try {
-                const filename = await generateInvoicePdf(res[0], expert_earning_id);
-
-                const invoiceUrl = filename;
+                // const filename = await generatePDFfromHTML(res[0], expert_earning_id);
+                const filename = `invoice_${expert_earning_id}.pdf`;
+                // const invoiceUrl = filename;
+                const invoiceUrl = await generateInvoicePdf(res[0], filename);
                 const updateSql = 'UPDATE expert_earning_master SET invoice_url = ? WHERE expert_earning_id = ?';
                 connection.query(updateSql, [invoiceUrl, expert_earning_id], (updateErr) => {
                     if (updateErr) {
@@ -4753,200 +4754,168 @@ const getExpertEarningPdf = async (request, response) => {
 };
 
 
-// AWS S3 Configuration
-const fs = require('fs');
-const pdf = require('html-pdf');
-const path = require('path');
-const { response } = require('express');
 
+
+// generate pdf 
 const AWS = require('aws-sdk');
+const fs = require('fs');
+const axios = require('axios');
+const PDFDocument = require('pdfkit');
+
+
 const s3 = new AWS.S3({
-    accessKeyId: "AKIAUGO4KNQULGJQFZIA",
-    secretAccessKey: "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",
-    region: "ap-south-1",
+  accessKeyId: "AKIAUGO4KNQULGJQFZIA",
+  secretAccessKey: "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",
+  region: "ap-south-1",
 });
 
-// Generate Expert earning Invoice PDF and Upload to S3
-const generateInvoicePdf = async (invoiceData) => {
-    return new Promise((resolve, reject) => {
-        try {
-            // Generate a unique filename
-            const randomSuffix = Math.floor(Math.random() * 1000);
-            const filename = `invoice_${Date.now()}_${randomSuffix}.pdf`;
+const BUCKET_NAME = "xpertnowbucket";
+const BASE_S3_URL = 'https://xpertnowbucket.s3.ap-south-1.amazonaws.com/uploads/';
 
-            // HTML Content
-            const htmlContent = `
- <!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <title>Payment Receipt</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0/dist/css/bootstrap.min.css" rel="stylesheet">
-  <style>
-    body {
-      background: #f8f9fa;
-      font-family: Arial, sans-serif;
-      margin: 20px;
-      color: #333;
-    }
-    .invoice-container {
-      max-width: 600px;
-      margin: 0 auto;
-      background: #fff;
-      padding: 25px;
-      border-radius: 5px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.05);
-    }
-    .logo {
-      text-align: center;
-      margin-bottom: 20px;
-    }
-   .logo img {
-  max-width: 100px; 
-  height: auto; 
+function generateUniqueFilename(prefix = 'invoice') {
+  const timestamp = Date.now();
+  const random = Math.floor(Math.random() * 100000);
+  return `${prefix}-${timestamp}-${random}.pdf`;
 }
-    .header, .section {
-      margin-bottom: 20px;
-    }
-    .info-row {
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 15px;
-    }
-    .info-block {
-      width: 48%;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-bottom: 20px;
-    }
-    th, td {
-      padding: 10px;
-      border-bottom: 1px solid #eee;
-    }
-    th {
-      text-align: left;
-      text-transform: uppercase;
-      font-size: 0.8rem;
-      color: #666;
-    }
-    .amount {
-      text-align: right;
-    }
-    .total-section {
-      text-align: right;
-      font-weight: bold;
-    }
-    .text-muted {
-      color: #666;
-      font-size: 0.85rem;
-    }
-    .text-success {
-      color: #28a745;
-    }
-    @media (max-width: 480px) {
-      .info-row {
-        flex-direction: column;
-      }
-      .info-block {
-        width: 100%;
-        margin-bottom: 15px;
-      }
-    }
-  </style>
-</head>
-<body>
-  <div class="invoice-container">
-    <div class="logo">
-      <img src="https://xpertnowbucket.s3.ap-south-1.amazonaws.com/uploads/1743577170167-xpertlog.png" alt="Xpertnow logo"">
-    </div>
-    <div class="header">
-      <h4>Hey ${invoiceData.name},</h4>
-      <p>This is the receipt for a payment of <strong>₹${invoiceData.grand_total_expert_earning}</strong> you made to milestone.</p>
-    </div>
-    <div class="section">
-      <div class="info-row">
-        <div class="info-block">
-          <div class="text-muted">Milestone No.</div>
-          <div><strong>#${invoiceData.milestone_number}</strong></div>
-        </div>
-        <div class="info-block">
-          <div class="text-muted">Payment Date</div>
-          <div><strong>${moment(invoiceData.createtime).format("MMM DD, YYYY")}</strong></div>
-        </div>
-      </div>
-    </div>
-    <div class="section">
-      <div class="info-row">
-        <div class="info-block">
-          <div class="text-muted">Client</div>
-          <div><strong>John McCleane</strong></div>
-          <div>999 5th Avenue, New York, 55832</div>
-          <div><a href="mailto:client@example.com">client@example.com</a></div>
-        </div>
-        <div class="info-block">
-          <div class="text-muted">Payment To</div>
-          <div><strong>${invoiceData.name}</strong></div>
-          <div>${invoiceData.address}, ${invoiceData.city_name}</div>
-          <div><a href="mailto:${invoiceData.email}">${invoiceData.email}</a></div>
-        </div>
-      </div>
-    </div>
-    <table>
-      <thead>
-        <tr>
-          <th>Description</th>
-          <th class="amount">Amount</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr><td>GST (${invoiceData.gst_per}%)</td><td class="amount">₹${invoiceData.gst_amt}</td></tr>
-        <tr><td>Platform Fee</td><td class="amount">₹${invoiceData.platform_fees}</td></tr>
-        <tr><td>TCS (${invoiceData.tcs_per}%)</td><td class="amount">₹${invoiceData.tcs_amt}</td></tr>
-        <tr><td>TDS (${invoiceData.tds_per}%)</td><td class="amount">₹${invoiceData.tds_amt}</td></tr>
-      </tbody>
-    </table>
-    <div class="total-section">
-      <div>Total Amount: ₹${invoiceData.total_amount}</div>
-      <div>Net Amount: ₹${invoiceData.net_expert_earning}</div>
-      <div class="text-success">Grand Total: ₹${invoiceData.grand_total_expert_earning}</div>
-    </div>
-  </div>
-</body>
-</html>
 
-`;
-            // Generate PDF Buffer
-            pdf.create(htmlContent, { format: 'A4' }).toBuffer(async (err, buffer) => {
-                if (err) {
-                    reject(err);
-                    return;
-                }
 
-                // Upload to S3
-                const params = {
-                    Bucket: "xpertnowbucket",
-                    Key: `uploads/${filename}`,
-                    Body: buffer,
-                    ContentType: 'application/pdf',
-                    ACL: 'public-read',
-                };
 
-                try {
-                    const s3Data = await s3.upload(params).promise();
-                    resolve(s3Data.Location); // Return the S3 file URL
-                } catch (uploadError) {
-                    reject(uploadError);
-                }
-            });
 
-        } catch (error) {
-            reject(error);
+// ... (same AWS & imports as before)
+
+async function generateInvoicePdf(invoiceData) {
+    return new Promise(async (resolve, reject) => {
+      const fileName = generateUniqueFilename();
+  
+      const doc = new PDFDocument({ size: 'A4', margin: 50 });
+      const buffers = [];
+  
+      doc.on('data', buffers.push.bind(buffers));
+      doc.on('end', async () => {
+        const pdfBuffer = Buffer.concat(buffers);
+  
+        const s3Key = `uploads/${fileName}`;
+        const uploadParams = {
+          Bucket: BUCKET_NAME,
+          Key: s3Key,
+          Body: pdfBuffer,
+          ContentType: 'application/pdf',
+          ACL: 'public-read',
+        };
+  
+        try {
+          await s3.upload(uploadParams).promise();
+          resolve(`${BASE_S3_URL}${fileName}`);
+        } catch (err) {
+          reject(err);
         }
+      });
+  
+      try {
+        const imageUrl = 'https://xpertnowbucket.s3.ap-south-1.amazonaws.com/uploads/1743577170167-xpertlog.png';
+        const imageResponse = await axios.get(imageUrl, { responseType: 'arraybuffer' });
+        const imageBuffer = Buffer.from(imageResponse.data, 'binary');
+  
+        // Add Logo
+        doc.image(imageBuffer, doc.page.width / 2 - 75, 30, { width: 150 });
+  
+        doc.moveDown(5);
+  
+        // Title
+        doc
+          .font('Helvetica-Bold')
+          .fontSize(26)
+          .text('', { align: 'center' });
+  
+        doc.moveDown(3);
+  
+        // Greeting & Intro
+        doc
+          .font('Helvetica')
+          .fontSize(16)
+          .text(`Hey ${invoiceData.name},`)
+          .moveDown(0.5)
+          .text(`This is the receipt for a payment of Rs ${invoiceData.grand_total_expert_earning} you made to milestone.`)
+          .moveDown(2);
+  
+        // Milestone Number
+        doc
+          .fontSize(14)
+          .font('Helvetica-Bold')
+          .text('Milestone Number:')
+          .font('Helvetica')
+          .text(invoiceData.milestone_number)
+          .moveDown(1);
+  
+        // Payment Date
+        doc
+          .font('Helvetica-Bold')
+          .text('Payment Date:')
+          .font('Helvetica')
+          .text(moment(invoiceData.createtime).format("MMM DD, YYYY"))
+          .moveDown(1);
+  
+        // Client
+        doc
+          .fontSize(14)
+          .font('Helvetica-Bold')
+          .text('Client:')
+          .font('Helvetica')
+          .text('John McCleane')
+          .text('999 5th Avenue, New York, 55832')
+          .text('client@example.com')
+          .moveDown(1);
+  
+        // Payment To
+        doc
+          .font('Helvetica-Bold')
+          .text('Payment To:')
+          .font('Helvetica')
+          .text(invoiceData.name)
+          .text(`${invoiceData.address}, ${invoiceData.city_name}`)
+          .text(invoiceData.email)
+          .moveDown(2);
+  
+        // Charges Table
+        const tableData = [
+          ['Total Amount', invoiceData.total_amount],
+          ['Platform Fee', invoiceData.platform_fees],
+          ['GST (18%)', invoiceData.gst_amt],
+          [`TCS (${invoiceData.tcs_per}%)`, invoiceData.tcs_amt],
+          [`TDS (${invoiceData.tds_per}%)`, invoiceData.tds_amt],
+        ];
+  
+        const startX = 50;
+        let startY = doc.y;
+  
+        doc.fontSize(14).font('Helvetica-Bold');
+        doc.text('Description', startX, startY);
+        doc.text('Amount (Rs)', 400, startY, { align: 'right' });
+        doc.font('Helvetica');
+        doc.moveDown(0.8);
+  
+        for (let i = 0; i < tableData.length; i++) {
+          const y = doc.y;
+          doc.text(tableData[i][0], startX, y);
+          doc.text(`${tableData[i][1]}`, 400, y, { align: 'right' });
+          doc.moveDown(0.8);
+        }
+  
+        // doc.moveDown(1.5);
+  
+        // Grand Total
+        doc.font('Helvetica-Bold').fontSize(12);
+        doc.text(`Grand Total: Rs ${invoiceData.grand_total_expert_earning}`, { align: 'right' });
+        doc.end();
+
+      } catch (error) {
+        reject(`Error generating PDF: ${error.message}`);
+      }
     });
-};
+  }
+  
+  
+
 
 
 
@@ -4966,7 +4935,7 @@ const getWalletPdf = async( request, response) => {
                 return response.status(200).json({ success: false, msg: languageMessage.dataFound});
             }
             try {
-                let type_label = res[0].type === 1 ? 'recharge' : res[0].type === 2 ? 'job' : 'consultation'
+                let type_label = res[0].type === 1 ? 'Recharge' : res[0].type === 2 ? 'Job' : 'Consultation'
                 const filename = await generateWalletInvoice(res[0], type_label);
 
                 const invoiceUrl = filename;
@@ -4986,190 +4955,101 @@ const getWalletPdf = async( request, response) => {
         return response.status(200).json({ success: false , msg: languageMessage.internalServerError, error: error.message});
     }
 }
-// comnet
+
+
+
 // generate wallet invoice
 const generateWalletInvoice = async (invoiceData, type_label) => {
-    return new Promise((resolve, reject) => {
-        try {
-            // Generate a unique filename
-            const randomSuffix = Math.floor(Math.random() * 1000);
-            const filename = `invoice_${Date.now()}_${randomSuffix}.pdf`;
-       
-// HTML Template
- const htmlContent = `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <title>Payment Receipt</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0/dist/css/bootstrap.min.css" rel="stylesheet">
-  <style>
-    body {
-      background: #f8f9fa;
-      font-family: Arial, sans-serif;
-      margin: 0;
-      padding: 0;
-      color: #333;
-    }
-    .invoice-container {
-      width: 100%;
-      max-width: 700px;
-      margin: 0 auto;
-      background: #fff;
-      padding: 30px;
-      border-radius: 8px;
-      box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
-    }
-    .header {
-      text-align: center;
-      margin-bottom: 30px;
-    }
-    .logo {
-      max-width: 150px;
-      margin-bottom: 10px;
-    }
-    h4 {
-      margin: 0;
-      font-size: 1.5rem;
-      font-weight: bold;
-    }
-    p {
-      margin-bottom: 10px;
-      font-size: 1rem;
-    }
-    .section {
-      margin-bottom: 20px;
-    }
-    .info-row {
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 20px;
-    }
-    .info-block {
-      width: 48%;
-    }
-    .info-block div {
-      font-size: 1rem;
-    }
-    .text-muted {
-      color: #666;
-      font-size: 0.9rem;
-    }
-    .amount {
-      text-align: right;
-      font-size: 1rem;
-    }
-    .total-section {
-      text-align: right;
-      font-weight: bold;
-      font-size: 1.1rem;
-      margin-top: 20px;
-    }
-    .pay-btn {
-      display: block;
-      width: 100%;
-      padding: 10px;
-      background: #1e2e50;
-      color: white;
-      text-align: center;
-      text-decoration: none;
-      border-radius: 4px;
-      font-weight: bold;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      font-size: 0.9rem;
-      border: none;
-      cursor: pointer;
-      margin-top: 25px;
-    }
-    @media (max-width: 480px) {
-      .info-row {
-        flex-direction: column;
+  return new Promise(async (resolve, reject) => {
+    const fileName = `invoice_${Date.now()}_${Math.floor(Math.random() * 1000)}.pdf`;
+
+    const doc = new PDFDocument({ size: 'A4', margin: 50 });
+    const buffers = [];
+
+    doc.on('data', buffers.push.bind(buffers));
+    doc.on('end', async () => {
+      const pdfBuffer = Buffer.concat(buffers);
+      const uploadParams = {
+        Bucket: BUCKET_NAME,
+        Key: `uploads/${fileName}`,
+        Body: pdfBuffer,
+        ContentType: 'application/pdf',
+        ACL: 'public-read',
+      };
+
+      try {
+        const s3Data = await s3.upload(uploadParams).promise();
+        resolve(s3Data.Location);
+      } catch (err) {
+        reject(err);
       }
-      .info-block {
-        width: 100%;
-        margin-bottom: 15px;
-      }
-      .invoice-container {
-        padding: 15px;
-      }
-    }
-  </style>
-</head>
-<body>
-  <div class="invoice-container">
-    <div class="header">
-      <img src="https://xpertnowbucket.s3.ap-south-1.amazonaws.com/uploads/1743577170167-xpertlog.png" alt="Xpertnow logo" class="logo">
-      <h4>Payment Receipt</h4>
-    </div>
-
-    <p>Hey ${invoiceData.name},</p>
-    <p>This is the receipt for a payment of <strong>₹${invoiceData.amount}</strong> you made to ${type_label}.</p>
-
-    <div class="section">
-      <div class="info-row">
-        <div class="info-block">
-          <div class="text-muted">Payment Date</div>
-          <div><strong>${moment(invoiceData.createtime).format("MMM DD, YYYY")}</strong></div>
-        </div>
-      </div>
-    </div>
-
-    <table style="width: 100%; margin-bottom: 20px;">
-      <thead>
-        <tr>
-          <th>Description</th>
-          <th class="amount">Amount</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>${type_label}</td>
-          <td class="amount">₹${invoiceData.amount}</td>
-        </tr>
-      </tbody>
-    </table>
-
-    <div class="total-section">
-      <div>Total Amount: ₹${invoiceData.amount}</div>
-    </div>
-
-    <div class="footer" style="text-align: center; margin-top: 20px; color: #888;">
-    
-    </div>
-  </div>
-</body>
-</html>
-`
-              // Generate PDF Buffer
-              pdf.create(htmlContent, { format: 'A4' }).toBuffer(async (err, buffer) => {
-                if (err) {
-                    reject(err);
-                    return;
-                }
-
-                // Upload to S3
-                const params = {
-                    Bucket: "xpertnowbucket",
-                    Key: `uploads/${filename}`,
-                    Body: buffer,
-                    ContentType: 'application/pdf',
-                    ACL: 'public-read',
-                };
-
-                try {
-                    const s3Data = await s3.upload(params).promise();
-                    resolve(s3Data.Location); // Return the S3 file URL
-                } catch (uploadError) {
-                    reject(uploadError);
-                }
-            });
-        } catch (error) {
-            reject(error);
-        }
     });
+
+    try {
+      // Fetch logo
+      const logoUrl = 'https://xpertnowbucket.s3.ap-south-1.amazonaws.com/uploads/1743577170167-xpertlog.png';
+      const imageResponse = await axios.get(logoUrl, { responseType: 'arraybuffer' });
+      const imageBuffer = Buffer.from(imageResponse.data, 'binary');
+
+      // Header logo
+      doc.image(imageBuffer, doc.page.width / 2 - 75, 40, { width: 150 });
+
+      // Move below image for greeting
+      doc.moveDown(5);
+
+  
+    doc
+      .font('Helvetica-Bold')
+      .fontSize(26)
+      .text('', { align: 'center' });
+
+  doc.moveDown(4);
+
+  // Greeting & Intro
+  doc
+     .font('Helvetica')
+     .fontSize(16)
+     .text(`Hey ${invoiceData.name},`)
+    .moveDown(0.5)
+    .text(`This is the receipt for a payment of Rs ${invoiceData.amount} you made to ${type_label}.`)
+    .moveDown(2);
+
+      // Payment Info
+      doc.fontSize(14).font('Helvetica-Bold').text('Payment Date:');
+      doc.font('Helvetica').text(moment(invoiceData.createtime).format("MMM DD, YYYY"));
+      doc.moveDown(2);
+
+
+    const startX = 50;
+    let startY = doc.y;
+
+    doc.fontSize(14).font('Helvetica-Bold');
+    doc.text('Description', startX, startY);
+    doc.text('Amount (Rs)', 400, startY, { align: 'right' });
+    doc.font('Helvetica');
+    doc.moveDown(0.8);
+
+   
+      const y = doc.y;
+      doc.text(type_label, startX, y);
+      doc.text(`Rs ${invoiceData.amount}`, 400, y, { align: 'right' });
+      doc.moveDown(0.8);
+
+      // Total
+      doc.font('Helvetica-Bold').fontSize(14);
+      doc.text(`Total Amount: Rs ${invoiceData.amount}`, { align: 'right' });
+
+      doc.end();
+
+    } catch (error) {
+      reject(`Error generating PDF: ${error.message}`);
+    }
+  });
 };
+
+
+
+
 
 
 // get expert all earning
@@ -5188,7 +5068,7 @@ const getExpertAllEarningPdf = async( request, response) => {
                 return response.status(200).json({ success: false, msg: languageMessage.dataNotFound});
             }
             try {
-                let type_label = res[0].type === 1 ? 'consultant' : 'Subscription'
+                let type_label = res[0].type === 1 ? 'Consultant' : 'Subscription'
                 const filename = await generateExpertAllEarningPdf(res[0], type_label);
 
                 const invoiceUrl = filename;
@@ -5208,195 +5088,100 @@ const getExpertAllEarningPdf = async( request, response) => {
         return response.status(200).json({ success: false , msg: languageMessage.internalServerError, error: error.message});
     }
 }
+
+// get expert all earning pdf/ invoice
 const generateExpertAllEarningPdf = async (invoiceData, type_label) => {
-    return new Promise((resolve, reject) => {
-        try {
-            // Generate a unique filename
-            const randomSuffix = Math.floor(Math.random() * 1000);
-            const filename = `invoice_${Date.now()}_${randomSuffix}.pdf`;
-       
-// HTML Template
- const htmlContent = `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <title>Payment Receipt</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0/dist/css/bootstrap.min.css" rel="stylesheet">
-  <style>
-    body {
-      background: #f8f9fa;
-      font-family: Arial, sans-serif;
-      margin: 0;
-      padding: 0;
-      color: #333;
-      height: 100%;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-    }
+  return new Promise(async (resolve, reject) => {
+    const fileName = `invoice_${Date.now()}_${Math.floor(Math.random() * 1000)}.pdf`;
 
-    .invoice-container {
-      width: 100%;
-      max-width: 800px;
-      background: #fff;
-      padding: 40px;
-      border-radius: 8px;
-      box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
-      display: flex;
-      flex-direction: column;
-      height: 100%;
-    }
+    const doc = new PDFDocument({ size: 'A4', margin: 50 });
+    const buffers = [];
 
-    .logo {
-      text-align: center;
-      margin-bottom: 30px;
-    }
+    doc.on('data', buffers.push.bind(buffers));
+    doc.on('end', async () => {
+      const pdfBuffer = Buffer.concat(buffers);
+      const uploadParams = {
+        Bucket: BUCKET_NAME,
+        Key: `uploads/${fileName}`,
+        Body: pdfBuffer,
+        ContentType: 'application/pdf',
+        ACL: 'public-read',
+      };
 
-    .logo img {
-      max-width: 120px;
-      height: auto;
-    }
-
-    .header, .section {
-      margin-bottom: 25px;
-    }
-
-    .info-row {
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 20px;
-    }
-
-    .info-block {
-      width: 48%;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-bottom: 30px;
-    }
-
-    th, td {
-      padding: 12px;
-      border-bottom: 1px solid #eee;
-      text-align: left;
-    }
-
-    th {
-      text-transform: uppercase;
-      font-size: 0.9rem;
-      color: #666;
-    }
-
-    .amount {
-      text-align: right;
-    }
-
-    .total-section {
-      text-align: right;
-      font-weight: bold;
-    }
-
-    .text-muted {
-      color: #666;
-      font-size: 0.9rem;
-    }
-
-    .text-success {
-      color: #28a745;
-    }
-
-    .footer {
-      margin-top: auto;
-      text-align: center;
-      font-size: 0.85rem;
-      color: #888;
-      padding: 10px;
-    }
-
-    @media (max-width: 768px) {
-      .info-row {
-        flex-direction: column;
+      try {
+        const s3Data = await s3.upload(uploadParams).promise();
+        resolve(s3Data.Location);
+      } catch (err) {
+        reject(err);
       }
-
-      .info-block {
-        width: 100%;
-        margin-bottom: 15px;
-      }
-    }
-  </style>
-</head>
-<body>
-  <div class="invoice-container">
-    <div class="logo">
-      <img src="https://xpertnowbucket.s3.ap-south-1.amazonaws.com/uploads/1743577170167-xpertlog.png" alt="Xpertnow logo">
-    </div>
-    <div class="header">
-      <h4>Hey ${invoiceData.name},</h4>
-      <p>This is the receipt for a payment of <strong>₹${invoiceData.expert_earning}</strong> you made to ${type_label}.</p>
-    </div>
-    <div class="section">
-      <div class="info-row">
-        <div class="info-block">
-          <div class="text-muted">Payment Date</div>
-          <div><strong>${moment(invoiceData.createtime).format("MMM DD, YYYY")}</strong></div>
-        </div>
-      </div>
-    </div>
-    <table>
-      <thead>
-        <tr>
-          <th>Description</th>
-          <th class="amount">Amount</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>${type_label}</td>
-          <td class="amount">₹${invoiceData.expert_earning}</td>
-        </tr>
-      </tbody>
-    </table>
-    <div class="total-section">
-      <div>Total Amount: ₹${invoiceData.expert_earning}</div>
-    </div>
-    <div class="footer">
-    </div>
-  </div>
-</body>
-</html>
- `
-              // Generate PDF Buffer
-              pdf.create(htmlContent, { format: 'A4' }).toBuffer(async (err, buffer) => {
-                if (err) {
-                    reject(err);
-                    return;
-                }
-
-                // Upload to S3
-                const params = {
-                    Bucket: "xpertnowbucket",
-                    Key: `uploads/${filename}`,
-                    Body: buffer,
-                    ContentType: 'application/pdf',
-                    ACL: 'public-read',
-                };
-
-                try {
-                    const s3Data = await s3.upload(params).promise();
-                    resolve(s3Data.Location); // Return the S3 file URL
-                } catch (uploadError) {
-                    reject(uploadError);
-                }
-            });
-        } catch (error) {
-            reject(error);
-        }
     });
+
+    try {
+      // Fetch logo
+      const logoUrl = 'https://xpertnowbucket.s3.ap-south-1.amazonaws.com/uploads/1743577170167-xpertlog.png';
+      const imageResponse = await axios.get(logoUrl, { responseType: 'arraybuffer' });
+      const imageBuffer = Buffer.from(imageResponse.data, 'binary');
+
+      // Header logo
+      doc.image(imageBuffer, doc.page.width / 2 - 75, 40, { width: 150 });
+
+      // Move below image for greeting
+      doc.moveDown(5);
+
+  
+    doc
+      .font('Helvetica-Bold')
+      .fontSize(26)
+      .text('', { align: 'center' });
+
+  doc.moveDown(4);
+
+  // Greeting & Intro
+  doc
+     .font('Helvetica')
+     .fontSize(16)
+     .text(`Hey ${invoiceData.name},`)
+    .moveDown(0.5)
+    .text(`This is the receipt for a payment of Rs ${invoiceData.expert_earning} you made to ${type_label}.`)
+    .moveDown(2);
+
+      // Payment Info
+      doc.fontSize(14).font('Helvetica-Bold').text('Payment Date:');
+      doc.font('Helvetica').text(moment(invoiceData.createtime).format("MMM DD, YYYY"));
+      doc.moveDown(2);
+
+
+    const startX = 50;
+    let startY = doc.y;
+
+    doc.fontSize(14).font('Helvetica-Bold');
+    doc.text('Description', startX, startY);
+    doc.text('Amount (Rs)', 400, startY, { align: 'right' });
+    doc.font('Helvetica');
+    doc.moveDown(0.8);
+
+   
+      const y = doc.y;
+      doc.text(type_label, startX, y);
+      doc.text(`Rs ${invoiceData.expert_earning}`, 400, y, { align: 'right' });
+      doc.moveDown(0.8);
+
+      // Total
+      doc.font('Helvetica-Bold').fontSize(14);
+      doc.text(`Total Amount: Rs ${invoiceData.expert_earning}`, { align: 'right' });
+
+      doc.end();
+
+    } catch (error) {
+      reject(`Error generating PDF: ${error.message}`);
+    }
+  });
 };
+
+
+
+
+
 
 
 
@@ -5431,203 +5216,170 @@ const getCustomerMilestoneCharge = async( request, response) => {
         return response.status(200).json({ success: false , msg: languageMessage.internalServerError, error: error.message});
     }
 }
-// get customer milestone pdf
+
+// generate customer milestone invoice
 const generateCustMilestonePdf = async (invoiceData) => {
-    return new Promise((resolve, reject) => {
-        try {
-            // Generate a unique filename
-            const randomSuffix = Math.floor(Math.random() * 1000);
-            const filename = `invoice_${Date.now()}_${randomSuffix}.pdf`; 
+  return new Promise(async (resolve, reject) => {
+    const fileName = `invoice_${Date.now()}_${Math.floor(Math.random() * 1000)}.pdf`;
 
-// HTML Template
- const htmlContent = `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <title>Payment Receipt</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0/dist/css/bootstrap.min.css" rel="stylesheet">
-  <style>
-    body {
-      background: #f8f9fa;
-      font-family: Arial, sans-serif;
-      margin: 0;
-      padding: 0;
-      color: #333;
-      height: 100%;
-    }
+    const doc = new PDFDocument({ size: 'A4', margin: 50 });
+    const buffers = [];
 
-    .invoice-container {
-      width: 100%;
-      height: 100%;
-      max-width: 800px;
-      margin: 0 auto;
-      background: #fff;
-      padding: 30px;
-      border-radius: 8px;
-      box-shadow: 0 0 15px rgba(0,0,0,0.1);
-      display: flex;
-      flex-direction: column;
-    }
+    doc.on('data', buffers.push.bind(buffers));
+    doc.on('end', async () => {
+      const pdfBuffer = Buffer.concat(buffers);
+      const uploadParams = {
+        Bucket: BUCKET_NAME,
+        Key: `uploads/${fileName}`,
+        Body: pdfBuffer,
+        ContentType: 'application/pdf',
+        ACL: 'public-read',
+      };
 
-    .logo {
-      text-align: center;
-      margin-bottom: 30px;
-    }
-
-    .logo img {
-      max-width: 120px;
-      height: auto;
-    }
-
-    .header, .section {
-      margin-bottom: 20px;
-    }
-
-    .info-row {
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 15px;
-    }
-
-    .info-block {
-      width: 48%;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-bottom: 20px;
-    }
-
-    th, td {
-      padding: 12px;
-      border-bottom: 1px solid #eee;
-      text-align: left;
-    }
-
-    th {
-      text-transform: uppercase;
-      font-size: 0.9rem;
-      color: #666;
-    }
-
-    .amount {
-      text-align: right;
-    }
-
-    .total-section {
-      text-align: right;
-      font-weight: bold;
-    }
-
-    .text-muted {
-      color: #666;
-      font-size: 0.9rem;
-    }
-
-    .text-success {
-      color: #28a745;
-    }
-
-    .footer {
-      margin-top: auto;
-      text-align: center;
-      font-size: 0.8rem;
-      color: #888;
-      padding: 10px;
-    }
-
-    @media (max-width: 768px) {
-      .info-row {
-        flex-direction: column;
+      try {
+        const s3Data = await s3.upload(uploadParams).promise();
+        resolve(s3Data.Location);
+      } catch (err) {
+        reject(err);
       }
-
-      .info-block {
-        width: 100%;
-        margin-bottom: 15px;
-      }
-    }
-  </style>
-</head>
-<body>
-  <div class="invoice-container">
-    <div class="logo">
-      <img src="https://xpertnowbucket.s3.ap-south-1.amazonaws.com/uploads/1743577170167-xpertlog.png" alt="Xpertnow logo">
-    </div>
-    <div class="header">
-      <h4>Hey ${invoiceData.cust_name},</h4>
-      <p>This is the receipt for a payment of <strong>₹${invoiceData.grand_total_expert_earning}</strong> you paid to ${invoiceData.name}.</p>
-    </div>
-    <div class="section">
-      <div class="info-row">
-        <div class="info-block">
-          <div class="text-muted">Milestone No.</div>
-          <div><strong>${invoiceData.milestone_number}</strong></div>
-        </div>
-        <div class="info-block">
-          <div class="text-muted">Payment Date</div>
-          <div><strong>${moment(invoiceData.createtime).format("MMM DD, YYYY")}</strong></div>
-        </div>
-      </div>
-    </div>
-    <table>
-      <thead>
-        <tr>
-          <th>Description</th>
-          <th class="amount">Amount</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>Milestone Payment</td>
-          <td class="amount">₹${invoiceData.grand_total_expert_earning}</td>
-        </tr>
-      </tbody>
-    </table>
-    <div class="total-section">
-      <div>Total Amount: ₹${invoiceData.grand_total_expert_earning}</div>
-    </div>
-    <div class="footer">
-     
-    </div>
-  </div>
-</body>
-</html>
-
-`
-              // Generate PDF Buffer
-              pdf.create(htmlContent, { format: 'A4' }).toBuffer(async (err, buffer) => {
-                if (err) {
-                    reject(err);
-                    return;
-                }
-
-                // Upload to S3
-                const params = {
-                    Bucket: "xpertnowbucket",
-                    Key: `uploads/${filename}`,
-                    Body: buffer,
-                    ContentType: 'application/pdf',
-                    ACL: 'public-read',
-                };
-
-                try {
-                    const s3Data = await s3.upload(params).promise();
-                    resolve(s3Data.Location); // Return the S3 file URL
-                } catch (uploadError) {
-                    reject(uploadError);
-                }
-            });
-        } catch (error) {
-            reject(error);
-        }
     });
+
+    try {
+      // Fetch logo
+      const logoUrl = 'https://xpertnowbucket.s3.ap-south-1.amazonaws.com/uploads/1743577170167-xpertlog.png';
+      const imageResponse = await axios.get(logoUrl, { responseType: 'arraybuffer' });
+      const imageBuffer = Buffer.from(imageResponse.data, 'binary');
+
+      // Header logo
+      doc.image(imageBuffer, doc.page.width / 2 - 75, 40, { width: 150 });
+
+      // Move below image for greeting
+      doc.moveDown(5);
+
+  
+    doc
+      .font('Helvetica-Bold')
+      .fontSize(26)
+      .text('', { align: 'center' });
+
+  doc.moveDown(4);
+
+  // Greeting & Intro
+  doc
+     .font('Helvetica')
+     .fontSize(16)
+     .text(`Hey ${invoiceData.cust_name},`)
+    .moveDown(0.5)
+    .text(`This is the receipt for a payment of Rs ${invoiceData.grand_total_expert_earning} you paid to ${invoiceData.name}.`)
+    .moveDown(2);
+
+    //  milestone number 
+      doc.fontSize(14).font('Helvetica-Bold').text('Milestone No.');
+      doc.font('Helvetica').text(invoiceData.milestone_number);
+      doc.moveDown(1);
+
+      // Payment Info
+      doc.fontSize(14).font('Helvetica-Bold').text('Payment Date:');
+      doc.font('Helvetica').text(moment(invoiceData.createtime).format("MMM DD, YYYY"));
+      doc.moveDown(2);
+
+
+    const startX = 50;
+    let startY = doc.y;
+
+    doc.fontSize(14).font('Helvetica-Bold');
+    doc.text('Description', startX, startY);
+    doc.text('Amount (Rs)', 400, startY, { align: 'right' });
+    doc.font('Helvetica');
+    doc.moveDown(0.8);
+
+   
+      const y = doc.y;
+      doc.text('Milestone Payment', startX, y);
+      doc.text(` ${invoiceData.grand_total_expert_earning}`, 400, y, { align: 'right' });
+      doc.moveDown(0.8);
+
+      // Total
+      doc.font('Helvetica-Bold').fontSize(12);
+      doc.text(`Total Amount: Rs ${invoiceData.grand_total_expert_earning}`, { align: 'right' });
+
+      doc.end();
+
+    } catch (error) {
+      reject(`Error generating PDF: ${error.message}`);
+    }
+  });
+};
+
+
+
+
+// schedule notification
+const scheduleNotification = () => {
+  const currentDate = moment().format('YYYY-MM-DD');
+  const oneHourLater = moment().add(1, 'hour').format('HH:mm:ss');
+
+  const sql = `
+    SELECT sm.user_id, sm.expert_id, sm.slot_id, sm.date, s.start_time, us.token 
+    FROM slot_schedule_master sm
+    JOIN slot_master s ON sm.slot_id = s.slot_id
+    JOIN user_sessions us ON sm.user_id = us.user_id
+    WHERE sm.delete_flag = 0 AND sm.date = ? AND s.start_time = ?
+  `;
+
+  connection.query(sql, [currentDate, oneHourLater], async (err, results) => {
+    if (err) {
+      console.error("DB Error:", err.message);
+      return;
+    }
+
+    if (results.length === 0) {
+      console.log("No upcoming calls in next hour.");
+      return;
+    }
+
+    for (let data of results) {
+      const user_id_notification = data.user_id;
+      const other_user_id_notification = data.expert_id;
+      const action_id = data.slot_id;
+      const action = "Upcoming call";
+      const title = "Upcoming Call";
+      const message = `Reminder: Your call is scheduled at ${moment(data.start_time, 'HH:mm:ss').format('hh:mm A')}`;
+      const action_data = {
+        user_id: user_id_notification,
+        other_user_id: other_user_id_notification,
+        action_id,
+        action
+      };
+
+      await getNotificationArrSingle(
+        user_id_notification,
+        other_user_id_notification,
+        action,
+        action_id,
+        title, title, title, title,
+        message, message, message, message,
+        action_data,
+        async (notification_arr_check) => {
+          const finalArr = [notification_arr_check];
+          if (finalArr.length > 0) {
+            await oneSignalNotificationSendCall(finalArr);
+            console.log(`Notification sent to user_id: ${user_id_notification}`);
+          } else {
+            console.log("Notification array is empty");
+          }
+        }
+      );
+    }
+    return response.status(200).json({ success: true, msg: languageMessage.NotificationSend})
+  });
 };
 
 
 
 
 
-module.exports = { getExpertDetails, getExpertDetailsById, getExpertByRating, getMyJobs, getJobPostDetails, createJobPost, chatConsultationHistory, chatJobsHistory, callConsultationHistory, callJobsHistory, getExpertByFilter, walletRecharge, walletHistory, getExpertByName, getExpertEarning, withdrawRequest, withdrawHistory, expertCallConsultationHistory, expertCallJobsHistory, getJobPostsForExpert, getExpertEarningHistory, expertChatConsultationHistory, expertChatJobsHistory, getReviewsOfExpert, getExpertMyJobs, getBidsOfJobPost, hireTheExpert, createProjectCost, getSubscriptionPlans, buySubscription, reviewReply, rateExpert, ExpertBidJob, CustomerCallHistory, ExpertCallHistory, getExpertHomeJobs, bookMarkJob, reportOnJob, customerJobFilter, expertJobFilter, createJobCost, createJobMilestone, getJobWorkMilestone, acceptRejectMilestone, sentMilestoneRequest, checkMilestoneRequest, getExpertJobDetails, getUserProfile, downloadApp, deepLink, getExpertByFilterSubLabel, logOut, chatFileUpload, getExpertCompletedJobs, add_availability, edit_availability, get_available_slots, userBookSlot, getExpertScheduleSlot, convertIntoMilestone, updateJobMilestone, getWalletAmount, checkWalletAmount, debitWalletAmount, generateUniqueId, getTokenVariable, completeJob, getExpertEarningPdf, getWalletPdf , getExpertAllEarningPdf, getCustomerMilestoneCharge };
+
+
+
+module.exports = { getExpertDetails, getExpertDetailsById, getExpertByRating, getMyJobs, getJobPostDetails, createJobPost, chatConsultationHistory, chatJobsHistory, callConsultationHistory, callJobsHistory, getExpertByFilter, walletRecharge, walletHistory, getExpertByName, getExpertEarning, withdrawRequest, withdrawHistory, expertCallConsultationHistory, expertCallJobsHistory, getJobPostsForExpert, getExpertEarningHistory, expertChatConsultationHistory, expertChatJobsHistory, getReviewsOfExpert, getExpertMyJobs, getBidsOfJobPost, hireTheExpert, createProjectCost, getSubscriptionPlans, buySubscription, reviewReply, rateExpert, ExpertBidJob, CustomerCallHistory, ExpertCallHistory, getExpertHomeJobs, bookMarkJob, reportOnJob, customerJobFilter, expertJobFilter, createJobCost, createJobMilestone, getJobWorkMilestone, acceptRejectMilestone, sentMilestoneRequest, checkMilestoneRequest, getExpertJobDetails, getUserProfile, downloadApp, deepLink, getExpertByFilterSubLabel, logOut, chatFileUpload, getExpertCompletedJobs, add_availability, edit_availability, get_available_slots, userBookSlot, getExpertScheduleSlot, convertIntoMilestone, updateJobMilestone, getWalletAmount, checkWalletAmount, debitWalletAmount, generateUniqueId, getTokenVariable, completeJob, getExpertEarningPdf, getWalletPdf , getExpertAllEarningPdf, getCustomerMilestoneCharge, scheduleNotification };
