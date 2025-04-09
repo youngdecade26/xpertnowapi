@@ -8337,8 +8337,19 @@ const ManageEarnings = async (request, response) => {
             // Fetch Expert Name
             if (post.expert_id) {
               const GetExpertName =
-                "SELECT u.name AS expert_name, c.name AS category_name FROM user_master AS u LEFT JOIN categories_master AS c ON u.category = c.category_id WHERE u.delete_flag = 0 AND user_id = ?";
-              const { expert_name, category_name } = await new Promise((resolve) => {
+                `SELECT u.name AS expert_name, c.name AS category_name, sc.sub_category_name
+                FROM user_master AS u 
+                LEFT JOIN 
+                categories_master AS c 
+                ON 
+                u.category = c.category_id 
+                LEFT JOIN 
+                sub_categories_master AS sc
+                ON 
+                u.sub_category = sc. sub_category_id
+                WHERE 
+                u.delete_flag = 0 AND u.user_id = ?`;
+              const { expert_name, category_name, sub_category_name } = await new Promise((resolve) => {
                 connection.query(
                   GetExpertName,
                   [post.expert_id],
@@ -8347,6 +8358,7 @@ const ManageEarnings = async (request, response) => {
                     else resolve({
                       expert_name: result[0].expert_name || "NA",
                       category_name: result[0].category_name || "NA",
+                      sub_category_name: result[0].sub_category_name || "NA",
                     });
                   }
                 );
@@ -8354,6 +8366,7 @@ const ManageEarnings = async (request, response) => {
 
               post.expert_name = expert_name;
               post.category_name = category_name;
+              post.sub_category_name = sub_category_name;
 
             } else {
               post.expert_name = "NA";
