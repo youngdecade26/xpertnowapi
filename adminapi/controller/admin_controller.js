@@ -7684,11 +7684,11 @@ const getUserConsultationById = async (request, response) => {
     const fetchDetails = `SELECT vcm.video_call_id, vcm.type, vcm.user_id,user.name AS user_name,  vcm.other_user_id, expert.name AS expert_name,  vcm.call_unique_number, vcm.price, vcm.transaction_id, vcm.duration, vcm.call_duration, vcm.status, vcm.rejected_by, vcm.total_diamond, vcm.room_id, vcm.token, vcm.provider_earning, vcm.admin_per,vcm.admin_earning, vcm.delete_flag, vcm.createtime, vcm.updatetime, vcm.mysqltime, vcm.wallet_amount, vcm.wallet_paid, vcm.tip_amount, vcm.tip_transaction_id, vcm.attend_call, vcm.switch_account, vcm.wallet_paid_tip, vcm.wallet_paid_amount_tip 
   FROM 
     video_call_master vcm 
-  JOIN 
+  LEFT JOIN 
     user_master user 
   ON 
     vcm.user_id = user.user_id AND user.user_type = 1 
-  JOIN 
+  LEFT JOIN 
     user_master expert 
   ON 
     vcm.other_user_id = expert.user_id AND expert.user_type = 2 
