@@ -5913,6 +5913,44 @@ const DeleteSubAdmin = async (request, response) => {
     });
   }
 };
+
+// Delete Job Post
+const DeleteJobPost = async (request, response) => {
+  const { job_post_id } = request.body;
+  if (!job_post_id) {
+    return response.status(200).json({
+      success: false,
+      msg: languageMessage.msg_empty_param,
+      key: "job_post_id",
+    });
+  }
+  try {
+
+    var Delete = "UPDATE job_post_master SET delete_flag = 1 WHERE job_post_id = ?";
+    connection.query(Delete, [job_post_id], async (err) => {
+      if (err) {
+        return response.status(200).json({
+          success: false,
+          msg: languageMessage.internalServerError,
+        });
+      } else {
+        return response.status(200).json({
+          success: true,
+          msg: "Job Post deleted successfully",
+        });
+      }
+    });
+
+  } catch (error) {
+    return response.status(200).json({
+      success: false,
+      msg: languageMessage.internalServerError,
+      error: error,
+    });
+  }
+};
+
+
 const ViewSubscription = async (request, response) => {
   const { subscription_id } = request.params;
   if (!subscription_id) {
@@ -9771,6 +9809,7 @@ module.exports = {
   AddSubscription,
   DeleteSubscription,
   DeleteSubAdmin,
+  DeleteJobPost,
   ViewSubscription,
   GetSubadminData,
   FetchFAQ,

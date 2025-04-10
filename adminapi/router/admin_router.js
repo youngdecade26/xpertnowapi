@@ -26,6 +26,7 @@ const {
   FetchAllSubscriptions,
   DeleteSubscription,
   DeleteSubAdmin,
+  DeleteJobPost,
   EditSubscription,
   EditSubAdmin,
   FetchSubscribedUsers,
@@ -267,10 +268,11 @@ router.get("/view_subscription/:subscription_id", ViewSubscription);
 router.post("/edit_subscription", upload.none(), EditSubscription);
 // subadmin
 router.get("/manage_subadmin", upload.none(), ManageSubAdmin);
-router.post("/add_subadmin", upload.none(),  AddSubAdmin);
+router.post("/add_subadmin", upload.none(), AddSubAdmin);
 router.post("/delete_subadmin", upload.none(), DeleteSubAdmin);
+router.post("/delete_jobpost", upload.none(), DeleteJobPost);
 router.get("/get_subadmin_data_by_id/:user_id", GetSubadminData);
-router.post("/edit_subadmin", upload.none(),  EditSubAdmin);
+router.post("/edit_subadmin", upload.none(), EditSubAdmin);
 router.get("/viewsubadminuser/:user_id", ViewSubAdminUser);
 //fetch faq
 router.get("/manage_faq", FetchFAQ);
