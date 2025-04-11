@@ -9189,6 +9189,100 @@ const ManageSubAdmin = async (request, response) => {
       .json({ success: false, msg: languageMessage.internalServerError });
   }
 };
+
+const GetDetailsUpdateRequests = async (request, response) => {
+  try {
+    const fetchDetails =
+      `SELECT 
+      drm.details_request_id, drm.user_id, um.name drm.type, drm.description, drm.status 
+      FROM 
+      details_request_master AS drm  
+      LEFT JOIN
+      user_master AS um
+      ON
+      um.user_id = drm.user_id
+      WHERE 
+      delete_flag = 0`;
+    connection.query(fetchDetails, (err, res) => {
+      if (err) {
+        return response
+          .status(200)
+          .json({ success: false, msg: languageMessage.internalServerError });
+      }
+      if (res.length <= 0) {
+        return response
+          .status(200)
+          .json({ success: true, msg: languageMessage.msgUserNotFound });
+      }
+      if (res.length > 0) {
+        return response.status(200).json({
+          success: true,
+          msg: languageMessage.msgDataFound,
+          subadmin_arr: res,
+        });
+      } else {
+        return response
+          .status(200)
+          .json({ success: false, msg: languageMessage.msgUserNotFound });
+      }
+    });
+  } catch (error) {
+    return response
+      .status(200)
+      .json({ success: false, msg: languageMessage.internalServerError });
+  }
+};
+
+
+const UpdateDetailsRequestStatus = async (request, response) => {
+  try {
+    const { details_request_id, newStatus } = request.body;
+
+    if (!details_request_id || newStatus === undefined) {
+      return response.status(200).json({
+        success: false,
+        msg: languageMessage.msg_empty_param,
+      });
+    }
+
+    const updateQuery = `
+      UPDATE details_request_master
+      SET status = ?
+      WHERE details_request_id = ? AND delete_flag = 0
+    `;
+
+    connection.query(updateQuery, [newStatus, details_request_id], (err, res) => {
+      if (err) {
+        console.error(err);
+        return response.status(500).json({
+          success: false,
+          msg: languageMessage.internalServerError,
+        });
+      }
+
+      if (res.affectedRows === 0) {
+        return response.status(200).json({
+          success: false,
+          msg: "No record found or already deleted.",
+        });
+      }
+
+      return response.status(200).json({
+        success: true,
+        msg: "Status updated successfully.",
+      });
+    });
+  } catch (error) {
+    console.error(error);
+    return response.status(500).json({
+      success: false,
+      msg: languageMessage.internalServerError,
+    });
+  }
+};
+
+
+
 const AddSubAdmin = async (request, response) => {
   if (!request.body) {
     return response
@@ -9878,4 +9972,6 @@ module.exports = {
   FetchInactiveUser,
   updateAdminDetails,
   adminDetails,
+  GetDetailsUpdateRequests,
+  UpdateDetailsRequestStatus
 };

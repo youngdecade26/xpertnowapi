@@ -152,7 +152,9 @@ const {
   FetchInactiveExpert,
   FetchInactiveUser,
   updateAdminDetails,
-  adminDetails
+  adminDetails,
+  GetDetailsUpdateRequests,
+  UpdateDetailsRequestStatus
 } = require("../controller/admin_controller");
 router.post("/send_notification", upload.none(), send_notification);
 router.get("/get_manage_inactive_users", upload.none(), FetchInactiveUser);
@@ -342,6 +344,10 @@ router.get(
   getRefundRequestById
 );
 router.get('/get_admin_details', adminDetails);
+
+router.get("/get_details_update_request", upload.none(), GetDetailsUpdateRequests);
+router.post("/update_detail_request", upload.none(), UpdateDetailsRequestStatus);
+
 
 // changess
 module.exports = router;
