@@ -4905,240 +4905,164 @@ const getExpertEarningPdf = async (request, response) => {
 
 
 
-// AWS S3 Configuration
-const fs = require('fs');
-const pdf = require('html-pdf');
-const path = require('path');
-const { response } = require('express');
-
+// generate pdf 
 const AWS = require('aws-sdk');
+const fs = require('fs');
+const axios = require('axios');
+const PDFDocument = require('pdfkit');
+
+
 const s3 = new AWS.S3({
-    accessKeyId: "AKIAUGO4KNQULGJQFZIA",
-    secretAccessKey: "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",
-    region: "ap-south-1",
+  accessKeyId: "AKIAUGO4KNQULGJQFZIA",
+  secretAccessKey: "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",
+  region: "ap-south-1",
 });
 
-// Generate Expert earning Invoice PDF and Upload to S3
-const generateInvoicePdf = async (invoiceData) => {
-    return new Promise((resolve, reject) => {
+const BUCKET_NAME = "xpertnowbucket";
+const BASE_S3_URL = 'https://xpertnowbucket.s3.ap-south-1.amazonaws.com/uploads/';
+
+function generateUniqueFilename(prefix = 'invoice') {
+  const timestamp = Date.now();
+  const random = Math.floor(Math.random() * 100000);
+  return `${prefix}-${timestamp}-${random}.pdf`;
+}
+
+
+
+// ... (same AWS & imports as before)
+
+async function generateInvoicePdf(invoiceData) {
+    return new Promise(async (resolve, reject) => {
+      const fileName = generateUniqueFilename();
+  
+      const doc = new PDFDocument({ size: 'A4', margin: 50 });
+      const buffers = [];
+  
+      doc.on('data', buffers.push.bind(buffers));
+      doc.on('end', async () => {
+        const pdfBuffer = Buffer.concat(buffers);
+  
+        const s3Key = `uploads/${fileName}`;
+        const uploadParams = {
+          Bucket: BUCKET_NAME,
+          Key: s3Key,
+          Body: pdfBuffer,
+          ContentType: 'application/pdf',
+          ACL: 'public-read',
+        };
+  
         try {
-            // Generate a unique filename
-            const randomSuffix = Math.floor(Math.random() * 1000);
-            const filename = `invoice_${Date.now()}_${randomSuffix}.pdf`;
-
-            // HTML Content
-            const htmlContent = `
-            <!DOCTYPE html>
-            <html lang="en">
-            <head>
-              <meta charset="utf-8">
-              <title>Payment Receipt</title>
-              <meta name="viewport" content="width=device-width, initial-scale=1">
-              <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0/dist/css/bootstrap.min.css" rel="stylesheet">
-              <style>
-                body {
-                  background: #f8f9fa;
-                  font-family: Arial, sans-serif;
-                  margin: 0;
-                  padding: 0;
-                  color: #333;
-                }
-                .invoice-container {
-                  max-width: 700px;
-                  margin: 20px auto;
-                  background: #fff;
-                  padding: 25px;
-                  border-radius: 8px;
-                  box-shadow: 0 0 10px rgba(0,0,0,0.05);
-                  page-break-inside: avoid;
-                }
-                .header {
-                  text-align: center;
-                  margin-bottom: 20px;
-                }
-                .logo {
-                  max-width: 140px;
-                  margin-bottom: 10px;
-                }
-                h4 {
-                  margin: 0;
-                  font-size: 1.4rem;
-                  font-weight: bold;
-                }
-                p {
-                  margin-bottom: 10px;
-                  font-size: 1rem;
-                }
-                .section {
-                  margin-bottom: 15px;
-                }
-                .info-row {
-                  display: flex;
-                  justify-content: space-between;
-                  flex-wrap: wrap;
-                  margin-bottom: 10px;
-                }
-                .info-block {
-                  width: 48%;
-                  font-size: 0.95rem;
-                }
-                .text-muted {
-                  color: #666;
-                  font-size: 0.85rem;
-                }
-                table {
-                  width: 100%;
-                  font-size: 0.95rem;
-                  margin-top: 10px;
-                }
-                th, td {
-                  padding: 8px 0;
-                }
-                th {
-                  border-bottom: 2px solid #ccc;
-                }
-                td {
-                  border-bottom: 1px solid #e1e1e1;
-                }
-                .amount {
-                  text-align: right;
-                }
-                .total-section {
-                  text-align: right;
-                  font-weight: bold;
-                  font-size: 1rem;
-                  margin-top: 15px;
-                }
-                .footer {
-                  text-align: center;
-                  color: #888;
-                  font-size: 0.85rem;
-                  margin-top: 20px;
-                }
-                @media (max-width: 480px) {
-                  .info-row {
-                    flex-direction: column;
-                  }
-                  .info-block {
-                    width: 100%;
-                    margin-bottom: 10px;
-                  }
-                  .invoice-container {
-                    padding: 15px;
-                  }
-                }
-              </style>
-            </head>
-            <body>
-              <div class="invoice-container">
-                <div class="header">
-                  <img src="https://xpertnowbucket.s3.ap-south-1.amazonaws.com/uploads/1743577170167-xpertlog.png" alt="Xpertnow logo" class="logo">
-                  <h4>Payment Receipt</h4>
-                </div>
-            
-                <p>Hey ${invoiceData.name},</p>
-                <p>This is the receipt for a payment of <strong>₹${invoiceData.grand_total_expert_earning}</strong> you made to milestone.</p>
-            
-                <div class="section">
-                  <div class="info-row">
-                    <div class="info-block">
-                      <div class="text-muted">Milestone Number</div>
-                      <div><strong>${invoiceData.milestone_number}</strong></div>
-                    </div>
-                    <div class="info-block">
-                      <div class="text-muted">Payment Date</div>
-                      <div><strong>${moment(invoiceData.createtime).format("MMM DD, YYYY")}</strong></div>
-                    </div>
-                  </div>
-                </div>
-            
-                <div class="section">
-                  <div class="info-row">
-                    <div class="info-block">
-                      <div class="text-muted">Client</div>
-                      <div><strong>${invoiceData.user_name} </strong></div>
-                      <div>${invoiceData.user_address}, ${invoiceData.user_city_name}</div>
-                      <div><a href="mailto:${invoiceData.user_email}">${invoiceData.user_email}</a></div>
-                    </div>
-                    <div class="info-block">
-                      <div class="text-muted">Payment to</div>
-                      <div><strong>${invoiceData.name}</strong></div>
-                      <div>${invoiceData.address}, ${invoiceData.city_name}</div>
-                      <div><a href="mailto:${invoiceData.email}">${invoiceData.email}</a></div>
-                    </div>
-                  </div>
-                </div>
-            
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Description</th>
-                      <th class="amount">Amount (₹)</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td>Total Amount</td>
-                      <td class="amount">₹${invoiceData.total_amount}</td>
-                    </tr>
-                    <tr>
-                      <td>Platform fee</td>
-                      <td class="amount">₹${invoiceData.platform_fees}</td>
-                    </tr>
-                    <tr>
-                      <td>GST (18%)</td>
-                      <td class="amount">₹${invoiceData.gst_amt}</td>
-                    </tr>
-                    <tr>
-                      <td>TCS (${invoiceData.tcs_per}%)</td>
-                      <td class="amount">₹${invoiceData.tcs_amt}</td>
-                    </tr>
-                    <tr>
-                      <td>TDS (${invoiceData.tds_per}%)</td>
-                      <td class="amount">₹${invoiceData.tds_amt}</td>
-                    </tr>
-                  </tbody>
-                </table>
-            
-                <div class="total-section">
-                  Grand Total: ₹${invoiceData.grand_total_expert_earning}
-                </div>
-              </div>
-            </body>
-            </html>
-            `;
-            
-
-
-            // Generate PDF Buffer
-            pdf.create(htmlContent, { format: 'A4' }).toBuffer(async (err, buffer) => {
-                if (err) {
-                    reject(err);
-                    return;
-                }
-
-                // Upload to S3
-                const params = {
-                    Bucket: "xpertnowbucket",
-                    Key: `uploads/${filename}`,
-                    Body: buffer,
-                    ContentType: 'application/pdf',
-                    ACL: 'public-read',
-                };
-
-                try {
-                    const s3Data = await s3.upload(params).promise();
-                    resolve(s3Data.Location); // Return the S3 file URL
-                } catch (uploadError) {
-                    reject(uploadError);
-                }
-            });
-
-        } catch (error) {
-            reject(error);
+          await s3.upload(uploadParams).promise();
+          resolve(`${BASE_S3_URL}${fileName}`);
+        } catch (err) {
+          reject(err);
         }
+      });
+  
+      try {
+        const imageUrl = 'https://xpertnowbucket.s3.ap-south-1.amazonaws.com/uploads/1743577170167-xpertlog.png';
+        const imageResponse = await axios.get(imageUrl, { responseType: 'arraybuffer' });
+        const imageBuffer = Buffer.from(imageResponse.data, 'binary');
+  
+        // Add Logo
+        doc.image(imageBuffer, doc.page.width / 2 - 75, 30, { width: 150 });
+  
+        doc.moveDown(5);
+  
+        // Title
+        doc
+          .font('Helvetica-Bold')
+          .fontSize(26)
+          .text('', { align: 'center' });
+  
+        doc.moveDown(3);
+  
+        // Greeting & Intro
+        doc
+          .font('Helvetica')
+          .fontSize(16)
+          .text(`Hey ${invoiceData.name},`)
+          .moveDown(0.5)
+          .text(`This is the receipt for a payment of Rs ${invoiceData.grand_total_expert_earning} you made to milestone.`)
+          .moveDown(2);
+  
+        // Milestone Number
+        doc
+          .fontSize(14)
+          .font('Helvetica-Bold')
+          .text('Milestone Number:')
+          .font('Helvetica')
+          .text(invoiceData.milestone_number)
+          .moveDown(1);
+  
+        // Payment Date
+        doc
+          .font('Helvetica-Bold')
+          .text('Payment Date:')
+          .font('Helvetica')
+          .text(moment(invoiceData.createtime).format("MMM DD, YYYY"))
+          .moveDown(1);
+  
+        // Client
+        doc
+          .fontSize(14)
+          .font('Helvetica-Bold')
+          .text('Client:')
+          .font('Helvetica')
+          .text(invoiceData.user_name)
+          .text(`${invoiceData.user_address}, ${invoiceData.user_city_name}`)
+          .text(invoiceData.user_email)
+          .moveDown(1);
+  
+        // Payment To
+        doc
+          .font('Helvetica-Bold')
+          .text('Payment To:')
+          .font('Helvetica')
+          .text(invoiceData.name)
+          .text(`${invoiceData.address}, ${invoiceData.city_name}`)
+          .text(invoiceData.email)
+          .moveDown(2);
+  
+        // Charges Table
+        const tableData = [
+          ['Total Amount', invoiceData.total_amount],
+          ['Platform Fee', invoiceData.platform_fees],
+          ['GST (18%)', invoiceData.gst_amt],
+          [`TCS (${invoiceData.tcs_per}%)`, invoiceData.tcs_amt],
+          [`TDS (${invoiceData.tds_per}%)`, invoiceData.tds_amt],
+        ];
+  
+        const startX = 50;
+        let startY = doc.y;
+  
+        doc.fontSize(14).font('Helvetica-Bold');
+        doc.text('Description', startX, startY);
+        doc.text('Amount (Rs)', 400, startY, { align: 'right' });
+        doc.font('Helvetica');
+        doc.moveDown(0.8);
+  
+        for (let i = 0; i < tableData.length; i++) {
+          const y = doc.y;
+          doc.text(tableData[i][0], startX, y);
+          doc.text(`${tableData[i][1]}`, 400, y, { align: 'right' });
+          doc.moveDown(0.8);
+        }
+  
+        // doc.moveDown(1.5);
+  
+        // Grand Total
+        doc.font('Helvetica-Bold').fontSize(12);
+        doc.text(`Grand Total: Rs ${invoiceData.grand_total_expert_earning}`, { align: 'right' });
+        doc.end();
+
+      } catch (error) {
+        reject(`Error generating PDF: ${error.message}`);
+      }
     });
-};
+  }
+  
+
 
 
 
@@ -5180,189 +5104,93 @@ const getWalletPdf = async (request, response) => {
 }
 // generate wallet invoice
 const generateWalletInvoice = async (invoiceData, type_label) => {
-    return new Promise((resolve, reject) => {
+    return new Promise(async (resolve, reject) => {
+      const fileName = `invoice_${Date.now()}_${Math.floor(Math.random() * 1000)}.pdf`;
+  
+      const doc = new PDFDocument({ size: 'A4', margin: 50 });
+      const buffers = [];
+  
+      doc.on('data', buffers.push.bind(buffers));
+      doc.on('end', async () => {
+        const pdfBuffer = Buffer.concat(buffers);
+        const uploadParams = {
+          Bucket: BUCKET_NAME,
+          Key: `uploads/${fileName}`,
+          Body: pdfBuffer,
+          ContentType: 'application/pdf',
+          ACL: 'public-read',
+        };
+  
         try {
-            // Generate a unique filename
-            const randomSuffix = Math.floor(Math.random() * 1000);
-            const filename = `invoice_${Date.now()}_${randomSuffix}.pdf`;
-
-            // HTML Template
-            const htmlContent = `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <title>Payment Receipt</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0/dist/css/bootstrap.min.css" rel="stylesheet">
-  <style>
-    body {
-      background: #f8f9fa;
-      font-family: Arial, sans-serif;
-      margin: 0;
-      padding: 0;
-      color: #333;
-    }
-    .invoice-container {
-      width: 100%;
-      max-width: 700px;
-      margin: 0 auto;
-      background: #fff;
-      padding: 30px;
-      border-radius: 8px;
-      box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
-    }
-    .header {
-      text-align: center;
-      margin-bottom: 30px;
-    }
-    .logo {
-      max-width: 150px;
-      margin-bottom: 10px;
-    }
-    h4 {
-      margin: 0;
-      font-size: 1.5rem;
-      font-weight: bold;
-    }
-    p {
-      margin-bottom: 10px;
-      font-size: 1rem;
-    }
-    .section {
-      margin-bottom: 20px;
-    }
-    .info-row {
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 20px;
-    }
-    .info-block {
-      width: 48%;
-    }
-    .info-block div {
-      font-size: 1rem;
-    }
-    .text-muted {
-      color: #666;
-      font-size: 0.9rem;
-    }
-    .amount {
-      text-align: right;
-      font-size: 1rem;
-    }
-    .total-section {
-      text-align: right;
-      font-weight: bold;
-      font-size: 1.1rem;
-      margin-top: 20px;
-    }
-    .pay-btn {
-      display: block;
-      width: 100%;
-      padding: 10px;
-      background: #1e2e50;
-      color: white;
-      text-align: center;
-      text-decoration: none;
-      border-radius: 4px;
-      font-weight: bold;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      font-size: 0.9rem;
-      border: none;
-      cursor: pointer;
-      margin-top: 25px;
-    }
-    @media (max-width: 480px) {
-      .info-row {
-        flex-direction: column;
-      }
-      .info-block {
-        width: 100%;
-        margin-bottom: 15px;
-      }
-      .invoice-container {
-        padding: 15px;
-      }
-    }
-  </style>
-</head>
-<body>
-  <div class="invoice-container">
-    <div class="header">
-      <img src="https://xpertnowbucket.s3.ap-south-1.amazonaws.com/uploads/1743577170167-xpertlog.png" alt="Xpertnow logo" class="logo">
-      <h4>Payment Receipt</h4>
-    </div>
-
-    <p>Hey ${invoiceData.name},</p>
-    <p>This is the receipt for a payment of <strong>₹${invoiceData.amount}</strong> you made to ${type_label}.</p>
-
-    <div class="section">
-      <div class="info-row">
-        <div class="info-block">
-          <div class="text-muted">Payment Date</div>
-          <div><strong>${moment(invoiceData.createtime).format("MMM DD, YYYY")}</strong></div>
-        </div>
-      </div>
-    </div>
-
-    <table style="width: 100%; margin-bottom: 20px;">
-      <thead>
-        <tr>
-          <th>Description</th>
-          <th class="amount">Amount</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>${type_label}</td>
-          <td class="amount">₹${invoiceData.amount}</td>
-        </tr>
-      </tbody>
-    </table>
-
-    <div class="total-section">
-      <div>Total Amount: ₹${invoiceData.amount}</div>
-    </div>
-
-    <div class="footer" style="text-align: center; margin-top: 20px; color: #888;">
-    
-    </div>
-  </div>
-</body>
-</html>
-`
-            // Generate PDF Buffer
-            pdf.create(htmlContent, { format: 'A4' }).toBuffer(async (err, buffer) => {
-                if (err) {
-                    reject(err);
-                    return;
-                }
-
-                // Upload to S3
-                const params = {
-                    Bucket: "xpertnowbucket",
-                    Key: `uploads/${filename}`,
-                    Body: buffer,
-                    ContentType: 'application/pdf',
-                    ACL: 'public-read',
-                };
-
-                try {
-                    const s3Data = await s3.upload(params).promise();
-                    resolve(s3Data.Location); // Return the S3 file URL
-                } catch (uploadError) {
-                    reject(uploadError);
-                }
-            });
-        } catch (error) {
-            reject(error);
+          const s3Data = await s3.upload(uploadParams).promise();
+          resolve(s3Data.Location);
+        } catch (err) {
+          reject(err);
         }
+      });
+  
+      try {
+        // Fetch logo
+        const logoUrl = 'https://xpertnowbucket.s3.ap-south-1.amazonaws.com/uploads/1743577170167-xpertlog.png';
+        const imageResponse = await axios.get(logoUrl, { responseType: 'arraybuffer' });
+        const imageBuffer = Buffer.from(imageResponse.data, 'binary');
+  
+        // Header logo
+        doc.image(imageBuffer, doc.page.width / 2 - 75, 40, { width: 150 });
+  
+        // Move below image for greeting
+        doc.moveDown(5);
+  
+    
+      doc
+        .font('Helvetica-Bold')
+        .fontSize(26)
+        .text('', { align: 'center' });
+  
+    doc.moveDown(4);
+  
+    // Greeting & Intro
+    doc
+       .font('Helvetica')
+       .fontSize(16)
+       .text(`Hey ${invoiceData.name},`)
+      .moveDown(0.5)
+      .text(`This is the receipt for a payment of Rs ${invoiceData.amount} you made to ${type_label}.`)
+      .moveDown(2);
+  
+        // Payment Info
+        doc.fontSize(14).font('Helvetica-Bold').text('Payment Date:');
+        doc.font('Helvetica').text(moment(invoiceData.createtime).format("MMM DD, YYYY"));
+        doc.moveDown(2);
+  
+  
+      const startX = 50;
+      let startY = doc.y;
+  
+      doc.fontSize(14).font('Helvetica-Bold');
+      doc.text('Description', startX, startY);
+      doc.text('Amount (Rs)', 400, startY, { align: 'right' });
+      doc.font('Helvetica');
+      doc.moveDown(0.8);
+  
+     
+        const y = doc.y;
+        doc.text(type_label, startX, y);
+        doc.text(`Rs ${invoiceData.amount}`, 400, y, { align: 'right' });
+        doc.moveDown(0.8);
+  
+        // Total
+        doc.font('Helvetica-Bold').fontSize(14);
+        doc.text(`Total Amount: Rs ${invoiceData.amount}`, { align: 'right' });
+  
+        doc.end();
+  
+      } catch (error) {
+        reject(`Error generating PDF: ${error.message}`);
+      }
     });
-};
-
-
+  };
+  
 
 
 // get expert all earning
@@ -5402,195 +5230,94 @@ const getExpertAllEarningPdf = async (request, response) => {
     }
 }
 const generateExpertAllEarningPdf = async (invoiceData, type_label) => {
-    return new Promise((resolve, reject) => {
+    return new Promise(async (resolve, reject) => {
+      const fileName = `invoice_${Date.now()}_${Math.floor(Math.random() * 1000)}.pdf`;
+  
+      const doc = new PDFDocument({ size: 'A4', margin: 50 });
+      const buffers = [];
+  
+      doc.on('data', buffers.push.bind(buffers));
+      doc.on('end', async () => {
+        const pdfBuffer = Buffer.concat(buffers);
+        const uploadParams = {
+          Bucket: BUCKET_NAME,
+          Key: `uploads/${fileName}`,
+          Body: pdfBuffer,
+          ContentType: 'application/pdf',
+          ACL: 'public-read',
+        };
+  
         try {
-            // Generate a unique filename
-            const randomSuffix = Math.floor(Math.random() * 1000);
-            const filename = `invoice_${Date.now()}_${randomSuffix}.pdf`;
-
-            // HTML Template
-            const htmlContent = `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <title>Payment Receipt</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0/dist/css/bootstrap.min.css" rel="stylesheet">
-  <style>
-    body {
-      background: #f8f9fa;
-      font-family: Arial, sans-serif;
-      margin: 0;
-      padding: 0;
-      color: #333;
-      height: 100%;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-    }
-
-    .invoice-container {
-      width: 100%;
-      max-width: 800px;
-      background: #fff;
-      padding: 40px;
-      border-radius: 8px;
-      box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
-      display: flex;
-      flex-direction: column;
-      height: 100%;
-    }
-
-    .logo {
-      text-align: center;
-      margin-bottom: 30px;
-    }
-
-    .logo img {
-      max-width: 120px;
-      height: auto;
-    }
-
-    .header, .section {
-      margin-bottom: 25px;
-    }
-
-    .info-row {
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 20px;
-    }
-
-    .info-block {
-      width: 48%;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-bottom: 30px;
-    }
-
-    th, td {
-      padding: 12px;
-      border-bottom: 1px solid #eee;
-      text-align: left;
-    }
-
-    th {
-      text-transform: uppercase;
-      font-size: 0.9rem;
-      color: #666;
-    }
-
-    .amount {
-      text-align: right;
-    }
-
-    .total-section {
-      text-align: right;
-      font-weight: bold;
-    }
-
-    .text-muted {
-      color: #666;
-      font-size: 0.9rem;
-    }
-
-    .text-success {
-      color: #28a745;
-    }
-
-    .footer {
-      margin-top: auto;
-      text-align: center;
-      font-size: 0.85rem;
-      color: #888;
-      padding: 10px;
-    }
-
-    @media (max-width: 768px) {
-      .info-row {
-        flex-direction: column;
-      }
-
-      .info-block {
-        width: 100%;
-        margin-bottom: 15px;
-      }
-    }
-  </style>
-</head>
-<body>
-  <div class="invoice-container">
-    <div class="logo">
-      <img src="https://xpertnowbucket.s3.ap-south-1.amazonaws.com/uploads/1743577170167-xpertlog.png" alt="Xpertnow logo">
-    </div>
-    <div class="header">
-      <h4>Hey ${invoiceData.name},</h4>
-      <p>This is the receipt for a payment of <strong>₹${invoiceData.expert_earning}</strong> you made to ${type_label}.</p>
-    </div>
-    <div class="section">
-      <div class="info-row">
-        <div class="info-block">
-          <div class="text-muted">Payment Date</div>
-          <div><strong>${moment(invoiceData.createtime).format("MMM DD, YYYY")}</strong></div>
-        </div>
-      </div>
-    </div>
-    <table>
-      <thead>
-        <tr>
-          <th>Description</th>
-          <th class="amount">Amount</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>${type_label}</td>
-          <td class="amount">₹${invoiceData.expert_earning}</td>
-        </tr>
-      </tbody>
-    </table>
-    <div class="total-section">
-      <div>Total Amount: ₹${invoiceData.expert_earning}</div>
-    </div>
-    <div class="footer">
-    </div>
-  </div>
-</body>
-</html>
- `
-            // Generate PDF Buffer
-            pdf.create(htmlContent, { format: 'A4' }).toBuffer(async (err, buffer) => {
-                if (err) {
-                    reject(err);
-                    return;
-                }
-
-                // Upload to S3
-                const params = {
-                    Bucket: "xpertnowbucket",
-                    Key: `uploads/${filename}`,
-                    Body: buffer,
-                    ContentType: 'application/pdf',
-                    ACL: 'public-read',
-                };
-
-                try {
-                    const s3Data = await s3.upload(params).promise();
-                    resolve(s3Data.Location); // Return the S3 file URL
-                } catch (uploadError) {
-                    reject(uploadError);
-                }
-            });
-        } catch (error) {
-            reject(error);
+          const s3Data = await s3.upload(uploadParams).promise();
+          resolve(s3Data.Location);
+        } catch (err) {
+          reject(err);
         }
+      });
+  
+      try {
+        // Fetch logo
+        const logoUrl = 'https://xpertnowbucket.s3.ap-south-1.amazonaws.com/uploads/1743577170167-xpertlog.png';
+        const imageResponse = await axios.get(logoUrl, { responseType: 'arraybuffer' });
+        const imageBuffer = Buffer.from(imageResponse.data, 'binary');
+  
+        // Header logo
+        doc.image(imageBuffer, doc.page.width / 2 - 75, 40, { width: 150 });
+  
+        // Move below image for greeting
+        doc.moveDown(5);
+  
+    
+      doc
+        .font('Helvetica-Bold')
+        .fontSize(26)
+        .text('', { align: 'center' });
+  
+    doc.moveDown(4);
+  
+    // Greeting & Intro
+    doc
+       .font('Helvetica')
+       .fontSize(16)
+       .text(`Hey ${invoiceData.name},`)
+      .moveDown(0.5)
+      .text(`This is the receipt for a payment of Rs ${invoiceData.expert_earning} you made to ${type_label}.`)
+      .moveDown(2);
+  
+        // Payment Info
+        doc.fontSize(14).font('Helvetica-Bold').text('Payment Date:');
+        doc.font('Helvetica').text(moment(invoiceData.createtime).format("MMM DD, YYYY"));
+        doc.moveDown(2);
+  
+  
+      const startX = 50;
+      let startY = doc.y;
+  
+      doc.fontSize(14).font('Helvetica-Bold');
+      doc.text('Description', startX, startY);
+      doc.text('Amount (Rs)', 400, startY, { align: 'right' });
+      doc.font('Helvetica');
+      doc.moveDown(0.8);
+  
+     
+        const y = doc.y;
+        doc.text(type_label, startX, y);
+        doc.text(`Rs ${invoiceData.expert_earning}`, 400, y, { align: 'right' });
+        doc.moveDown(0.8);
+  
+        // Total
+        doc.font('Helvetica-Bold').fontSize(14);
+        doc.text(`Total Amount: Rs ${invoiceData.expert_earning}`, { align: 'right' });
+  
+        doc.end();
+  
+      } catch (error) {
+        reject(`Error generating PDF: ${error.message}`);
+      }
     });
-};
-
+  };
+  
+  
 
 
 
@@ -5627,199 +5354,98 @@ const getCustomerMilestoneCharge = async (request, response) => {
 }
 // get customer milestone pdf
 const generateCustMilestonePdf = async (invoiceData) => {
-    return new Promise((resolve, reject) => {
+    return new Promise(async (resolve, reject) => {
+      const fileName = `invoice_${Date.now()}_${Math.floor(Math.random() * 1000)}.pdf`;
+  
+      const doc = new PDFDocument({ size: 'A4', margin: 50 });
+      const buffers = [];
+  
+      doc.on('data', buffers.push.bind(buffers));
+      doc.on('end', async () => {
+        const pdfBuffer = Buffer.concat(buffers);
+        const uploadParams = {
+          Bucket: BUCKET_NAME,
+          Key: `uploads/${fileName}`,
+          Body: pdfBuffer,
+          ContentType: 'application/pdf',
+          ACL: 'public-read',
+        };
+  
         try {
-            // Generate a unique filename
-            const randomSuffix = Math.floor(Math.random() * 1000);
-            const filename = `invoice_${Date.now()}_${randomSuffix}.pdf`;
-
-            // HTML Template
-            const htmlContent = `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <title>Payment Receipt</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0/dist/css/bootstrap.min.css" rel="stylesheet">
-  <style>
-    body {
-      background: #f8f9fa;
-      font-family: Arial, sans-serif;
-      margin: 0;
-      padding: 0;
-      color: #333;
-      height: 100%;
-    }
-
-    .invoice-container {
-      width: 100%;
-      height: 100%;
-      max-width: 800px;
-      margin: 0 auto;
-      background: #fff;
-      padding: 30px;
-      border-radius: 8px;
-      box-shadow: 0 0 15px rgba(0,0,0,0.1);
-      display: flex;
-      flex-direction: column;
-    }
-
-    .logo {
-      text-align: center;
-      margin-bottom: 30px;
-    }
-
-    .logo img {
-      max-width: 120px;
-      height: auto;
-    }
-
-    .header, .section {
-      margin-bottom: 20px;
-    }
-
-    .info-row {
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 15px;
-    }
-
-    .info-block {
-      width: 48%;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-bottom: 20px;
-    }
-
-    th, td {
-      padding: 12px;
-      border-bottom: 1px solid #eee;
-      text-align: left;
-    }
-
-    th {
-      text-transform: uppercase;
-      font-size: 0.9rem;
-      color: #666;
-    }
-
-    .amount {
-      text-align: right;
-    }
-
-    .total-section {
-      text-align: right;
-      font-weight: bold;
-    }
-
-    .text-muted {
-      color: #666;
-      font-size: 0.9rem;
-    }
-
-    .text-success {
-      color: #28a745;
-    }
-
-    .footer {
-      margin-top: auto;
-      text-align: center;
-      font-size: 0.8rem;
-      color: #888;
-      padding: 10px;
-    }
-
-    @media (max-width: 768px) {
-      .info-row {
-        flex-direction: column;
-      }
-
-      .info-block {
-        width: 100%;
-        margin-bottom: 15px;
-      }
-    }
-  </style>
-</head>
-<body>
-  <div class="invoice-container">
-    <div class="logo">
-      <img src="https://xpertnowbucket.s3.ap-south-1.amazonaws.com/uploads/1743577170167-xpertlog.png" alt="Xpertnow logo">
-    </div>
-    <div class="header">
-      <h4>Hey ${invoiceData.cust_name},</h4>
-      <p>This is the receipt for a payment of <strong>₹${invoiceData.grand_total_expert_earning}</strong> you paid to ${invoiceData.name}.</p>
-    </div>
-    <div class="section">
-      <div class="info-row">
-        <div class="info-block">
-          <div class="text-muted">Milestone No.</div>
-          <div><strong>${invoiceData.milestone_number}</strong></div>
-        </div>
-        <div class="info-block">
-          <div class="text-muted">Payment Date</div>
-          <div><strong>${moment(invoiceData.createtime).format("MMM DD, YYYY")}</strong></div>
-        </div>
-      </div>
-    </div>
-    <table>
-      <thead>
-        <tr>
-          <th>Description</th>
-          <th class="amount">Amount</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>Milestone Payment</td>
-          <td class="amount">₹${invoiceData.grand_total_expert_earning}</td>
-        </tr>
-      </tbody>
-    </table>
-    <div class="total-section">
-      <div>Total Amount: ₹${invoiceData.grand_total_expert_earning}</div>
-    </div>
-    <div class="footer">
-     
-    </div>
-  </div>
-</body>
-</html>
-
-`
-            // Generate PDF Buffer
-            pdf.create(htmlContent, { format: 'A4' }).toBuffer(async (err, buffer) => {
-                if (err) {
-                    reject(err);
-                    return;
-                }
-
-                // Upload to S3
-                const params = {
-                    Bucket: "xpertnowbucket",
-                    Key: `uploads/${filename}`,
-                    Body: buffer,
-                    ContentType: 'application/pdf',
-                    ACL: 'public-read',
-                };
-
-                try {
-                    const s3Data = await s3.upload(params).promise();
-                    resolve(s3Data.Location); // Return the S3 file URL
-                } catch (uploadError) {
-                    reject(uploadError);
-                }
-            });
-        } catch (error) {
-            reject(error);
+          const s3Data = await s3.upload(uploadParams).promise();
+          resolve(s3Data.Location);
+        } catch (err) {
+          reject(err);
         }
+      });
+  
+      try {
+        // Fetch logo
+        const logoUrl = 'https://xpertnowbucket.s3.ap-south-1.amazonaws.com/uploads/1743577170167-xpertlog.png';
+        const imageResponse = await axios.get(logoUrl, { responseType: 'arraybuffer' });
+        const imageBuffer = Buffer.from(imageResponse.data, 'binary');
+  
+        // Header logo
+        doc.image(imageBuffer, doc.page.width / 2 - 75, 40, { width: 150 });
+  
+        // Move below image for greeting
+        doc.moveDown(5);
+  
+    
+      doc
+        .font('Helvetica-Bold')
+        .fontSize(26)
+        .text('', { align: 'center' });
+  
+    doc.moveDown(4);
+  
+    // Greeting & Intro
+    doc
+       .font('Helvetica')
+       .fontSize(16)
+       .text(`Hey ${invoiceData.cust_name},`)
+      .moveDown(0.5)
+      .text(`This is the receipt for a payment of Rs ${invoiceData.grand_total_expert_earning} you paid to ${invoiceData.name}.`)
+      .moveDown(2);
+  
+      //  milestone number 
+        doc.fontSize(14).font('Helvetica-Bold').text('Milestone No.');
+        doc.font('Helvetica').text(invoiceData.milestone_number);
+        doc.moveDown(1);
+  
+        // Payment Info
+        doc.fontSize(14).font('Helvetica-Bold').text('Payment Date:');
+        doc.font('Helvetica').text(moment(invoiceData.createtime).format("MMM DD, YYYY"));
+        doc.moveDown(2);
+  
+  
+      const startX = 50;
+      let startY = doc.y;
+  
+      doc.fontSize(14).font('Helvetica-Bold');
+      doc.text('Description', startX, startY);
+      doc.text('Amount (Rs)', 400, startY, { align: 'right' });
+      doc.font('Helvetica');
+      doc.moveDown(0.8);
+  
+     
+        const y = doc.y;
+        doc.text('Milestone Payment', startX, y);
+        doc.text(` ${invoiceData.grand_total_expert_earning}`, 400, y, { align: 'right' });
+        doc.moveDown(0.8);
+  
+        // Total
+        doc.font('Helvetica-Bold').fontSize(12);
+        doc.text(`Total Amount: Rs ${invoiceData.grand_total_expert_earning}`, { align: 'right' });
+  
+        doc.end();
+  
+      } catch (error) {
+        reject(`Error generating PDF: ${error.message}`);
+      }
     });
-};
- 
+  };
+  
 
 //get nda price
 const getNdaPrice = async( request, response) => {

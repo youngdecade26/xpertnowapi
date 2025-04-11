@@ -484,16 +484,18 @@ router.get('/get_request_status', upload.none(), getRequestStatus);
 
 // router.get('/schedule_notification', upload.none(), scheduleNotification);
 
-router.get('/get_nda_price', upload.none(), getNdaPrice);
-
-
-router.post('/create_subscription',async (req, res, next) => {
+router.get('/get_nda_price', async (req, res, next) => {
   await authenticateToken(req, res, next);
-}, upload.none(), createSubscription);
+}, upload.none(), getNdaPrice);
 
-router.post('/create_plan',async (req, res, next) => {
-  await authenticateToken(req, res, next);
-}, upload.none(), createPayuPlan);
+
+// router.post('/create_subscription',async (req, res, next) => {
+//   await authenticateToken(req, res, next);
+// }, upload.none(), createSubscription);
+
+// router.post('/create_plan',async (req, res, next) => {
+//   await authenticateToken(req, res, next);
+// }, upload.none(), createPayuPlan);
 
 
 
