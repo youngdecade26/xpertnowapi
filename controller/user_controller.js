@@ -2444,29 +2444,30 @@ const editProfileRequest = async (request, response) => {
                     return response.status(200).json({ success: false, msg: languageMessage.RequestNotSent });
                 }
                  let details_request_id = res1.insertId;
-                const user_email = admin_email;
+                // const user_email = admin_email;
 
-                const fromName = admin_name;
+                // const fromName = admin_name;
     
-                const app_name = 'Xpertnow';
+                // const app_name = 'Xpertnow';
     
-                const message = description;
+                // const message = description;
     
-                const title = "Profile Update Request";
+                // const title = "Profile Update Request";
     
-                const subject = "Profile Update Request";
+                // const subject = "Profile Update Request";
     
-                const app_logo = "https://xpertnowbucket.s3.ap-south-1.amazonaws.com/uploads/1743577170167-xpertlog.png";
+                // const app_logo = "https://xpertnowbucket.s3.ap-south-1.amazonaws.com/uploads/1743577170167-xpertlog.png";
 
-                const expert_email = expertEmail;
-                const expert_name = expertName;
+                // const expert_email = expertEmail;
+                // const expert_name = expertName;
     
-                await mailer(user_email, fromName, app_name, message, title, subject, app_logo, expert_email, expert_name).then(data => {
+                // await mailer(user_email, fromName, app_name, message, title, subject, app_logo, expert_email, expert_name).then(data => {
                       
-                    if (data.status === 'yes') {
+                //     if (data.status === 'yes') {
     
-                return response.status(200).json({ success: true, msg: languageMessage.RequestSent }); }
-            });
+                return response.status(200).json({ success: true, msg: languageMessage.RequestSent });
+            //  }
+            // });
         })
         });
     })
