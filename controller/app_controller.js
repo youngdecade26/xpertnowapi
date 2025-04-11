@@ -4809,7 +4809,7 @@ const completeJob = async (request, response) => {
         });
     })
 })
-    }
+}
     catch (error) {
         return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: error.message });
     }
