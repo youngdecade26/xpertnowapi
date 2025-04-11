@@ -119,8 +119,24 @@ const messages = {
   PdfGeneratedSuccess : ['Invoice generated successfully'],
   ErrorGeneratingPdf:['Error generating PDF'],
   CallScheduled:['Call scheduled successfully'],
-  NotificationSend:['Notification sent successfully']
-  
 
+  statusUpdated:['Status updated successfully'],
+  statusNotUpdated:['Status has not been updated, please try again'],
+
+
+  expertOffline:['Expert is offline'],
+  expertOnline:['Expert is online'],
+  CannotWithdraw:['You cannot withdraw amount. The minimum amount must be ₹10,000'],
+
+  RequestSent :['Profile update request sent successfully'],
+  RequestNotSent:['Profile update request has not been sent, please try again'],
+
+  NotificationSend:['Notificaion send successfully'],
+
+  NdaAmountErr:['Insufficient balance, wallet amount must be equal to nda price'],
+
+  MinimumWithdrawalAmount:['Minimum withdrawal amount must be ']
+  
+  
 };
 module.exports = messages; 
