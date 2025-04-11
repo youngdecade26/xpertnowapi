@@ -750,7 +750,6 @@ async function mailerInvite(
 
 
 
-
 // job complete mail
 async function JobcompleteMailer(
     email,
