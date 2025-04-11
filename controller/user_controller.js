@@ -109,15 +109,15 @@ const usersignUp_1 = async (request, response) => {
       
      
     // const otp = await generateOTP(6);
-    // const otp = 123456;
-    const otp = Math.floor(100000 + Math.random() * 900000); // Generate a random OTP
-    let notiSendStatus;
-    try {
-        notiSendStatus = await otpSendMessage(mobile, otp);
-    } catch (error) {
-        console.error('OTP Sending Failed:', error);
-        notiSendStatus = error;
-    }
+    const otp = 123456;
+    // const otp = Math.floor(100000 + Math.random() * 900000); // Generate a random OTP
+    // let notiSendStatus;
+    // try {
+    //     notiSendStatus = await otpSendMessage(mobile, otp);
+    // } catch (error) {
+    //     console.error('OTP Sending Failed:', error);
+    //     notiSendStatus = error;
+    // }
     
 
 
