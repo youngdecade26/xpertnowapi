@@ -4785,26 +4785,27 @@ const completeJob = async (request, response) => {
                 if (res1.affectedRows == 0) {
                     return response.status(200).json({ success: false, msg: languageMessage.updateErr });
                 }
-                   const user_email = res[0].email;
+                //    const user_email = res[0].email;
 
-                const fromName = res[0].name;
+                // const fromName = res[0].name;
     
-                const app_name = 'Team Xpertnow';
+                // const app_name = 'Team Xpertnow';
     
-                const message = `We are pleased to inform you that the job you created- <b> ${job_name} </b> has been successfully completed. We appreciate your engagement and look forward to assisting you with future tasks. <br> If you have any questions or need further support, please do not hesitate to contact us.`;
+                // const message = `We are pleased to inform you that the job you created- <b> ${job_name} </b> has been successfully completed. We appreciate your engagement and look forward to assisting you with future tasks. <br> If you have any questions or need further support, please do not hesitate to contact us.`;
     
-                const title = "Job Completion Confirmation";
+                // const title = "Job Completion Confirmation";
     
-                const subject = "Job Completion Confirmation";
+                // const subject = "Job Completion Confirmation";
     
-                const app_logo = "https://xpertnowbucket.s3.ap-south-1.amazonaws.com/uploads/1743577170167-xpertlog.png";
+                // const app_logo = "https://xpertnowbucket.s3.ap-south-1.amazonaws.com/uploads/1743577170167-xpertlog.png";
 
-                await JobcompleteMailer(user_email, fromName, app_name, message, title, subject, app_logo).then(data => {
+                // await JobcompleteMailer(user_email, fromName, app_name, message, title, subject, app_logo).then(data => {
     
-                    if (data.status === 'yes') {
+                //     if (data.status === 'yes') {
 
-                return response.status(200).json({ success: true, msg: languageMessage.JobCompleted });}
-            });
+                return response.status(200).json({ success: true, msg: languageMessage.JobCompleted });
+            // }
+            // });
         });
     })
 })
@@ -4930,7 +4931,6 @@ function generateUniqueFilename(prefix = 'invoice') {
 
 
 // ... (same AWS & imports as before)
-
 async function generateInvoicePdf(invoiceData) {
     return new Promise(async (resolve, reject) => {
       const fileName = generateUniqueFilename();

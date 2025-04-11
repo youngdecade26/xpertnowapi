@@ -2462,7 +2462,7 @@ const editProfileRequest = async (request, response) => {
                 const expert_name = expertName;
     
                 await mailer(user_email, fromName, app_name, message, title, subject, app_logo, expert_email, expert_name).then(data => {
-    
+                      
                     if (data.status === 'yes') {
     
                 return response.status(200).json({ success: true, msg: languageMessage.RequestSent }); }
