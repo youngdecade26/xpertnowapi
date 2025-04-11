@@ -9202,7 +9202,7 @@ const GetDetailsUpdateRequests = async (request, response) => {
       ON
       um.user_id = drm.user_id
       WHERE 
-      delete_flag = 0`;
+      um.delete_flag = 0`;
     connection.query(fetchDetails, (err, res) => {
       if (err) {
         return response
