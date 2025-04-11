@@ -271,17 +271,17 @@ const userResendOtp = async (request, response) => {
                 return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated ,active_status:0});
             }
             // const otp = await generateOTP(6);
-            // const otp = 123456;
+            const otp = 123456;
 
-            const mobile = result[0].mobile;
-            const otp = Math.floor(100000 + Math.random() * 900000); // Generate a random OTP
-            let notiSendStatus;
-            try {
-                notiSendStatus = await otpSendMessage(mobile, otp);
-            } catch (error) {
-                console.error('OTP Sending Failed:', error);
-                notiSendStatus = error;
-            }
+            // const mobile = result[0].mobile;
+            // const otp = Math.floor(100000 + Math.random() * 900000); // Generate a random OTP
+            // let notiSendStatus;
+            // try {
+            //     notiSendStatus = await otpSendMessage(mobile, otp);
+            // } catch (error) {
+            //     console.error('OTP Sending Failed:', error);
+            //     notiSendStatus = error;
+            // }
         
             const clearOtpQuery = `
             UPDATE user_master 
@@ -900,7 +900,7 @@ const signUp_1 = async (request, response) => {
         return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param });
     }
     // const otp = await generateOTP(6);
-    // const otp = 123456;
+    const otp = 123456;
    
 
     try {
@@ -915,14 +915,14 @@ const signUp_1 = async (request, response) => {
                     return response.status(200).json({ success: false, msg: languageMessage.alreadyUseNum });
                 }
 
-                 var otp = Math.floor(100000 + Math.random() * 900000); // Generate a random OTP
-                let notiSendStatus;
-                try {
-                    notiSendStatus = await otpSendMessage(mobile, otp);
-                } catch (error) {
-                    console.error('OTP Sending Failed:', error);
-                    notiSendStatus = error;
-                }
+                //  var otp = Math.floor(100000 + Math.random() * 900000); // Generate a random OTP
+                // let notiSendStatus;
+                // try {
+                //     notiSendStatus = await otpSendMessage(mobile, otp);
+                // } catch (error) {
+                //     console.error('OTP Sending Failed:', error);
+                //     notiSendStatus = error;
+                // }
                
                 const user_id_get=result[0].user_id;
                 const newUserQuery = `UPDATE user_master SET otp = ? WHERE user_id = ?`;
@@ -1065,16 +1065,16 @@ const resendOtp = async (request, response) => {
                 return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated ,active_status:0});
             }
             // const otp = await generateOTP(6);
-            // const otp = 123456;
-            const mobile = result[0].mobile;
-            const otp = Math.floor(100000 + Math.random() * 900000); // Generate a random OTP
-            let notiSendStatus;
-            try {
-                notiSendStatus = await otpSendMessage(mobile, otp);
-            } catch (error) {
-                console.error('OTP Sending Failed:', error);
-                notiSendStatus = error;
-            }
+            const otp = 123456;
+            // const mobile = result[0].mobile;
+            // const otp = Math.floor(100000 + Math.random() * 900000); // Generate a random OTP
+            // let notiSendStatus;
+            // try {
+            //     notiSendStatus = await otpSendMessage(mobile, otp);
+            // } catch (error) {
+            //     console.error('OTP Sending Failed:', error);
+            //     notiSendStatus = error;
+            // }
             const clearOtpQuery = `
             UPDATE user_master 
             SET otp = ?
