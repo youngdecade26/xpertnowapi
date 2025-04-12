@@ -9194,7 +9194,7 @@ const GetDetailsUpdateRequests = async (request, response) => {
   try {
     const fetchDetails =
       `SELECT 
-      drm.details_request_id, drm.user_id, um.name, drm.type, drm.description, drm.status 
+      drm.details_request_id, drm.user_id, um.name, drm.type, drm.description, drm.status, drm.createtime 
       FROM 
       details_request_master AS drm  
       LEFT JOIN
@@ -9202,7 +9202,7 @@ const GetDetailsUpdateRequests = async (request, response) => {
       ON
       um.user_id = drm.user_id
       WHERE 
-      delete_flag = 0`;
+      um.delete_flag = 0`;
     connection.query(fetchDetails, (err, res) => {
       if (err) {
         return response
