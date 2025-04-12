@@ -4911,6 +4911,7 @@ const AWS = require('aws-sdk');
 const fs = require('fs');
 const axios = require('axios');
 const PDFDocument = require('pdfkit');
+const path = require('path');
 
 
 const s3 = new AWS.S3({
@@ -4960,12 +4961,17 @@ async function generateInvoicePdf(invoiceData) {
       });
   
       try {
-        const imageUrl = 'https://xpertnowbucket.s3.ap-south-1.amazonaws.com/uploads/1743577170167-xpertlog.png';
-        const imageResponse = await axios.get(imageUrl, { responseType: 'arraybuffer' });
-        const imageBuffer = Buffer.from(imageResponse.data, 'binary');
+        // const imageUrl = 'https://xpertnowbucket.s3.ap-south-1.amazonaws.com/uploads/1743577170167-xpertlog.png';
+        // const imageResponse = await axios.get(imageUrl, { responseType: 'arraybuffer' });
+        // const imageBuffer = Buffer.from(imageResponse.data, 'binary');
   
-        // Add Logo
-        doc.image(imageBuffer, doc.page.width / 2 - 75, 30, { width: 150 });
+        // // Add Logo
+        // doc.image(imageBuffer, doc.page.width / 2 - 75, 30, { width: 150 });
+        const logoPath = path.join(__dirname, '..', 'assets', 'xpertlogo.png');
+        if (fs.existsSync(logoPath)) {
+          doc.image(logoPath, doc.page.width / 2 - 75, 30, { width: 150 });
+        }
+  
   
         doc.moveDown(5);
   
@@ -5066,6 +5072,9 @@ async function generateInvoicePdf(invoiceData) {
 
 
 
+
+
+
 // get wallet pdf
 const getWalletPdf = async (request, response) => {
     const { transition_id } = request.query;
@@ -5131,12 +5140,11 @@ const generateWalletInvoice = async (invoiceData, type_label) => {
   
       try {
         // Fetch logo
-        const logoUrl = 'https://xpertnowbucket.s3.ap-south-1.amazonaws.com/uploads/1743577170167-xpertlog.png';
-        const imageResponse = await axios.get(logoUrl, { responseType: 'arraybuffer' });
-        const imageBuffer = Buffer.from(imageResponse.data, 'binary');
+        const logoPath = path.join(__dirname, '..', 'assets', 'xpertlogo.png');
+        if (fs.existsSync(logoPath)) {
+          doc.image(logoPath, doc.page.width / 2 - 75, 30, { width: 150 });
+        }
   
-        // Header logo
-        doc.image(imageBuffer, doc.page.width / 2 - 75, 40, { width: 150 });
   
         // Move below image for greeting
         doc.moveDown(5);
@@ -5257,12 +5265,10 @@ const generateExpertAllEarningPdf = async (invoiceData, type_label) => {
   
       try {
         // Fetch logo
-        const logoUrl = 'https://xpertnowbucket.s3.ap-south-1.amazonaws.com/uploads/1743577170167-xpertlog.png';
-        const imageResponse = await axios.get(logoUrl, { responseType: 'arraybuffer' });
-        const imageBuffer = Buffer.from(imageResponse.data, 'binary');
-  
-        // Header logo
-        doc.image(imageBuffer, doc.page.width / 2 - 75, 40, { width: 150 });
+        const logoPath = path.join(__dirname, '..', 'assets', 'xpertlogo.png');
+        if (fs.existsSync(logoPath)) {
+          doc.image(logoPath, doc.page.width / 2 - 75, 30, { width: 150 });
+        }
   
         // Move below image for greeting
         doc.moveDown(5);
@@ -5381,12 +5387,10 @@ const generateCustMilestonePdf = async (invoiceData) => {
   
       try {
         // Fetch logo
-        const logoUrl = 'https://xpertnowbucket.s3.ap-south-1.amazonaws.com/uploads/1743577170167-xpertlog.png';
-        const imageResponse = await axios.get(logoUrl, { responseType: 'arraybuffer' });
-        const imageBuffer = Buffer.from(imageResponse.data, 'binary');
-  
-        // Header logo
-        doc.image(imageBuffer, doc.page.width / 2 - 75, 40, { width: 150 });
+        const logoPath = path.join(__dirname, '..', 'assets', 'xpertlogo.png');
+        if (fs.existsSync(logoPath)) {
+          doc.image(logoPath, doc.page.width / 2 - 75, 30, { width: 150 });
+        }
   
         // Move below image for greeting
         doc.moveDown(5);
