@@ -4967,13 +4967,13 @@ async function generateInvoicePdf(invoiceData) {
   
         // // Add Logo
         // doc.image(imageBuffer, doc.page.width / 2 - 75, 30, { width: 150 });
-        const logoPath = path.join(__dirname, '..', 'assets', 'xpertlogo.png');
-        if (fs.existsSync(logoPath)) {
-          doc.image(logoPath, doc.page.width / 2 - 75, 30, { width: 150 });
-        }
+    //     const logoPath = path.join(__dirname, '..', 'assets', 'xpertlogo.png');
+    //     if (fs.existsSync(logoPath)) {
+    //       doc.image(logoPath, doc.page.width / 2 - 75, 30, { width: 150 });
+    //     }
   
-    console.log(logoPath);
-        doc.moveDown(5);
+    // console.log(logoPath);
+    //     doc.moveDown(5);
   
         // Title
         doc
