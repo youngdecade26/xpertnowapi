@@ -4972,7 +4972,7 @@ async function generateInvoicePdf(invoiceData) {
           doc.image(logoPath, doc.page.width / 2 - 75, 30, { width: 150 });
         }
   
-  
+    console.log(logoPath);
         doc.moveDown(5);
   
         // Title
@@ -5201,8 +5201,10 @@ const generateWalletInvoice = async (invoiceData, type_label) => {
   
 
 
-// get expert all earning
-const getExpertAllEarningPdf = async (request, response) => {
+
+
+  // get expert all earning
+  const getExpertAllEarningPdf = async (request, response) => {
     const { expert_earning_id } = request.query;
     try {
         if (!expert_earning_id) {
@@ -5237,6 +5239,8 @@ const getExpertAllEarningPdf = async (request, response) => {
         return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: error.message });
     }
 }
+
+// get expert all earnings
 const generateExpertAllEarningPdf = async (invoiceData, type_label) => {
     return new Promise(async (resolve, reject) => {
       const fileName = `invoice_${Date.now()}_${Math.floor(Math.random() * 1000)}.pdf`;
@@ -5327,8 +5331,11 @@ const generateExpertAllEarningPdf = async (invoiceData, type_label) => {
 
 
 
-// get customer milestone charge
-const getCustomerMilestoneCharge = async (request, response) => {
+
+
+  // get customer milestone charge
+
+  const getCustomerMilestoneCharge = async (request, response) => {
     const { milestone_id } = request.query;
     try {
         if (!milestone_id) {
@@ -5358,6 +5365,8 @@ const getCustomerMilestoneCharge = async (request, response) => {
         return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: error.message });
     }
 }
+
+
 // get customer milestone pdf
 const generateCustMilestonePdf = async (invoiceData) => {
     return new Promise(async (resolve, reject) => {
