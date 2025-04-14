@@ -16,7 +16,7 @@ async function otpSendMessage(mobile, otp) {
         const options = {
             method: 'POST',
             hostname: 'control.msg91.com',
-            path: `/api/v5/otp?otp=${otp}&otp_length=6&otp_expiry=5&template_id=67e253a1d6fc050fad3baff4&mobile=91${mobile}&authkey=435272AT2B1NRQ67e38dbeP1`,
+            path: `/api/v5/otp?otp=${otp}&otp_length=6&template_id=67e253a1d6fc050fad3baff4&mobile=91${mobile}&authkey=435272AT2B1NRQ67e38dbeP1`,
             headers: { 'Content-Type': 'application/json' },
         };
 
