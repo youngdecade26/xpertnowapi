@@ -16,7 +16,7 @@ async function otpSendMessage(mobile, otp) {
         const options = {
             method: 'POST',
             hostname: 'control.msg91.com',
-            path: `/api/v5/otp?otp=${otp}&otp_length=6&template_id=67e253a1d6fc050fad3baff4&mobile=91${mobile}&authkey=435272AT2B1NRQ67e38dbeP1`,
+            path: `/api/v5/otp?otp=${otp}&otp_length=6&otp_expiry=5&template_id=67e253a1d6fc050fad3baff4&mobile=91${mobile}&authkey=435272AT2B1NRQ67e38dbeP1`,
             headers: { 'Content-Type': 'application/json' },
         };
 
@@ -41,6 +41,33 @@ async function otpSendMessage(mobile, otp) {
     });
 }
 
+
+// send otp 
+const axios = require('axios');
+
+const sendOtp = async () => {
+  try {
+    const response = await axios.post(
+      `https://control.msg91.com/api/v5/otp?&otp_expiry=5&template_id=67e253a1d6fc050fad3baff4&mobile=${mobile}&authkey=435272AT2B1NRQ67e38dbeP1&realTimeResponse=`,
+      {
+        Param1: "value1",
+        Param2: "value2",
+        Param3: "value3"
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    console.log('OTP API Response:', response.data);
+  } catch (error) {
+    console.error('Error sending OTP:', error.response ? error.response.data : error.message);
+  }
+};
+
+sendOtp();
 
 //Get content
 const getContent = async (request, response) => {
@@ -113,7 +140,7 @@ const usersignUp_1 = async (request, response) => {
                     const otp = Math.floor(100000 + Math.random() * 900000); // Generate a random OTP
                     let notiSendStatus;
                     try {
-                        notiSendStatus = await otpSendMessage(mobile, otp);
+                        notiSendStatus = await sendOtp(mobile, otp);
                     } catch (error) {
                         console.error('OTP Sending Failed:', error);
                         notiSendStatus = error;
@@ -157,7 +184,7 @@ const usersignUp_1 = async (request, response) => {
                 const otp = Math.floor(100000 + Math.random() * 900000); // Generate a random OTP
                 let notiSendStatus;
                 try {
-                    notiSendStatus = await otpSendMessage(mobile, otp);
+                    notiSendStatus = await sendOtp(mobile, otp);
                 } catch (error) {
                     console.error('OTP Sending Failed:', error);
                     notiSendStatus = error;
