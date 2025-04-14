@@ -10,36 +10,38 @@ const SECRET_KEY = "TOKEN-KEY"; // Change to your secure secret
 const { mailer } = require('./MailerApi');
 
 // send otp on mobile function
-const https = require('https');
-async function otpSendMessage(mobile, otp) {
-    return new Promise((resolve, reject) => {
-        const options = {
-            method: 'POST',
-            hostname: 'control.msg91.com',
-            path: `/api/v5/otp?otp=${otp}&otp_length=6&otp_expiry=5&template_id=67e253a1d6fc050fad3baff4&mobile=91${mobile}&authkey=435272AT2B1NRQ67e38dbeP1`,
-            headers: { 'Content-Type': 'application/json' },
-        };
+// const https = require('https');
+// async function otpSendMessage(mobile, otp) {
+//     return new Promise((resolve, reject) => {
+//         const options = {
+//             method: 'POST',
+//             hostname: 'control.msg91.com',
+//             path: `/api/v5/otp?otp=${otp}&otp_length=6&otp_expiry=5&template_id=67e253a1d6fc050fad3baff4&mobile=91${mobile}&authkey=435272AT2B1NRQ67e38dbeP1`,
+//             headers: { 'Content-Type': 'application/json' },
+//         };
 
-        const req = https.request(options, (res) => {
-            let data = '';
+//         const req = https.request(options, (res) => {
+//             let data = '';
 
-            res.on('data', (chunk) => {
-                data += chunk;
-            });
+//             res.on('data', (chunk) => {
+//                 data += chunk;
+//             });
 
-            res.on('end', () => {
-                console.log('OTP API Response:', data);
-                resolve(JSON.parse(data));
-            });
-        });
+//             res.on('end', () => {
+//                 console.log('OTP API Response:', data);
+//                 resolve(JSON.parse(data));
+//             });
+//         });
 
-        req.on('error', (error) => {
-            reject(error);
-        });
+//         req.on('error', (error) => {
+//             reject(error);
+//         });
 
-        req.end();
-    });
-}
+//         req.end();
+//     });
+// }
+
+
 
 
 // send otp 
@@ -66,8 +68,44 @@ const sendOtp = async () => {
     console.error('Error sending OTP:', error.response ? error.response.data : error.message);
   }
 };
-
 sendOtp();
+
+
+
+const http = require('https');
+async function otpSendMessage(mobile, otp) {
+    return new Promise((resolve, reject) => {
+const options = {
+  method: 'POST',
+  hostname: 'control.msg91.com',
+  port: null,
+  path: `/api/v5/otp?template_id=67e253a1d6fc050fad3baff4&mobile=${mobile}&authkey=435272AT2B1NRQ67e38dbeP1&realTimeResponse=`,
+  headers: {
+    'Content-Type': 'application/JSON',
+    'content-type': 'application/json'
+  }
+};
+
+const req = http.request(options, function (res) {
+  const chunks = [];
+
+  res.on('data', function (chunk) {
+    chunks.push(chunk);
+  });
+
+  res.on('end', function () {
+    const body = Buffer.concat(chunks);
+    console.log(body.toString());
+  });
+});
+
+req.write('{\n  "Param1": "value1",\n  "Param2": "value2",\n  "Param3": "value3"\n}');
+req.end();
+});
+}
+
+
+
 
 //Get content
 const getContent = async (request, response) => {
@@ -140,7 +178,7 @@ const usersignUp_1 = async (request, response) => {
                     const otp = Math.floor(100000 + Math.random() * 900000); // Generate a random OTP
                     let notiSendStatus;
                     try {
-                        notiSendStatus = await sendOtp(mobile, otp);
+                        notiSendStatus = await otpSendMessage(mobile, otp);
                     } catch (error) {
                         console.error('OTP Sending Failed:', error);
                         notiSendStatus = error;
