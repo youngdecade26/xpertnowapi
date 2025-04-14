@@ -50,7 +50,7 @@ const axios = require('axios');
 const sendOtp = async () => {
   try {
     const response = await axios.post(
-      `https://control.msg91.com/api/v5/otp?template_id=67e253a1d6fc050fad3baff4&mobile=7389534852&authkey=435272AT2B1NRQ67e38dbeP1&realTimeResponse=`,
+      `https://control.msg91.com/api/v5/otp?template_id=67e253a1d6fc050fad3baff4&mobile=${mobile}&authkey=435272AT2B1NRQ67e38dbeP1&realTimeResponse=`,
       {
         Param1: "value1",
         Param2: "value2",
