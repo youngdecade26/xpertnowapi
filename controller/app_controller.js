@@ -4887,6 +4887,7 @@ const getExpertEarningPdf = async (request, response) => {
                 const filename = await generateInvoicePdf(earning_data, expert_earning_id);
 
                 const invoiceUrl = filename;
+                console.log('Invoice created at:', invoiceUrl);
                 const updateSql = 'UPDATE expert_earning_master SET invoice_url = ? WHERE expert_earning_id = ?';
                 connection.query(updateSql, [invoiceUrl, expert_earning_id], (updateErr) => {
                     if (updateErr) {
@@ -4895,6 +4896,7 @@ const getExpertEarningPdf = async (request, response) => {
                     return response.status(200).json({ success: true, msg: languageMessage.PdfGeneratedSuccess, invoice_url: invoiceUrl });
                 });
             } catch (pdfError) {
+                    console.error('Invoice generation failed:', pdfError);
                 return response.status(200).json({ success: false, msg: languageMessage.ErrorGeneratingPdf, error: pdfError.message });
             }
         });
