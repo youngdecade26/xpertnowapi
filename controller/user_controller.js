@@ -173,16 +173,16 @@ const usersignUp_1 = async (request, response) => {
                 const user_id_get = result[0].user_id;
 
                 if (type == 0) {
-                    // const otp = 123456;
+                    const otp = 123456;
                     // const otp = await generate
-                    const otp = Math.floor(100000 + Math.random() * 900000); // Generate a random OTP
-                    let notiSendStatus;
-                    try {
-                        notiSendStatus = await otpSendMessage(mobile, otp);
-                    } catch (error) {
-                        console.error('OTP Sending Failed:', error);
-                        notiSendStatus = error;
-                    }
+                    // const otp = Math.floor(100000 + Math.random() * 900000); // Generate a random OTP
+                    // let notiSendStatus;
+                    // try {
+                    //     notiSendStatus = await otpSendMessage(mobile, otp);
+                    // } catch (error) {
+                    //     console.error('OTP Sending Failed:', error);
+                    //     notiSendStatus = error;
+                    // }
                     const updateOtpQuery = "UPDATE user_master SET otp = ? WHERE user_id = ? and delete_flag=0";
                     connection.query(updateOtpQuery, [otp, user_id_get], (err) => {
                         if (err) {
@@ -218,15 +218,15 @@ const usersignUp_1 = async (request, response) => {
                 if (device_type === 'andriod') { id = 0; }
 
                 if (device_type === 'ios') { id = 1; }
-                // const otp = 123456;
-                const otp = Math.floor(100000 + Math.random() * 900000); // Generate a random OTP
-                let notiSendStatus;
-                try {
-                    notiSendStatus = await sendOtp(mobile, otp);
-                } catch (error) {
-                    console.error('OTP Sending Failed:', error);
-                    notiSendStatus = error;
-                }
+                const otp = 123456;
+                // const otp = Math.floor(100000 + Math.random() * 900000); // Generate a random OTP
+                // let notiSendStatus;
+                // try {
+                //     notiSendStatus = await sendOtp(mobile, otp);
+                // } catch (error) {
+                //     console.error('OTP Sending Failed:', error);
+                //     notiSendStatus = error;
+                // }
 
                 const newUserQuery = "INSERT INTO user_master (mobile, otp, user_type, player_id, device_type, createtime, updatetime, login_type, signup_step) VALUES (?, ?, ?, ?, ?, now(), now(), ?, ?)";
                 const values = [mobile, otp, 1, player_id, id, 0, 0];
@@ -324,17 +324,17 @@ const userResendOtp = async (request, response) => {
             }
 
             // const otp = await generateOTP(6);
-            // const otp = 123456;
+            const otp = 123456;
 
-            const mobile = result[0].mobile;
-            const otp = Math.floor(100000 + Math.random() * 900000); // Generate a random OTP
-            let notiSendStatus;
-            try {
-                notiSendStatus = await otpSendMessage(mobile, otp);
-            } catch (error) {
-                console.error('OTP Sending Failed:', error);
-                notiSendStatus = error;
-            }
+            // const mobile = result[0].mobile;
+            // const otp = Math.floor(100000 + Math.random() * 900000); // Generate a random OTP
+            // let notiSendStatus;
+            // try {
+            //     notiSendStatus = await otpSendMessage(mobile, otp);
+            // } catch (error) {
+            //     console.error('OTP Sending Failed:', error);
+            //     notiSendStatus = error;
+            // }
 
             const clearOtpQuery = `
             UPDATE user_master 
@@ -970,15 +970,15 @@ const signUp_1 = async (request, response) => {
 
                 const user_id_get = result[0].user_id;
                 if (type == 0) {
-                    // const otp = 123456;
-                    const otp = Math.floor(100000 + Math.random() * 900000); // Generate a random OTP
-                    let notiSendStatus;
-                    try {
-                        notiSendStatus = await otpSendMessage(mobile, otp);
-                    } catch (error) {
-                        console.error('OTP Sending Failed:', error);
-                        notiSendStatus = error;
-                    }
+                    const otp = 123456;
+                    // const otp = Math.floor(100000 + Math.random() * 900000); // Generate a random OTP
+                    // let notiSendStatus;
+                    // try {
+                    //     notiSendStatus = await otpSendMessage(mobile, otp);
+                    // } catch (error) {
+                    //     console.error('OTP Sending Failed:', error);
+                    //     notiSendStatus = error;
+                    // }
                     const newUserQuery = `UPDATE user_master SET otp = ? WHERE user_id = ?`;
                     connection.query(newUserQuery, [otp, result[0].user_id], async (err, result1) => {
                         if (err) {
@@ -1021,16 +1021,16 @@ const signUp_1 = async (request, response) => {
                 if (device_type === 'andriod') { id = 0; }
                 if (device_type === 'ios') { id = 1; }
                 if (device_type === 'web') { id = 2; }
-                // const otp = 123456;
+                const otp = 123456;
 
-                const otp = Math.floor(100000 + Math.random() * 900000); // Generate a random OTP
-                let notiSendStatus;
-                try {
-                    notiSendStatus = await otpSendMessage(mobile, otp);
-                } catch (error) {
-                    console.error('OTP Sending Failed:', error);
-                    notiSendStatus = error;
-                }
+                // const otp = Math.floor(100000 + Math.random() * 900000); // Generate a random OTP
+                // let notiSendStatus;
+                // try {
+                //     notiSendStatus = await otpSendMessage(mobile, otp);
+                // } catch (error) {
+                //     console.error('OTP Sending Failed:', error);
+                //     notiSendStatus = error;
+                // }
                 const newUserQuery = `
             INSERT INTO user_master (mobile, otp, user_type, player_id, device_type, createtime, updatetime)
             VALUES (?, ?, ?, ?, ?, now(), now())
@@ -1136,16 +1136,16 @@ const resendOtp = async (request, response) => {
                 return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
             }
             // const otp = await generateOTP(6);
-            // const otp = 123456;
-            const mobile = result[0].mobile;
-            const otp = Math.floor(100000 + Math.random() * 900000); // Generate a random OTP
-            let notiSendStatus;
-            try {
-                notiSendStatus = await otpSendMessage(mobile, otp);
-            } catch (error) {
-                console.error('OTP Sending Failed:', error);
-                notiSendStatus = error;
-            }
+            const otp = 123456;
+            // const mobile = result[0].mobile;
+            // const otp = Math.floor(100000 + Math.random() * 900000); // Generate a random OTP
+            // let notiSendStatus;
+            // try {
+            //     notiSendStatus = await otpSendMessage(mobile, otp);
+            // } catch (error) {
+            //     console.error('OTP Sending Failed:', error);
+            //     notiSendStatus = error;
+            // }
             const clearOtpQuery = `
             UPDATE user_master 
             SET otp = ?
