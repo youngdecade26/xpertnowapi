@@ -5497,10 +5497,130 @@ const getNdaPrice = async( request, response) => {
 
 
 
+// manage chat status
+const userChatStatus = async (request, response) => {
+    const { user_id, other_user_id } = request.body;
+    try {
+        if (!user_id) {
+            return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'user_id' });
+        }
+        if (!other_user_id) {
+            return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'other_user_id' });
+        }
+        const checkUserQuery = 'SELECT user_id, name, active_flag FROM user_master WHERE user_id = ? AND delete_flag = 0';
+        connection.query(checkUserQuery, [user_id], async (err, userRes) => {
+            if (err) {
+                return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err.message });
+            }
+            if (userRes.length == 0) {
+                return response.status(200).json({ success: false, msg: languageMessage.msgUserNotFound });
+            }
+            if (userRes[0].active_flag == 0) {
+                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
+            }
+            const checkOtherUser = 'SELECT user_id, active_flag FROM user_master WHERE user_id = ?  AND delete_flag = 0';
+            connection.query(checkOtherUser, [other_user_id], async (err1, res1) => {
+                if (err1) {
+                    return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err1.message });
+                }
+                if (res1.length == 0) {
+                    return response.status(200).json({ success: false, msg: languageMessage.userNotFound });
+                }
+                if (res1[0].active_flag == 0) {
+                    return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
+                }
+                const check = 'SELECT * FROM chat_status_master WHERE user_id = ? AND delete_flag = 0';
+                connection.query(check, [user_id], async (err2, res2) => {
+                    if (err2) {
+                        return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err2.message })
+                    }
+                    if (res2.length > 0) {
+                        const update = 'UPDATE chat_status_master SET other_user_id = ?, updatetime = NOW() WHERE user_id = ? AND delete_flag= 0';
+                        connection.query(update, [other_user_id, user_id], async (updateErr, updateRes) => {
+                            if (updateErr) {
+                                return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err1.message })
+                            }
+                            if (updateRes.affectedRows > 0) {
+                                return response.status(200).json({ success: true, msg: languageMessage.dataFound });
+                            }
+                        })
+                    }
+                    else {
+                        const insert = 'INSERT INTO chat_status_master (user_id, other_user_id, createtime, updatetime) VALUES(?, ?, NOW(), NOW())';
+                        connection.query(insert, [user_id, other_user_id], async (insertErr, insertRes) => {
+                            if (insertErr) {
+                                return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: insertErr.message })
+                            }
+                            if (insertRes.affectedRows > 0) {
+                                return response.status(200).json({ success: true, msg: languageMessage.dataFound })
+                            }
+                        });
+                    }
+                })
+            })
+
+        });
+    }
+    catch (error) {
+        return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: error.message });
+    }
+}
+
+// get user active status 
+const getActiveStatus = async (request, response) => {
+    const { user_id, other_user_id } = request.query;
+    try {
+        if (!user_id) {
+            return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'user_id' });
+        }
+        if (!other_user_id) {
+            return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'other_user_id' });
+        }
+        const checkUserQuery = 'SELECT user_id, name, active_flag FROM user_master WHERE user_id = ? AND delete_flag = 0';
+        connection.query(checkUserQuery, [user_id], async (err, userRes) => {
+            if (err) {
+                return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err.message });
+            }
+            if (userRes.length == 0) {
+                return response.status(200).json({ success: false, msg: languageMessage.userNotFound });
+            }
+            if (userRes[0].active_flag == 0) {
+                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
+            }
+            const checkOtherUser = 'SELECT user_id, active_flag FROM user_master WHERE user_id = ?  AND delete_flag = 0';
+            connection.query(checkOtherUser, [other_user_id], async (err1, res1) => {
+                if (err1) {
+                    return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err1.message });
+                }
+                if (res1.length == 0) {
+                    return response.status(200).json({ success: false, msg: languageMessage.userNotFound });
+                }
+                if (res1[0].active_flag == 0) {
+                    return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
+                }
+                const sql = 'SELECT chat_status_id FROM chat_status_master WHERE other_user_id =? AND user_id = ? AND delete_flag = 0';
+                connection.query(sql, [user_id, other_user_id], async (err2, res2) => {
+                    if (err2) {
+                        return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err2.message });
+                    }
+                    let status = res2.length > 0 ? true : false
+                    return response.status(200).json({ success: true, msg: languageMessage.dataFound, status: status });
+                });
+            });
+        });
+
+    }
+    catch (error) {
+        return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: error.message });
+    }
+}
 
 
 
 
 
 
-module.exports = { getExpertDetails, getExpertDetailsById, getExpertByRating, getMyJobs, getJobPostDetails, createJobPost, chatConsultationHistory, chatJobsHistory, callConsultationHistory, callJobsHistory, getExpertByFilter, walletRecharge, walletHistory, getExpertByName, getExpertEarning, withdrawRequest, withdrawHistory, expertCallConsultationHistory, expertCallJobsHistory, getJobPostsForExpert, getExpertEarningHistory, expertChatConsultationHistory, expertChatJobsHistory, getReviewsOfExpert, getExpertMyJobs, getBidsOfJobPost, hireTheExpert, createProjectCost, getSubscriptionPlans, buySubscription, reviewReply, rateExpert, ExpertBidJob, CustomerCallHistory, ExpertCallHistory, getExpertHomeJobs, bookMarkJob, reportOnJob, customerJobFilter, expertJobFilter, createJobCost, createJobMilestone, getJobWorkMilestone, acceptRejectMilestone, sentMilestoneRequest, checkMilestoneRequest, getExpertJobDetails, getUserProfile, downloadApp, deepLink, getExpertByFilterSubLabel, logOut, chatFileUpload, getExpertCompletedJobs, add_availability, edit_availability, get_available_slots, userBookSlot, getExpertScheduleSlot, convertIntoMilestone, updateJobMilestone, getWalletAmount, checkWalletAmount, debitWalletAmount, generateUniqueId, getTokenVariable, completeJob, getExpertEarningPdf, getWalletPdf, getExpertAllEarningPdf, getCustomerMilestoneCharge,  getNdaPrice};
+
+
+
+module.exports = { getExpertDetails, getExpertDetailsById, getExpertByRating, getMyJobs, getJobPostDetails, createJobPost, chatConsultationHistory, chatJobsHistory, callConsultationHistory, callJobsHistory, getExpertByFilter, walletRecharge, walletHistory, getExpertByName, getExpertEarning, withdrawRequest, withdrawHistory, expertCallConsultationHistory, expertCallJobsHistory, getJobPostsForExpert, getExpertEarningHistory, expertChatConsultationHistory, expertChatJobsHistory, getReviewsOfExpert, getExpertMyJobs, getBidsOfJobPost, hireTheExpert, createProjectCost, getSubscriptionPlans, buySubscription, reviewReply, rateExpert, ExpertBidJob, CustomerCallHistory, ExpertCallHistory, getExpertHomeJobs, bookMarkJob, reportOnJob, customerJobFilter, expertJobFilter, createJobCost, createJobMilestone, getJobWorkMilestone, acceptRejectMilestone, sentMilestoneRequest, checkMilestoneRequest, getExpertJobDetails, getUserProfile, downloadApp, deepLink, getExpertByFilterSubLabel, logOut, chatFileUpload, getExpertCompletedJobs, add_availability, edit_availability, get_available_slots, userBookSlot, getExpertScheduleSlot, convertIntoMilestone, updateJobMilestone, getWalletAmount, checkWalletAmount, debitWalletAmount, generateUniqueId, getTokenVariable, completeJob, getExpertEarningPdf, getWalletPdf, getExpertAllEarningPdf, getCustomerMilestoneCharge,  getNdaPrice,  userChatStatus, getActiveStatus};
