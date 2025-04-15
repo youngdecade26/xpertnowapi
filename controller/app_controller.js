@@ -4828,12 +4828,11 @@ const getExpertEarningPdf = async (request, response) => {
         const sql = `SELECT em.milestone_id, em.total_amount, em.expert_id, em.commission_percentage, 
             em.admin_commission_amount, em.expert_earning, em.expert_type, em.gst_amt, em.gst_per, 
             em.net_expert_earning, em.tds_per, em.tds_amt, em.tcs_per, em.tcs_amt, em.platform_fees, 
-            em.platform_fees_gst_amt, em.grand_total_expert_earning, em.createtime, em.user_id, mm.milestone_number, um.name, um.email, um.address, um.city, cm.city_name, umm.name AS user_name, umm.email AS user_email, umm.address AS user_address, umm.city AS user_city, cmm.city_name AS user_city_name	 
+            em.platform_fees_gst_amt, em.grand_total_expert_earning, em.createtime, em.user_id, mm.milestone_number, um.name, um.email, um.address, um.city, cm.city_name, umm.name AS user_name, umm.email AS user_email, umm.address AS user_address, umm.city AS user_city	 
             FROM expert_earning_master em 
             JOIN milestone_master mm ON em.milestone_id = mm.milestone_id 
             JOIN user_master um ON em.expert_id = um.user_id 
             JOIN user_master umm ON em.user_id = umm.user_id
-            JOIN city_master cmm ON umm.city = cmm.city_id
             JOIN city_master cm ON um.city = cm.city_id
             WHERE em.type = 0 AND em.expert_earning_id = ? AND em.delete_flag = 0`;
 
@@ -4879,7 +4878,7 @@ const getExpertEarningPdf = async (request, response) => {
                 city_name: info.city_name,
                 user_name : info.user_name,
                 user_city: info.user_city,
-                user_city_name : info.user_city_name,
+                // user_city_name : info.user_city_name,
                 user_email: info.user_email,
                 user_address: info.user_address
 
@@ -5016,7 +5015,7 @@ async function generateInvoicePdf(invoiceData) {
           .text('Client:')
           .font('Helvetica')
           .text(invoiceData.user_name)
-          .text(`${invoiceData.user_address}, ${invoiceData.user_city_name}`)
+          .text(`${invoiceData.user_address},`)
           .text(invoiceData.user_email)
           .moveDown(1);
   
