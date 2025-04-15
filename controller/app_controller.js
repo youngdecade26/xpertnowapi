@@ -4857,6 +4857,13 @@ const getExpertEarningPdf = async (request, response) => {
             }
 
             let earning_data;
+            let address ;
+            if(info.user_address == null ){
+                address = ' '
+            }
+            else{
+                address  = info.user_address
+            }
             earning_data = {
                 total_amount: info.total_amount,
                 expert_earning: info.expert_earning,
@@ -4880,7 +4887,7 @@ const getExpertEarningPdf = async (request, response) => {
                 user_city: info.user_city,
                 // user_city_name : info.user_city_name,
                 user_email: info.user_email,
-                user_address: info.user_address
+                user_address: address
 
             }
             try {
@@ -4958,7 +4965,6 @@ function generateUniqueFilename(prefix = 'invoice') {
 //         }
 //       });
 const { PassThrough } = require('stream');
-
 async function generateInvoicePdf(invoiceData) {
   return new Promise((resolve, reject) => {
     const fileName = generateUniqueFilename();
