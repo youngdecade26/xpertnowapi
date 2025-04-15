@@ -4908,7 +4908,6 @@ const getExpertEarningPdf = async (request, response) => {
 // generate pdf 
 const AWS = require('aws-sdk');
 const fs = require('fs');
-const axios = require('axios');
 const PDFDocument = require('pdfkit');
 const path = require('path');
 
@@ -4928,36 +4927,64 @@ function generateUniqueFilename(prefix = 'invoice') {
   return `${prefix}-${timestamp}-${random}.pdf`;
 }
 
+// // ... (same AWS & imports as before)
+// async function generateInvoicePdf(invoiceData) {
+//     return new Promise(async (resolve, reject) => {
+//       const fileName = generateUniqueFilename();
+  
+//       const doc = new PDFDocument({ size: 'A4', margin: 50 });
+//       const buffers = [];
+  
+//       doc.on('data', buffers.push.bind(buffers));
+//       doc.on('end', async () => {
+//         const pdfBuffer = Buffer.concat(buffers);
+  
+//         const s3Key = `uploads/${fileName}`;
+//         const uploadParams = {
+//           Bucket: BUCKET_NAME,
+//           Key: s3Key,
+//           Body: pdfBuffer,
+//           ContentType: 'application/pdf',
+//           ACL: 'public-read',
+//         };
+  
+//         try {
+//           await s3.upload(uploadParams).promise();
+//           resolve(`${BASE_S3_URL}${fileName}`);
+//         } catch (err) {
+//           reject(err);
+//         }
+//       });
+const { PassThrough } = require('stream');
 
-
-// ... (same AWS & imports as before)
 async function generateInvoicePdf(invoiceData) {
-    return new Promise(async (resolve, reject) => {
-      const fileName = generateUniqueFilename();
-  
-      const doc = new PDFDocument({ size: 'A4', margin: 50 });
-      const buffers = [];
-  
-      doc.on('data', buffers.push.bind(buffers));
-      doc.on('end', async () => {
-        const pdfBuffer = Buffer.concat(buffers);
-  
-        const s3Key = `uploads/${fileName}`;
-        const uploadParams = {
-          Bucket: BUCKET_NAME,
-          Key: s3Key,
-          Body: pdfBuffer,
-          ContentType: 'application/pdf',
-          ACL: 'public-read',
-        };
-  
-        try {
-          await s3.upload(uploadParams).promise();
-          resolve(`${BASE_S3_URL}${fileName}`);
-        } catch (err) {
-          reject(err);
-        }
-      });
+  return new Promise((resolve, reject) => {
+    const fileName = generateUniqueFilename();
+    const s3Key = `uploads/${fileName}`;
+
+    const doc = new PDFDocument({ size: 'A4', margin: 50 });
+    const passThroughStream = new PassThrough();
+
+    // Prepare S3 upload as stream
+    const uploadParams = {
+      Bucket: BUCKET_NAME,
+      Key: s3Key,
+      Body: passThroughStream,
+      ContentType: 'application/pdf',
+      ACL: 'public-read',
+    };
+
+    s3.upload(uploadParams, (err, data) => {
+      if (err) {
+        console.error('S3 Upload Error:', err);
+        return reject(err);
+      }
+      console.log('PDF uploaded successfully:', data.Location);
+      return resolve(`${BASE_S3_URL}${fileName}`);
+    });
+
+    // Pipe the PDF doc to S3 upload stream
+    doc.pipe(passThroughStream);
   
       try {
         // const imageUrl = 'https://xpertnowbucket.s3.ap-south-1.amazonaws.com/uploads/1743577170167-xpertlog.png';
