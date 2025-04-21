@@ -5687,8 +5687,8 @@ const initiatePayment = (req, res) => {
   const udf3 = '';
   const udf4 = '';
   const udf5 = '';
-  const surl = 'https://youngdecade.org/2024/xpert/server/payment_success';
-  const furl = 'https://youngdecade.org/2024/xpert/server/payment_failure';
+  const surl = `https://zqd422dn6n.ap-south-1.awsapprunner.com/payment_success?transaction_id=${txnid}`;
+  const furl = 'https://zqd422dn6n.ap-south-1.awsapprunner.com/payment_failure';
   
   // Correct hash string format as per PayU's requirements
   const hashString = `${key}|${txnid}|${amount}|${productinfo}|${firstname}|${email}|${udf1}|${udf2}|${udf3}|${udf4}|${udf5}||||||${salt}`;
