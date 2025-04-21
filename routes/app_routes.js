@@ -5,7 +5,7 @@ const { signUp_1, signUp_2, getStates, getCities, getDegree, getCategoryDetails,
 
 const {getExpertDetails,getExpertDetailsById,createJobPost,walletRecharge,getExpertByRating,getMyJobs,getJobPostDetails,chatConsultationHistory,chatJobsHistory,callConsultationHistory,callJobsHistory,getExpertByFilter,getExpertByName,walletHistory,getExpertEarning,withdrawRequest,withdrawHistory,expertCallConsultationHistory,expertCallJobsHistory,getJobPostsForExpert,getExpertEarningHistory,expertChatConsultationHistory,
 expertChatJobsHistory,getReviewsOfExpert,getExpertMyJobs,getBidsOfJobPost,hireTheExpert,createProjectCost,getSubscriptionPlans,buySubscription,
-reviewReply,rateExpert,CustomerCallHistory,ExpertCallHistory,ExpertBidJob,getExpertHomeJobs,bookMarkJob,reportOnJob,customerJobFilter,expertJobFilter,createJobCost,createJobMilestone,getJobWorkMilestone,updateMilestoneStatus,acceptRejectMilestone,sentMilestoneRequest,checkMilestoneRequest,getExpertJobDetails,getUserProfile,downloadApp,deepLink,getExpertByFilterSubLabel,logOut,chatFileUpload,getExpertCompletedJobs,add_availability,edit_availability,get_available_slots,userBookSlot,getExpertScheduleSlot,convertIntoMilestone,updateJobMilestone,getWalletAmount,checkWalletAmount,debitWalletAmount, generateUniqueId, getTokenVariable, completeJob, getExpertEarningPdf,getWalletPdf, getExpertAllEarningPdf, getCustomerMilestoneCharge, getNdaPrice,  userChatStatus, getActiveStatus } = require("../controller/app_controller");
+reviewReply,rateExpert,CustomerCallHistory,ExpertCallHistory,ExpertBidJob,getExpertHomeJobs,bookMarkJob,reportOnJob,customerJobFilter,expertJobFilter,createJobCost,createJobMilestone,getJobWorkMilestone,updateMilestoneStatus,acceptRejectMilestone,sentMilestoneRequest,checkMilestoneRequest,getExpertJobDetails,getUserProfile,downloadApp,deepLink,getExpertByFilterSubLabel,logOut,chatFileUpload,getExpertCompletedJobs,add_availability,edit_availability,get_available_slots,userBookSlot,getExpertScheduleSlot,convertIntoMilestone,updateJobMilestone,getWalletAmount,checkWalletAmount,debitWalletAmount, generateUniqueId, getTokenVariable, completeJob, getExpertEarningPdf,getWalletPdf, getExpertAllEarningPdf, getCustomerMilestoneCharge, getNdaPrice,  userChatStatus, getActiveStatus, paymentFailure, paymentSuccess, initiatePayment, getSubscriptionStatus, paymentHideShow  } = require("../controller/app_controller");
 
 const {generateVideocallToken,VideoVoiceCallStart,VideoVoiceCallJoin,generateTokenByChannelName,VideoVoiceCallEnd,VideoVoiceCallReject,generatecallResourceId,startRecording,endRecording,getRecordingDetails,checkRecordingStatus, createSubscription, createPayuPlan} = require('../controller/call_controller');
 const router = express.Router();
@@ -501,6 +501,18 @@ router.get('/get_nda_price', async (req, res, next) => {
 router.post('/user_chat_status', upload.none() , userChatStatus);
 
 router.get('/get_active_status', upload.none(), getActiveStatus);
+
+router.get('/initiate_payment', upload.none(), initiatePayment);
+
+router.post('/payment_success', upload.none(), paymentSuccess);
+
+router.get('/payment_failure', upload.none(), paymentFailure);
+
+router.get('/get_subscription_status',  upload.none(), getSubscriptionStatus);
+
+router.get('/payment_hide_show', upload.none(), paymentHideShow);
+
+
 
 
 
