@@ -4858,12 +4858,12 @@ const getExpertEarningPdf = async (request, response) => {
             }
 
             let earning_data;
-            let address ;
+            let customer_address = ''; 
             if(info.user_address == null ){
-                address = ' '
+                customer_address  = ''
             }
             else{
-                address  = info.user_address
+                customer_address = info.user_address
             }
             earning_data = {
                 total_amount: info.total_amount,
@@ -4888,7 +4888,7 @@ const getExpertEarningPdf = async (request, response) => {
                 user_city: info.user_city,
                 // user_city_name : info.user_city_name,
                 user_email: info.user_email,
-                user_address: address
+                user_address: customer_address
 
             }
             try {
