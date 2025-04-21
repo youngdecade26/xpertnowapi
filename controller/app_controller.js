@@ -5368,7 +5368,6 @@ const generateExpertAllEarningPdf = async (invoiceData, type_label) => {
 
 
   // get customer milestone charge
-
   const getCustomerMilestoneCharge = async (request, response) => {
     const { milestone_id } = request.query;
     try {
@@ -5652,9 +5651,232 @@ const getActiveStatus = async (request, response) => {
 
 
 
+// payU payment integration
+const crypto = require('crypto');
+const key = 'JrzqFr';
+const salt = '3qjFQW3C5c2b1eZquRYJXLDgBB0qvpE4';
+const PAYU_BASE_URL = 'https://secure.payu.in/_payment';
+
+const initiatePayment = (req, res) => {
+  const { amount, user_id  } = req.query;
+//   firstname, email, phone 
+
+  if (!amount) {
+    return res.status(200).send('Missing amount');
+  }
+  if(!user_id ){
+    return res.status(200).send('Please send data ')
+  } 
+  const checkUser = 'SELECT email, mobile, name, active_flag FROM user_master WHERE user_id = ? AND delete_flag = 0';
+  connection.query(checkUser, [ user_id], async( err, result) =>{
+    if(err){
+        return res.status(200).send('Internal server error');
+    }
+    if( result[0].active_flag == 0){
+        return res.status(200).send('Account deactivated')
+    }
+    let data = result[0];
+ 
+  const txnid = crypto.randomBytes(6).toString('hex'); // 12-character alphanumeric ID
+  const productinfo = 'Test Product';
+  const firstname = data.name;
+  const email = data.email;
+  const phone = data.mobile;
+  const udf1 = '';
+  const udf2 = '';
+  const udf3 = '';
+  const udf4 = '';
+  const udf5 = '';
+  const surl = 'https://youngdecade.org/2024/xpert/server/payment_success';
+  const furl = 'https://youngdecade.org/2024/xpert/server/payment_failure';
+  
+  // Correct hash string format as per PayU's requirements
+  const hashString = `${key}|${txnid}|${amount}|${productinfo}|${firstname}|${email}|${udf1}|${udf2}|${udf3}|${udf4}|${udf5}||||||${salt}`;
+  const hash = crypto.createHash('sha512').update(hashString).digest('hex');
+
+  
+  const htmlForm = `
+    <!DOCTYPE html>
+    <html>
+      <head><title>Redirecting to PayU</title></head>
+      <body onload="document.forms[0].submit();">
+        <form action="${PAYU_BASE_URL}" method="post">
+          <input type="hidden" name="key" value="${key}" />
+          <input type="hidden" name="txnid" value="${txnid}" />
+          <input type="hidden" name="amount" value="${amount}" />
+          <input type="hidden" name="productinfo" value="${productinfo}" />
+          <input type="hidden" name="firstname" value="${firstname}" />
+          <input type="hidden" name="email" value="${email}" />
+          <input type="hidden" name="phone" value="${phone}" />
+             <input type="hidden" name="user_id" value="${user_id}" />  <!-- Pass user_id here -->
+          <input type="hidden" name="surl" value="${surl}" />
+          <input type="hidden" name="furl" value="${furl}" />
+          <input type="hidden" name="hash" value="${hash}" />
+          <input type="hidden" name="service_provider" value="payu_paisa" />
+          <p>Redirecting to PayU...</p>
+        </form>
+      </body>
+    </html>
+  `;
+  res.setHeader('Content-Type', 'text/html');
+  res.send(htmlForm);
+
+})
+}
+
+
+
+// Payment success API
+const verifyHash = (body) => {
+    const {
+      key, txnid, amount, productinfo,
+      firstname, email, status, hash, user_id
+    } = body;
+  
+    // Hash sequence in reverse (as per PayU docs)
+    const hashSequence = `${salt}|${status}|||||||||||${email}|${firstname}|${productinfo}|${amount}|${txnid}|${key}`;
+    const calculatedHash = crypto.createHash('sha512').update(hashSequence).digest('hex');
+    return hash === calculatedHash;
+  };
+  
+
+  
+// Payment success api ...
+const paymentSuccess = (req, res) => {
+  const body = req.body;
+
+  // Step 1: Verify the hash
+  if (!verifyHash(body)) {
+    return res.status(400).send('Hash verification failed');
+  }
+
+  // Step 2: Extract data
+  const { txnid, status, amount, email, user_id } = body;
+
+  // Step 3: Check if payment was successful
+  if (status.toLowerCase() !== 'success') {
+    return res.status(400).send('Payment failed or incomplete');
+  }
+
+  // Step 4: Send immediate response to user
+  res.send({
+    message: 'Payment Successful!',
+    txnid,
+    status,
+  });
+};
+
+// Payment failure API
+const paymentFailure = (req, res) => {
+  const body = req.query;
+  return res.send('Payment Failed. Please try again.');
+};
+  
+
+
+// get subscription status
+const getSubscriptionStatus = async (request, response) => {
+    const { user_id } = request.query;
+ 
+    try {
+      if (!user_id) {
+        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'user_id' });
+      }
+  
+      const checkUser = 'SELECT user_id, active_flag FROM user_master WHERE user_id = ? AND delete_flag = 0';
+      connection.query(checkUser, [user_id], (err, userRes) => {
+        if (err) {
+          return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err.message });
+        }
+  
+        if (userRes.length === 0) {
+          return response.status(200).json({ success: false, msg: languageMessage.msgUserNotFound });
+        }
+  
+        if (userRes[0].active_flag === 0) {
+          return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
+        }
+  
+        const sql = `
+          SELECT status, end_date 
+          FROM expert_subscription_master 
+          WHERE expert_id = ? AND delete_flag = 0 
+          ORDER BY end_date DESC LIMIT 1`;
+  
+        connection.query(sql, [user_id], (subErr, subRes) => {
+          if (subErr) {
+            return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: subErr.message });
+          }
+  
+          if (subRes.length === 0) {
+            return response.status(200).json({ success: true, subscription_status: 3, msg: 'No subscription found' }); // 3 = No subscription
+          }
+  
+          const subscription = subRes[0];
+          const currentDate = new Date();
+          const endDate = new Date(subscription.end_date);
+          let status_label = '1 = Active, 2 = Expired'
+  
+          if (currentDate <= endDate) {
+            return response.status(200).json({ success: true, msg: languageMessage.dataFound, subscription_status: 1, status_label : status_label }); // 1 = Active
+          } else {
+            return response.status(200).json({ success: true,  msg: languageMessage.dataFound, subscription_status: 2, status_label: status_label }); // 2 = Expired
+          }
+        });
+      });
+    } catch (error) {
+      return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: error.message });
+    }
+  };
+  
+// Payment hide and show
+const paymentHideShow = async( request, response) =>{ 
+    const {user_id} = request.query;
+    
+    try{
+    if(!user_id){
+        return response.status(200).json({success: false, msg: languageMessage.msg_empty_param, key:'user_id'});
+    }
+    const checkUser = 'SELECT user_id, active_flag FROM user_master WHERE user_id = ? AND delete_flag = 0';
+    connection.query(checkUser, [user_id], (err, userRes) => {
+      if (err) {
+        return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err.message });
+      }
+
+      if (userRes.length == 0) {
+        return response.status(200).json({ success: false, msg: languageMessage.msgUserNotFound });
+      }
+
+      if (userRes[0].active_flag == 0) {
+        return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
+      }
+
+        const sql = 'SELECT status FROM payment_master WHERE payment_id = 1 AND  delete_flag = 0';
+        connection.query(sql, async( err, res) => {
+             if(err){
+                return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err.message});
+             }
+             if(res.length ==  0){
+                return response.status(200).json({ success: false, msg: languageMessage.dataNotFound});
+             }
+             let status = res[0].status;
+             let status_label = '0 = hide, 1 = show';
+             return response.status(200).json({ success: true, msg: languageMessage.dataFound, status, status_label})
+        });
+    })
+    }
+    catch(error){
+        return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: error.message});
+    }
+} 
 
 
 
 
 
-module.exports = { getExpertDetails, getExpertDetailsById, getExpertByRating, getMyJobs, getJobPostDetails, createJobPost, chatConsultationHistory, chatJobsHistory, callConsultationHistory, callJobsHistory, getExpertByFilter, walletRecharge, walletHistory, getExpertByName, getExpertEarning, withdrawRequest, withdrawHistory, expertCallConsultationHistory, expertCallJobsHistory, getJobPostsForExpert, getExpertEarningHistory, expertChatConsultationHistory, expertChatJobsHistory, getReviewsOfExpert, getExpertMyJobs, getBidsOfJobPost, hireTheExpert, createProjectCost, getSubscriptionPlans, buySubscription, reviewReply, rateExpert, ExpertBidJob, CustomerCallHistory, ExpertCallHistory, getExpertHomeJobs, bookMarkJob, reportOnJob, customerJobFilter, expertJobFilter, createJobCost, createJobMilestone, getJobWorkMilestone, acceptRejectMilestone, sentMilestoneRequest, checkMilestoneRequest, getExpertJobDetails, getUserProfile, downloadApp, deepLink, getExpertByFilterSubLabel, logOut, chatFileUpload, getExpertCompletedJobs, add_availability, edit_availability, get_available_slots, userBookSlot, getExpertScheduleSlot, convertIntoMilestone, updateJobMilestone, getWalletAmount, checkWalletAmount, debitWalletAmount, generateUniqueId, getTokenVariable, completeJob, getExpertEarningPdf, getWalletPdf, getExpertAllEarningPdf, getCustomerMilestoneCharge,  getNdaPrice,  userChatStatus, getActiveStatus};
+
+
+
+
+
+module.exports = { getExpertDetails, getExpertDetailsById, getExpertByRating, getMyJobs, getJobPostDetails, createJobPost, chatConsultationHistory, chatJobsHistory, callConsultationHistory, callJobsHistory, getExpertByFilter, walletRecharge, walletHistory, getExpertByName, getExpertEarning, withdrawRequest, withdrawHistory, expertCallConsultationHistory, expertCallJobsHistory, getJobPostsForExpert, getExpertEarningHistory, expertChatConsultationHistory, expertChatJobsHistory, getReviewsOfExpert, getExpertMyJobs, getBidsOfJobPost, hireTheExpert, createProjectCost, getSubscriptionPlans, buySubscription, reviewReply, rateExpert, ExpertBidJob, CustomerCallHistory, ExpertCallHistory, getExpertHomeJobs, bookMarkJob, reportOnJob, customerJobFilter, expertJobFilter, createJobCost, createJobMilestone, getJobWorkMilestone, acceptRejectMilestone, sentMilestoneRequest, checkMilestoneRequest, getExpertJobDetails, getUserProfile, downloadApp, deepLink, getExpertByFilterSubLabel, logOut, chatFileUpload, getExpertCompletedJobs, add_availability, edit_availability, get_available_slots, userBookSlot, getExpertScheduleSlot, convertIntoMilestone, updateJobMilestone, getWalletAmount, checkWalletAmount, debitWalletAmount, generateUniqueId, getTokenVariable, completeJob, getExpertEarningPdf, getWalletPdf, getExpertAllEarningPdf, getCustomerMilestoneCharge,  getNdaPrice,  userChatStatus, getActiveStatus, paymentFailure, initiatePayment, paymentSuccess, getSubscriptionStatus, paymentHideShow };

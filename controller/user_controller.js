@@ -704,7 +704,7 @@ const deleteAccount = async (request, response) => {
         return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param });
     }
     try {
-        const query1 = "SELECT mobile, active_flag FROM user_master WHERE user_id = ? AND delete_flag=0 AND user_type=1";
+        const query1 = "SELECT mobile, active_flag FROM user_master WHERE user_id = ? AND delete_flag=0";
         const values1 = [user_id];
         connection.query(query1, values1, async (err, result) => {
             if (err) {
@@ -2099,7 +2099,7 @@ const deleteExpertAccount = async (request, response) => {
         return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param });
     }
     try {
-        const query1 = "SELECT mobile, active_flag FROM user_master WHERE user_id = ? AND delete_flag=0 AND user_type=2";
+        const query1 = "SELECT mobile, active_flag FROM user_master WHERE user_id = ? AND delete_flag=0 ";
         const values1 = [user_id];
         connection.query(query1, values1, async (err, result) => {
             if (err) {
