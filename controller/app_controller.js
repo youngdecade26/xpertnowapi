@@ -4725,7 +4725,8 @@ async function getExpertEarningg(milestone_id, user_id) {
                   (type, user_id, expert_id, milestone_id, total_amount, commission_percentage, admin_commission_amount, expert_earning, expert_type, gst_per, gst_amt, net_expert_earning, tds_per, tds_amt, tcs_per, tcs_amt, platform_fees, platform_fees_gst_amt, grand_total_expert_earning, createtime, updatetime) 
                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
               `;
-                    connection.query(insert, [0, user_id, expert_id, milestone_id, received_amount, commission_percentage, admin_commission_amount, grand_total_earning, gst, 0, 0, net_amount, 0, 0, 0, 0, platform_fee_amount, net_apply_gst_amount, grand_total_earning], (err3, res3) => {
+           
+                    connection.query(insert, [0, user_id, expert_id, milestone_id, received_amount, commission_percentage, admin_commission_amount, grand_total_earning, 0, gst, net_apply_gst_amount,  net_amount, 0, 0, 0, 0, platform_fee_amount, platform_fee_amount, grand_total_earning], (err3, res3) => {
                         if (err3) {
                             reject(err3);
                         }
