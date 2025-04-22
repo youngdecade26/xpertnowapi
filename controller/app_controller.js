@@ -2166,6 +2166,25 @@ const getExpertMyJobs = (request, response) => {
             if (result[0]?.active_flag === 0) {
                 return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
             }
+                 const checkSubscription = `SELECT esm.createtime, sm.duration FROM expert_subscription_master esm JOIN subscription_master sm ON esm.subscription_id = sm.subscription_id WHERE esm.expert_id = ? AND sm.delete_flag = 0 AND esm.delete_flag = 0 ORDER BY esm.createtime DESC LIMIT 1`;
+
+            connection.query(checkSubscription, [user_id], async(subErr, subRes) => {
+                if (subErr) {
+                    return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: subErr.message });
+                }
+
+                if (subRes.length > 0) {
+                    const { createtime, duration } = subRes[0];
+
+                    const expiryDate = new Date(createtime);
+                    expiryDate.setDate(expiryDate.getDate() + duration);
+
+                    const now = new Date();
+                    if (now > expiryDate) {
+                        return response.status(200).json({ success: false, msg: languageMessage.SubscriptionExpired });
+                    }
+                }
+
             const query2 = `
                 SELECT job_post_id, user_id,assign_expert_id, title, category, sub_category, max_price, min_price, duration, status, updatetime
                 ,createtime FROM job_post_master 
@@ -2222,6 +2241,7 @@ const getExpertMyJobs = (request, response) => {
                 return response.status(200).json({ success: true, msg: languageMessage.dataFound, jobPostDetails: jobPostDetails });
             });
         });
+})
     } catch (err) {
         return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
     }
@@ -2762,6 +2782,30 @@ const getExpertHomeJobs = (request, response) => {
                 return response.status(200).json({ success: false, msg: languageMessage.ExpertRejected });
             }
 
+            const checkSubscription = `
+SELECT esm.createtime, sm.duration 
+FROM expert_subscription_master esm 
+JOIN subscription_master sm ON esm.subscription_id = sm.subscription_id 
+WHERE esm.expert_id = ? AND sm.delete_flag = 0 AND esm.delete_flag = 0
+ORDER BY esm.createtime DESC LIMIT 1
+`;
+
+            connection.query(checkSubscription, [user_id], async(subErr, subRes) => {
+                if (subErr) {
+                    return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: subErr.message });
+                }
+
+                if (subRes.length > 0) {
+                    const { createtime, duration } = subRes[0];
+
+                    const expiryDate = new Date(createtime);
+                    expiryDate.setDate(expiryDate.getDate() + duration);
+
+                    const now = new Date();
+                    if (now > expiryDate) {
+                        return response.status(200).json({ success: false, msg: languageMessage.SubscriptionExpired });
+                    }
+                }
             const jobPostDetails = await getHomeExpertJob(user_id);
             const completedJobDetails = await getHomeExpertCompletedJob(user_id);
             const userjobPost = await getHomeExpertUserJob(user_id);
@@ -2769,6 +2813,7 @@ const getExpertHomeJobs = (request, response) => {
             return response.status(200).json({ success: true, msg: languageMessage.dataFound, jobPostDetails: jobPostDetails, userjobPost: userjobPost, userjobPostCount: userjobPostCount, completedJobDetails: completedJobDetails })
 
         });
+        })
     } catch (err) {
         return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
     }
