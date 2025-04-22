@@ -108,10 +108,26 @@ const getExpertByRating = async (request, response) => {
             await queryAsync(updateTimeQuery, [user_id]);
         }
         // Fetch top-rated experts
+        // const expertQuery = `
+        //     SELECT user_id as expert_id
+        //     FROM user_master 
+        //     WHERE delete_flag = 0 AND user_type = 2 AND active_flag = 1 AND profile_completed = 1 and expert_status=1`;
         const expertQuery = `
-            SELECT user_id as expert_id
-            FROM user_master 
-            WHERE delete_flag = 0 AND user_type = 2 AND active_flag = 1 AND profile_completed = 1 and expert_status=1`;
+        SELECT um.user_id AS expert_id
+        FROM user_master um
+        JOIN expert_subscription_master esm ON um.user_id = esm.expert_id
+        JOIN subscription_master sm ON esm.subscription_id = sm.subscription_id
+        WHERE 
+            um.delete_flag = 0 
+            AND um.user_type = 2 
+            AND um.active_flag = 1 
+            AND um.profile_completed = 1 
+            AND um.expert_status = 1
+            AND esm.delete_flag = 0
+            AND sm.delete_flag = 0
+            AND DATE_ADD(esm.createtime, INTERVAL sm.duration DAY) >= NOW()
+        GROUP BY um.user_id
+    `;
         const expertResults = await queryAsync(expertQuery);
         if (expertResults.length === 0) {
             return response.status(200).json({ success: true, msg: languageMessage.dataFound, expertDetails: 'NA' });
@@ -941,10 +957,25 @@ const getExpertByFilter = async (request, response) => {
                 return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
             }
             // Prepare query for experts
-            let query2 = `
-                SELECT user_id as expert_id 
-                FROM user_master 
-                WHERE delete_flag = 0 AND active_flag = 1 AND user_type = 2 and expert_status=1`;
+            // let query2 = `
+            //     SELECT user_id as expert_id 
+            //     FROM user_master 
+            //     WHERE delete_flag = 0 AND active_flag = 1 AND user_type = 2 and expert_status=1`;
+            let query2  = `
+            SELECT um.user_id AS expert_id
+            FROM user_master um
+            JOIN expert_subscription_master esm ON um.user_id = esm.expert_id
+            JOIN subscription_master sm ON esm.subscription_id = sm.subscription_id
+            WHERE 
+                um.delete_flag = 0 
+                AND um.user_type = 2 
+                AND um.active_flag = 1 
+                AND um.expert_status = 1
+                AND esm.delete_flag = 0
+                AND sm.delete_flag = 0
+                AND DATE_ADD(esm.createtime, INTERVAL sm.duration DAY) >= NOW()
+            GROUP BY um.user_id
+        `;
             let value2 = [];
             if (state) {
                 query2 += " AND state = ?";
@@ -3735,7 +3766,23 @@ const getExpertByFilterSubLabel = async (request, response) => {
             }
 
             // Prepare query for experts
-            let query2 = `SELECT user_id as expert_id FROM user_master WHERE delete_flag = 0 AND active_flag = 1 AND user_type = 2 and expert_status=1`;
+            // let query2 = `SELECT user_id as expert_id FROM user_master WHERE delete_flag = 0 AND active_flag = 1 AND user_type = 2 and expert_status=1`;
+              let query2  = `
+            SELECT um.user_id AS expert_id
+            FROM user_master um
+            JOIN expert_subscription_master esm ON um.user_id = esm.expert_id
+            JOIN subscription_master sm ON esm.subscription_id = sm.subscription_id
+            WHERE 
+                um.delete_flag = 0 
+                AND um.user_type = 2 
+                AND um.active_flag = 1 
+                AND um.expert_status = 1
+                AND esm.delete_flag = 0
+                AND sm.delete_flag = 0
+                AND um.delete_flag = 0
+                AND DATE_ADD(esm.createtime, INTERVAL sm.duration DAY) >= NOW()
+            GROUP BY um.user_id
+        `;
             let value2 = [];
             if (state) {
                 query2 += " AND state = ?";
