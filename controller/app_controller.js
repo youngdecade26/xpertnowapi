@@ -2229,13 +2229,17 @@ const getExpertMyJobs = (request, response) => {
 //end
 const getSubscriptionPlans = (request, response) => {
     let { user_id } = request.query;
+
     if (!user_id) {
         return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param });
     }
+
     try {
-        const query1 = "SELECT mobile, active_flag FROM user_master WHERE user_id = ? AND delete_flag = 0 AND user_type=2";
-        const values1 = [user_id];
-        connection.query(query1, values1, async (err, result) => {
+        const userQuery = `
+            SELECT mobile, active_flag FROM user_master 
+            WHERE user_id = ? AND delete_flag = 0 AND user_type = 2
+        `;
+        connection.query(userQuery, [user_id], (err, result) => {
             if (err) {
                 return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
             }
@@ -2245,22 +2249,68 @@ const getSubscriptionPlans = (request, response) => {
             if (result[0]?.active_flag === 0) {
                 return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
             }
-            const query2 = `SELECT subscription_id, amount, description, duration, plan_type,createtime FROM subscription_master WHERE delete_flag = 0 order by plan_type asc`;
-            connection.query(query2, async (err, subscriptions) => {
-                if (err) {
-                    return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
-                }
-                if (subscriptions.length === 0) {
-                    return response.status(200).json({ success: false, msg: languageMessage.dataNotFound, subscriptionPlanDetails: 'NA' });
+
+            // Check if the free subscription was already used and expired
+            const checkFreeSubscription = `
+                SELECT esm.createtime, sm.duration 
+                FROM expert_subscription_master esm 
+                JOIN subscription_master sm ON esm.subscription_id = sm.subscription_id 
+                WHERE esm.expert_id = ? AND sm.plan_type = 0 AND esm.delete_flag = 0
+                ORDER BY esm.createtime DESC LIMIT 1
+            `;
+
+            connection.query(checkFreeSubscription, [user_id], (freeErr, freeResult) => {
+                let excludeFree = false;
+
+                if (freeErr) {
+                    return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: freeErr.message });
                 }
 
-                return response.status(200).json({ success: true, msg: languageMessage.dataFound, subscriptionPlanDetails: subscriptions, plan_type_label: '0=free, 1=primium,2 standard' });
+                if (freeResult.length > 0) {
+                    const { createtime, duration } = freeResult[0];
+                    const expiryDate = new Date(createtime);
+                    expiryDate.setDate(expiryDate.getDate() + duration);
+
+                    if (new Date() > expiryDate) {
+                        excludeFree = true; // free plan expired, so exclude it
+                    }
+                }
+
+                // Now fetch all subscription plans, optionally excluding free one
+                const planQuery = excludeFree
+                    ? `SELECT subscription_id, amount, description, duration, plan_type, createtime 
+                       FROM subscription_master 
+                       WHERE delete_flag = 0 AND plan_type != 0 
+                       ORDER BY plan_type ASC`
+                    : `SELECT subscription_id, amount, description, duration, plan_type, createtime 
+                       FROM subscription_master 
+                       WHERE delete_flag = 0 
+                       ORDER BY plan_type ASC`;
+
+                connection.query(planQuery, (planErr, plans) => {
+                    if (planErr) {
+                        return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: planErr.message });
+                    }
+                    if (plans.length === 0) {
+                        return response.status(200).json({ success: false, msg: languageMessage.dataNotFound, subscriptionPlanDetails: 'NA' });
+                    }
+
+                    return response.status(200).json({
+                        success: true,
+                        msg: languageMessage.dataFound,
+                        subscriptionPlanDetails: plans,
+                        plan_type_label: '0=free, 1=premium, 2=standard',
+                    });
+                });
             });
         });
     } catch (err) {
         return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
     }
-}
+};
+
+
+
 const buySubscription = (request, response) => {
     let { user_id, subscription_id } = request.body;
     if (!user_id || !subscription_id) {
@@ -5832,26 +5882,9 @@ const getSubscriptionStatus = async (request, response) => {
   
 // Payment hide and show
 const paymentHideShow = async( request, response) =>{ 
-    const {user_id} = request.query;
-    
+  
     try{
-    if(!user_id){
-        return response.status(200).json({success: false, msg: languageMessage.msg_empty_param, key:'user_id'});
-    }
-    const checkUser = 'SELECT user_id, active_flag FROM user_master WHERE user_id = ? AND delete_flag = 0';
-    connection.query(checkUser, [user_id], (err, userRes) => {
-      if (err) {
-        return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err.message });
-      }
-
-      if (userRes.length == 0) {
-        return response.status(200).json({ success: false, msg: languageMessage.msgUserNotFound });
-      }
-
-      if (userRes[0].active_flag == 0) {
-        return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
-      }
-
+   
         const sql = 'SELECT status FROM payment_master WHERE payment_id = 1 AND  delete_flag = 0';
         connection.query(sql, async( err, res) => {
              if(err){
@@ -5864,8 +5897,7 @@ const paymentHideShow = async( request, response) =>{
              let status_label = '0 = hide, 1 = show';
              return response.status(200).json({ success: true, msg: languageMessage.dataFound, status, status_label})
         });
-    })
-    }
+        }
     catch(error){
         return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: error.message});
     }
