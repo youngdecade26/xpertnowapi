@@ -2312,9 +2312,12 @@ const getSubscriptionPlans = (request, response) => {
 
 
 const buySubscription = (request, response) => {
-    let { user_id, subscription_id } = request.body;
+    let { user_id, subscription_id,  transaction_id } = request.body;
     if (!user_id || !subscription_id) {
         return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param });
+    }
+    if (!transaction_id ) {
+        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key:'transaction_id' });
     }
     try {
         const query1 = "SELECT mobile, active_flag FROM user_master WHERE user_id = ? AND delete_flag = 0 AND user_type=2";
@@ -2342,7 +2345,7 @@ const buySubscription = (request, response) => {
                 }
                 let startdate = new Date();
                 let enddate = new Date();
-                const transaction_id = '123456';
+                // const transaction_id = '123456';
                 const status = 1;
                 const amount = subscriptions[0].amount;
                 const duration = subscriptions[0].duration;
