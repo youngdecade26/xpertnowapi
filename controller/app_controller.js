@@ -4048,7 +4048,7 @@ const add_availability = (req, res) => {
             });
         });
         Promise.all(queries)
-        Promise.all(queries)
+        // Promise.all(queries)
             .then(async () => {
                 try {
                     // const updateAvailabilityStatus = `UPDATE user_master SET availability_status = 1,updatetime=NOW() WHERE user_id = ?`;
@@ -4091,6 +4091,7 @@ function insertSlots(availabilityId, body, day, resolve, reject) {
     });
     Promise.all(slotQueries).then(resolve).catch(reject);
 }
+
 // EDIT Availability
 const edit_availability = (req, res) => {
     const { user_id, day, status } = req.body;
