@@ -2827,7 +2827,6 @@ ORDER BY esm.createtime DESC LIMIT 1
 
                 if (subRes.length > 0) {
                     const { createtime, duration } = subRes[0];
-
                     const expiryDate = new Date(createtime);
                     expiryDate.setDate(expiryDate.getDate() + duration);
 
