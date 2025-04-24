@@ -5923,7 +5923,7 @@ const paymentFailure = (req, res) => {
 // get subscription status
 const getSubscriptionStatus = async (request, response) => {
     const { user_id } = request.query;
- 
+  
     try {
       if (!user_id) {
         return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'user_id' });
@@ -5936,20 +5936,23 @@ const getSubscriptionStatus = async (request, response) => {
         }
   
         if (userRes.length === 0) {
-          return response.status(200).json({ success: false, msg: languageMessage.msgUserNotFound });
+          return response.status(200).json({ success: false, msg: languageMessage.UserNotFound });
         }
   
         if (userRes[0].active_flag === 0) {
           return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
         }
   
-        const sql = `
-          SELECT status, end_date 
-          FROM expert_subscription_master 
-          WHERE expert_id = ? AND delete_flag = 0 
-          ORDER BY end_date DESC LIMIT 1`;
+        const checkSubscription = `
+          SELECT esm.createtime, sm.duration 
+          FROM expert_subscription_master esm 
+          JOIN subscription_master sm ON esm.subscription_id = sm.subscription_id 
+          WHERE esm.expert_id = ? AND sm.delete_flag = 0 AND esm.delete_flag = 0
+          ORDER BY esm.createtime DESC 
+          LIMIT 1
+        `;
   
-        connection.query(sql, [user_id], (subErr, subRes) => {
+        connection.query(checkSubscription, [user_id], (subErr, subRes) => {
           if (subErr) {
             return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: subErr.message });
           }
@@ -5958,15 +5961,17 @@ const getSubscriptionStatus = async (request, response) => {
             return response.status(200).json({ success: true, subscription_status: 3, msg: 'No subscription found' }); // 3 = No subscription
           }
   
-          const subscription = subRes[0];
-          const currentDate = new Date();
-          const endDate = new Date(subscription.end_date);
-          let status_label = '1 = Active, 2 = Expired'
+          const { createtime, duration } = subRes[0];
+          const expiryDate = new Date(createtime);
+          expiryDate.setDate(expiryDate.getDate() + duration);
   
-          if (currentDate <= endDate) {
-            return response.status(200).json({ success: true, msg: languageMessage.dataFound, subscription_status: 1, status_label : status_label }); // 1 = Active
+          const now = new Date();
+          const status_label = '1 = Active, 2 = Expired';
+  
+          if (now < expiryDate) {
+            return response.status(200).json({ success: true,  msg: languageMessage.dataFound, subscription_status: 1,  status_label }); // Active
           } else {
-            return response.status(200).json({ success: true,  msg: languageMessage.dataFound, subscription_status: 2, status_label: status_label }); // 2 = Expired
+            return response.status(200).json({ success: true, msg: languageMessage.dataFound,  subscription_status: 2, status_label }); // Expired
           }
         });
       });
@@ -5974,6 +5979,7 @@ const getSubscriptionStatus = async (request, response) => {
       return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: error.message });
     }
   };
+  
   
 // Payment hide and show
 const paymentHideShow = async( request, response) =>{ 
