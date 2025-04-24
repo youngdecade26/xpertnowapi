@@ -5969,10 +5969,10 @@ const getSubscriptionStatus = async (request, response) => {
           if (subRes.length === 0) {
             return response.status(200).json({ success: true, subscription_status: 3, msg: 'No subscription found' }); // 3 = No subscription
           }
-  
+
           const { createtime, duration } = subRes[0];
-          const expiryDate = new Date(createtime);
-          expiryDate.setDate(expiryDate.getDate() + duration);
+          const createdAt = new Date(createtime);
+  const expiryDate = new Date(createdAt.getTime() + duration * 24 * 60 * 60 * 1000); // Add full days in milliseconds
   
           const now = new Date();
           const status_label = '1 = Active, 2 = Expired';
@@ -5989,7 +5989,8 @@ const getSubscriptionStatus = async (request, response) => {
     }
   };
   
-  
+
+ 
 // Payment hide and show
 const paymentHideShow = async( request, response) =>{ 
   
