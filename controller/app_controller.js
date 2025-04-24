@@ -2318,13 +2318,13 @@ const getSubscriptionPlans = (request, response) => {
                 }
 
                 if (freeResult.length > 0) {
-                    const { createtime, duration } = freeResult[0];
-                    const expiryDate = new Date(createtime);
-                    expiryDate.setDate(expiryDate.getDate() + duration);
+                    // const { createtime, duration } = freeResult[0];
+                    // const expiryDate = new Date(createtime);
+                    // expiryDate.setDate(expiryDate.getDate() + duration);
 
-                    if (new Date() > expiryDate) {
+                    // if (new Date() > expiryDate) {
                         excludeFree = true; // free plan expired, so exclude it
-                    }
+                    // }
                 }
 
                 // Now fetch all subscription plans, optionally excluding free one
