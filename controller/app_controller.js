@@ -2820,7 +2820,6 @@ JOIN subscription_master sm ON esm.subscription_id = sm.subscription_id
 WHERE esm.expert_id = ? AND sm.delete_flag = 0 AND esm.delete_flag = 0
 ORDER BY esm.createtime DESC LIMIT 1
 `;
-
             connection.query(checkSubscription, [user_id], async(subErr, subRes) => {
                 if (subErr) {
                     return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: subErr.message });
@@ -2833,7 +2832,7 @@ ORDER BY esm.createtime DESC LIMIT 1
                     expiryDate.setDate(expiryDate.getDate() + duration);
 
                     const now = new Date();
-                    if (now > expiryDate) {
+                    if (now >= expiryDate) {
                         return response.status(200).json({ success: false, msg: languageMessage.SubscriptionExpired });
                     }
                 }
