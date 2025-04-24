@@ -4065,12 +4065,12 @@ const add_availability = (req, res) => {
                     res.status(200).json({ success: true, msg: languageMessage.AvailibilityCreated });
                 } catch (err) {
                     console.error("Error updating availability status:", err);
-                    res.status(200).json({ success: false, msg: languageMessage.internalServerError });
+                    res.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err.message });
                 }
             })
             .catch((err) => {
                 console.error("Error:", err);
-                res.status(200).json({ success: false, msg: languageMessage.internalServerError });
+                res.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err.message });
             });
     });
 };
