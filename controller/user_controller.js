@@ -661,8 +661,20 @@ const getSubExpertiseCategoryLevel = async (request, response) => {
 // Manage User Privacy
 const managePrivacy = async (request, response) => {
     let { user_id, chat_access, img_access, screenshot_access, callrecord_access } = request.body;
-    if (!user_id || !chat_access || !img_access || !screenshot_access || !callrecord_access) {
-        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param });
+    if (!user_id ) {
+        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key:'user_id' });
+    }
+    if (!chat_access ) {
+        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key:'chat_access' });
+    }
+    if ( !img_access ) {
+        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param , key:' img_access'});
+    }
+    if ( !screenshot_access ) {
+        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param , key:' screenshot_access'});
+    }
+    if ( !callrecord_access ) {
+        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param , key:'callrecord_access'});
     }
     try {
         const query1 = "SELECT mobile, active_flag FROM user_master WHERE user_id = ? AND delete_flag=0 AND user_type=1";
