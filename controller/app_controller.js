@@ -5968,7 +5968,7 @@ const getSubscriptionStatus = async (request, response) => {
           const now = new Date();
           const status_label = '1 = Active, 2 = Expired';
   
-          if (now < expiryDate) {
+          if (now > expiryDate) {
             return response.status(200).json({ success: true,  msg: languageMessage.dataFound, subscription_status: 1,  status_label }); // Active
           } else {
             return response.status(200).json({ success: true, msg: languageMessage.dataFound,  subscription_status: 2, status_label }); // Expired
