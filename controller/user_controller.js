@@ -1056,7 +1056,7 @@ const signUp_1 = async (request, response) => {
                         // Store new session
                         const insertSessionQuery = "INSERT INTO user_sessions (user_id, device_id, token) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE token = ?";
                         connection.query(insertSessionQuery, [user_id_get, device_id, token, token]);
-                        const check_device = await DeviceTokenStore_1_Signal(result[0].user_id, id, player_id);
+                        const check_device = await DeviceTokenStore_1_Signal(user_id_get, id, player_id);
                         const userDetails = await getUserDetails(result.insertId);
                         return response.status(200).json({ success: true, msg: languageMessage.userCreatedSuccess, userDataArray: userDetails, token: token });
 
