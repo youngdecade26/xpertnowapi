@@ -2825,13 +2825,23 @@ ORDER BY esm.createtime DESC LIMIT 1
                     return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: subErr.message });
                 }
 
-                if (subRes.length > 0) {
-                    const { createtime, duration } = subRes[0];
-                    const expiryDate = new Date(createtime);
-                    expiryDate.setDate(expiryDate.getDate() + duration);
+                // if (subRes.length > 0) {
+                //     const { createtime, duration } = subRes[0];
+                //     const expiryDate = new Date(createtime);
+                //     expiryDate.setDate(expiryDate.getDate() + duration);
 
+                //     const now = new Date();
+                //     if (now >= expiryDate) {
+                //         return response.status(200).json({ success: false, msg: languageMessage.SubscriptionExpired });
+                //     }
+                // }
+                if (subRes.length > 0) {
+                    const { createtime, duration } = subRes[0]; // duration is in days
+                    const createdAt = new Date(createtime);
+                    const expiryDate = new Date(createdAt.getTime() + duration * 24 * 60 * 60 * 1000); // Add full days in milliseconds
+            
                     const now = new Date();
-                    if (now >= expiryDate) {
+                    if (now > expiryDate) {
                         return response.status(200).json({ success: false, msg: languageMessage.SubscriptionExpired });
                     }
                 }
