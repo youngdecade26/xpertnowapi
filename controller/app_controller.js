@@ -3999,7 +3999,7 @@ const add_availability = (req, res) => {
     const values1 = [user_id];
     connection.query(query1, values1, async (err, result) => {
         if (err) {
-            return res.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
+            return res.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err.message });
         }
         if (result.length === 0) {
             return res.status(200).json({ success: false, msg: languageMessage.userNotFound });
