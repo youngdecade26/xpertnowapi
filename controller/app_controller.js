@@ -3999,13 +3999,13 @@ const add_availability = (req, res) => {
     const values1 = [user_id];
     connection.query(query1, values1, async (err, result) => {
         if (err) {
-            return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
+            return res.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
         }
         if (result.length === 0) {
-            return response.status(200).json({ success: false, msg: languageMessage.userNotFound });
+            return res.status(200).json({ success: false, msg: languageMessage.userNotFound });
         }
         if (result[0]?.active_flag === 0) {
-            return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
+            return res.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
         }
         const days = day.split(',').map(Number);
         const statuses = status.split(',').map(Number);
