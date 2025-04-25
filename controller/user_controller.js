@@ -72,40 +72,6 @@ sendOtp();
 
 
 
-// const http = require('https');
-// async function otpSendMessage(mobile, otp) {
-//     return new Promise((resolve, reject) => {
-// const options = {
-//   method: 'POST',
-//   hostname: 'control.msg91.com',
-//   port: null,
-//   path: `/api/v5/otp?template_id=67e253a1d6fc050fad3baff4&mobile=${mobile}&authkey=435272AT2B1NRQ67e38dbeP1&realTimeResponse=`,
-//   headers: {
-//     'Content-Type': 'application/JSON',
-//     'content-type': 'application/json'
-//   }
-// };
-
-// const req = http.request(options, function (res) {
-//   const chunks = [];
-
-//   res.on('data', function (chunk) {
-//     chunks.push(chunk);
-//   });
-
-//   res.on('end', function () {
-//     const body = Buffer.concat(chunks);
-//     console.log(body.toString());
-//   });
-// });
-
-// req.write('{\n  "Param1": "value1",\n  "Param2": "value2",\n  "Param3": "value3"\n}');
-// req.end();
-// });
-// }
-
-
-
 
 //Get content
 const getContent = async (request, response) => {
@@ -160,8 +126,15 @@ const usersignUp_1 = async (request, response) => {
     if (!mobile || !player_id || !device_type || !login_type || !device_id) {
         return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param });
     }
-    // const otp = await generateOTP(6);
+    
+if (!/^[6-9]\d{9}$/.mobile)) {
+    return response.status(200).json({ success: false, msg: languageMessage.InvalidNumber})
+  }
+   
     try {
+      
+
+
         const query1 = "SELECT user_id, active_flag, user_type FROM user_master WHERE mobile = ? AND delete_flag=0";
         const values1 = [mobile];
         connection.query(query1, values1, async (err, result) => {
@@ -173,8 +146,8 @@ const usersignUp_1 = async (request, response) => {
                 const user_id_get = result[0].user_id;
 
                 if (type == 0) {
-                    const otp = 123456;
-                    // const otp = await generate
+                    // const otp = 123456;
+                     const otp = await generateOTP(6);
                     // const otp = Math.floor(100000 + Math.random() * 900000); // Generate a random OTP
                     // let notiSendStatus;
                     // try {
@@ -218,7 +191,8 @@ const usersignUp_1 = async (request, response) => {
                 if (device_type === 'andriod') { id = 0; }
 
                 if (device_type === 'ios') { id = 1; }
-                const otp = 123456;
+                // const otp = 123456;
+                 const otp = await generateOTP(6);
                 // const otp = Math.floor(100000 + Math.random() * 900000); // Generate a random OTP
                 // let notiSendStatus;
                 // try {
@@ -323,8 +297,8 @@ const userResendOtp = async (request, response) => {
                 return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
             }
 
-            // const otp = await generateOTP(6);
-            const otp = 123456;
+            const otp = await generateOTP(6);
+            // const otp = 123456;
 
             // const mobile = result[0].mobile;
             // const otp = Math.floor(100000 + Math.random() * 900000); // Generate a random OTP
@@ -964,10 +938,13 @@ const signUp_1 = async (request, response) => {
     if (!device_id) {
         return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param });
     }
-    // const otp = await generateOTP(6);
 
 
-
+    
+    if (!/^[6-9]\d{9}$/.test(mobile)) {
+        return response.status(200).json({ success: false, msg: languageMessage.InvalidNumber });
+    }
+    
     try {
         const query1 = "SELECT user_id, active_flag, user_type FROM user_master WHERE mobile = ? AND delete_flag=0";
         const values1 = [mobile];
@@ -982,7 +959,7 @@ const signUp_1 = async (request, response) => {
 
                 const user_id_get = result[0].user_id;
                 if (type == 0) {
-                    const otp = 123456;
+                     const otp = await generateOTP(6);
                     // const otp = Math.floor(100000 + Math.random() * 900000); // Generate a random OTP
                     // let notiSendStatus;
                     // try {
@@ -1033,7 +1010,8 @@ const signUp_1 = async (request, response) => {
                 if (device_type === 'andriod') { id = 0; }
                 if (device_type === 'ios') { id = 1; }
                 if (device_type === 'web') { id = 2; }
-                const otp = 123456;
+                // const otp = 123456;
+                    const otp = await generateOTP(6);
 
                 // const otp = Math.floor(100000 + Math.random() * 900000); // Generate a random OTP
                 // let notiSendStatus;
@@ -1147,8 +1125,8 @@ const resendOtp = async (request, response) => {
             if (result[0]?.active_flag === 0) {
                 return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
             }
-            // const otp = await generateOTP(6);
-            const otp = 123456;
+            const otp = await generateOTP(6);
+            // const otp = 123456;
             // const mobile = result[0].mobile;
             // const otp = Math.floor(100000 + Math.random() * 900000); // Generate a random OTP
             // let notiSendStatus;

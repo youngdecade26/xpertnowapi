@@ -136,7 +136,8 @@ const messages = {
   NdaAmountErr:['Insufficient balance, wallet amount must be equal to nda price'],
 
   MinimumWithdrawalAmount:['Minimum withdrawal amount must be '],
-  SubscriptionExpired : ['Your subscription has expired']
+  SubscriptionExpired : ['Your subscription has expired'],
+  InvalidNumber:['Invalid mobile number']
   
   
 };
