@@ -3095,9 +3095,10 @@ const createJobMilestone = async (request, response) => {
                 }
                 const project_title = jobResult[0].title;
                 const other_user_id = jobResult[0].assign_expert_id;
-                const bookMarkQuery = `INSERT INTO milestone_master(job_post_id,price,duration,description,file,title,duration_type,createtime,updatetime)
-                VALUES (?,?,?,?,?,?,?,now(),now())`;
-                connection.query(bookMarkQuery, [job_post_id, amount, duration, description, pdf_file, title, duration_type], async (err, result) => {
+                let milestone_number = await generateOTP(4);
+                const bookMarkQuery = `INSERT INTO milestone_master(job_post_id,price,duration,description,file,title,duration_type, milestone_number, createtime,updatetime)
+                VALUES (?,?,?,?,?,?,?,?,NOW(),NOW())`;
+                connection.query(bookMarkQuery, [job_post_id, amount, duration, description, pdf_file, title, duration_type, milestone_number], async (err, result) => {
                     if (err) {
                         return response.status(200).json({ success: false, msg: languageMessage.milestoneCreateUnsuccess, key: err });
                     }
