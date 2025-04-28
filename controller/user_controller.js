@@ -126,10 +126,9 @@ const usersignUp_1 = async (request, response) => {
     if (!mobile || !player_id || !device_type || !login_type || !device_id) {
         return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param });
     }
-    
-if (!/^[6-9]\d{9}$/.mobile)) {
-    return response.status(200).json({ success: false, msg: languageMessage.InvalidNumber})
-  }
+    if (!/^[6-9]\d{9}$/.test(mobile)) {
+        return response.status(200).json({ success: false, msg: languageMessage.InvalidNumber });
+    }
    
     try {
       
