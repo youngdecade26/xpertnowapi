@@ -3086,7 +3086,7 @@ const createJobMilestone = async (request, response) => {
             const user_name = userResult[0].name;
             const checkJob = "SELECT job_post_id,title,assign_expert_id FROM job_post_master WHERE delete_flag = 0 AND job_post_id=? and user_id = ? and assign_expert_id!=0";
             const jobvalues = [job_post_id, user_id];
-            connection.query(checkJob, jobvalues, (err, jobResult) => {
+            connection.query(checkJob, jobvalues, async(err, jobResult) => {
                 if (err) {
                     return response.status(500).json({ success: false, msg: languageMessage.jobNotFound, key: err.message });
                 }
