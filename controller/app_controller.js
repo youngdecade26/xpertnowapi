@@ -3073,7 +3073,7 @@ const createJobMilestone = async (request, response) => {
     try {
         const query1 = "SELECT name,mobile, active_flag, wallet_balance FROM user_master WHERE user_id = ? AND delete_flag = 0";
         const values1 = [user_id];
-        connection.query(query1, values1, (err, userResult) => {
+        connection.query(query1, values1, async(err, userResult) => {
             if (err) {
                 return response.status(500).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
             }
