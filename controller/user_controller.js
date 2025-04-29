@@ -41,34 +41,31 @@ async function otpSendMessage(mobile, otp) {
     });
 }
 
-
-
-
 // send otp 
-const axios = require('axios');
+// const axios = require('axios');
 
-const sendOtp = async () => {
-  try {
-    const response = await axios.post(
-      `https://control.msg91.com/api/v5/otp?template_id=67e253a1d6fc050fad3baff4&mobile=${mobile}&authkey=435272AT2B1NRQ67e38dbeP1&realTimeResponse=`,
-      {
-        Param1: "value1",
-        Param2: "value2",
-        Param3: "value3"
-      },
-      {
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      }
-    );
+// const sendOtp = async () => {
+//   try {
+//     const response = await axios.post(
+//       `https://control.msg91.com/api/v5/otp?template_id=67e253a1d6fc050fad3baff4&mobile=${mobile}&authkey=435272AT2B1NRQ67e38dbeP1&realTimeResponse=`,
+//       {
+//         Param1: "value1",
+//         Param2: "value2",
+//         Param3: "value3"
+//       },
+//       {
+//         headers: {
+//           'Content-Type': 'application/json'
+//         }
+//       }
+//     );
 
-    console.log('OTP API Response:', response.data);
-  } catch (error) {
-    console.error('Error sending OTP:', error.response ? error.response.data : error.message);
-  }
-};
-sendOtp();
+//     console.log('OTP API Response:', response.data);
+//   } catch (error) {
+//     console.error('Error sending OTP:', error.response ? error.response.data : error.message);
+//   }
+// };
+// sendOtp();
 
 
 
