@@ -5668,7 +5668,7 @@ const getNdaPrice = async( request, response) => {
             if(res[0].active_flag == 0){
                 return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status:0});
             }
-        const sql = 'SELECT price FROM nda_price_master WHERE delete_flag = 0';
+        const sql = 'SELECT price, image FROM nda_price_master WHERE delete_flag = 0';
         connection.query(sql, async(err1, res1) =>{
             if(err1){
                 return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err1.message});
@@ -5676,7 +5676,9 @@ const getNdaPrice = async( request, response) => {
             if(res1.length == 0){
                 return response.status(200).json({ success: false, msg: languageMessage.dataNotFound});
             }
-            return response.status(200).json({ success: true, msg: languageMessage.dataFound, nda_price: res1[0].price.toString()});
+            return response.status(200).json({ success: true, msg: languageMessage.dataFound, nda_price: res1[0].price.toString(),
+            image: res1[0].image
+            });
         });
         });
     }
