@@ -94,7 +94,7 @@ const messages = {
   invalidDays: ["invalid days insert,please try again!"],
   AvailibilityAlreadyExists: ["Availibility slot already exists"],
   invalidData: ["Invalid Data Send, please check again"],
-  availabilityUpdated: ["Availibility Udpated successfully"],
+  availabilityUpdated: ["Availibility updated successfully"],
   AvailibilityUdpatedError: ["Availibility Udpated unsuccessfully, please try again"],
   checkToken: ["Your account has been logged in on another device."],
   checkUnathorizedToken: ["Your token is unauthorized."],

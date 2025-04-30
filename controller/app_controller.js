@@ -4685,7 +4685,7 @@ const checkWalletAmount = async (request, response) => {
 //end
 //debitWalletAmount
 const debitWalletAmount = async (request, response) => {
-    const { user_id, amount, expert_id, transaction_id} = request.body;
+    const { user_id, amount, expert_id} = request.body;
     if (!user_id) {
         return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'user_id' });
     }
@@ -4707,8 +4707,8 @@ const debitWalletAmount = async (request, response) => {
             }
             const status = 1;
             const type = 3;
-            const fileInsertQuery = `INSERT INTO wallet_master(user_id, expert_id, amount,status,type, payment_transaction_id, createtime,updatetime) VALUES (?,?,?,?,?,?,NOW(),NOW())`;
-            connection.query(fileInsertQuery, [user_id, expert_id, amount, status, type, transaction_id], (err, result1) => {
+            const fileInsertQuery = `INSERT INTO wallet_master(user_id, expert_id, amount,status,type, createtime,updatetime) VALUES (?,?,?,?,?,NOW(),NOW())`;
+            connection.query(fileInsertQuery, [user_id, expert_id, amount, status, type], (err, result1) => {
                 if (err) {
                     return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
                 }
