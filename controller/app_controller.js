@@ -2217,7 +2217,7 @@ const getExpertMyJobs = (request, response) => {
                 }
 
             const query2 = `
-                SELECT job_post_id, user_id,assign_expert_id, title, category, sub_category, max_price, min_price, duration, status, updatetime
+                SELECT job_post_id, user_id,assign_expert_id, title, category, sub_category, max_price, min_price, duration, duration_type, status, updatetime
                 ,createtime FROM job_post_master 
                 WHERE assign_expert_id = ? AND delete_flag = 0 ORDER BY createtime DESC`;
             connection.query(query2, [user_id], async (err, jobPosts) => {
@@ -2264,6 +2264,7 @@ const getExpertMyJobs = (request, response) => {
                             category: category,
                             posted_time: getRelativeTime(job.createtime),
                             status_label: '0=pending,1=hired,2=inprogress,3=completed',
+                             duration_type_label: '1=days,2=month,3=year',
                             user_name: userNameQuery,
                             user_image: userimageQuery,
                         };
@@ -2585,7 +2586,7 @@ const CustomerCallHistory = async (request, response) => {
                             call_history.push({
                                 ...record,
                                 createtime: formattedTime,
-                                type_label: '1=video,2=voice',
+                                type_label: '1=video, 2=voice',
                                 status_label: '0-pending,1-start,2-completed,3=rejected',
                                 expert_name: expertDetails.name,
                                 expert_image: expertDetails.image,
