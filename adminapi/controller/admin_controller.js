@@ -7858,7 +7858,7 @@ const EditNdaPrice = async (request, response) => {
       .status(400)
       .json({ success: false, msg: languageMessage.msg_empty_param, key: "1" });
   }
-  let { action, nda_price_id, price } = request.body;
+  let { action, nda_price_id, price, image } = request.body;
   if (!action && !action == "edit_nda_price") {
     return response
       .status(200)
@@ -7874,11 +7874,16 @@ const EditNdaPrice = async (request, response) => {
       .status(200)
       .json({ success: false, msg: languageMessage.msg_empty_param, key: "3" });
   }
+  if (!image) {
+    return response
+      .status(200)
+      .json({ success: false, msg: languageMessage.msg_empty_param, key: "4" });
+  }
   const updatetime = moment().format("YYYY-MM-DD HH:mm:ss");
   try {
     let Update =
-      "Update nda_price_master set price=? , updatetime=? where nda_price_id=?";
-    let values = [price, updatetime, nda_price_id];
+      "Update nda_price_master set price=? , image=?, updatetime=? where nda_price_id=?";
+    let values = [price, image, updatetime, nda_price_id];
     connection.query(Update, values, (err) => {
       if (err) {
         return response.status(200).json({
