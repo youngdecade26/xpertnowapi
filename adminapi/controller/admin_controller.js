@@ -7825,7 +7825,7 @@ const FetchNdaPrice = (req, res) => {
   try {
     let s_no = 1;
     const FaqQuery =
-      "select  nda_price_id, price,createtime,updatetime FROM nda_price_master WHERE delete_flag = 0 ORDER BY nda_price_id DESC ";
+      "select  nda_price_id, price, image, createtime,updatetime FROM nda_price_master WHERE delete_flag = 0 ORDER BY nda_price_id DESC ";
     connection.query(FaqQuery, (error, results) => {
       if (error) {
         console.error("Error executing MySQL query:", error);
