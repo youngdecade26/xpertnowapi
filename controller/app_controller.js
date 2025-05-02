@@ -102,8 +102,8 @@ const getExpertByRating = async (request, response) => {
             if (userResult[0].active_flag === 0) {
                 return response.status(403).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
             }
-            
-          
+
+
             const updateTimeQuery = `UPDATE user_master SET last_login_date_time = NOW() WHERE user_id = ?`;
             await queryAsync(updateTimeQuery, [user_id]);
         }
@@ -297,7 +297,7 @@ const getJobPostDetails = async (request, response) => {
                         // });
 
 
-                       
+
                         // Fetch user image
                         const userImageQuery = "SELECT image FROM user_master WHERE user_id = ? AND delete_flag = 0";
                         const userimage = await new Promise((resolve) => {
@@ -348,7 +348,7 @@ const getJobPostDetails = async (request, response) => {
                             city: city,
                             userName: userName,
                             userimage: userimage,
-                         
+
                             posted_time: getRelativeTime(job.createtime),
                             duration_type_labe: '1=days,2=month,3=year',
                             status_label: '0=pending,1=hired,2=inprogress,3=completed',
@@ -478,7 +478,7 @@ const createJobPost = async (request, response) => {
                     return response.status(200).json({ success: false, msg: languageMessage.NdaAmountErr });
                 }
 
-                
+
 
                 const newUserQuery = `
                     INSERT INTO job_post_master 
@@ -514,14 +514,14 @@ const createJobPost = async (request, response) => {
                             console.error("Error inserting files:", error);
                         }
                     }
-                if(nda_status == 1) {
-                    const debitWallet = 'INSERT INTO wallet_master (user_id, amount, status, type, createtime, updatetime) VALUES(?, ?, 1,2,NOW(),NOW())';
-                    connection.query(debitWallet, [user_id, nda_price], async(walletErr, walletRes) => {
-                        if(walletErr){
-                            return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: walletErr.message});
-                        }
-                    });
-                }
+                    if (nda_status == 1) {
+                        const debitWallet = 'INSERT INTO wallet_master (user_id, amount, status, type, createtime, updatetime) VALUES(?, ?, 1,2,NOW(),NOW())';
+                        connection.query(debitWallet, [user_id, nda_price], async (walletErr, walletRes) => {
+                            if (walletErr) {
+                                return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: walletErr.message });
+                            }
+                        });
+                    }
 
                     const jobDetailQuery = `
                         SELECT jm.job_post_id, jm.title, jm.category, jm.sub_category, jm.max_price, jm.min_price, 
@@ -961,7 +961,7 @@ const getExpertByFilter = async (request, response) => {
             //     SELECT user_id as expert_id 
             //     FROM user_master 
             //     WHERE delete_flag = 0 AND active_flag = 1 AND user_type = 2 and expert_status=1`;
-            let query2  = `
+            let query2 = `
             SELECT um.user_id AS expert_id
             FROM user_master um
             JOIN expert_subscription_master esm ON um.user_id = esm.expert_id
@@ -1516,7 +1516,7 @@ const getExpertEarning = async (request, response) => {
                 const partialEarning = result[0]?.partial_expert_earning;
                 const query2 = `SELECT SUM(withdraw_amount) AS total_withdraw_amount FROM expert_withdraw_master WHERE expert_id = ? AND withdraw_status=1`;
                 connection.query(query2, [user_id], async (err, result) => {
-                    if (err) { 
+                    if (err) {
                         return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
                     }
                     const withdraws = result[0]?.total_withdraw_amount;
@@ -1533,7 +1533,7 @@ const getExpertEarning = async (request, response) => {
 //make withdraw request
 const withdrawRequest = async (request, response) => {
     let { user_id, withdraw_amount, withdraw_message } = request.body;
-    if (!user_id || !withdraw_amount ) {
+    if (!user_id || !withdraw_amount) {
         return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param });
     }
     try {
@@ -1549,51 +1549,51 @@ const withdrawRequest = async (request, response) => {
             if (result[0]?.active_flag === 0) {
                 return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
             }
-        const sqlQuery = 'SELECT mini_withdrawal_amt FROM commission_master WHERE delete_flag = 0';
-        connection.query(sqlQuery,async(infoErr, infoRes) => {
-            if(infoErr){
-                return response.status(200).json({ success: fasle, msg: languageMessage.internalServerError, error: infoErr.message});
-            }
-            let minimum_amount = parseInt(infoRes[0].mini_withdrawal_amt);
-   
-            const query2 = `SELECT SUM(expert_earning) AS partial_expert_earning FROM expert_earning_master WHERE expert_id = ?`;
-            connection.query(query2, [user_id], async (err1, result1) => {
-                if (err1) {
-                    return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err1.message });
+            const sqlQuery = 'SELECT mini_withdrawal_amt FROM commission_master WHERE delete_flag = 0';
+            connection.query(sqlQuery, async (infoErr, infoRes) => {
+                if (infoErr) {
+                    return response.status(200).json({ success: fasle, msg: languageMessage.internalServerError, error: infoErr.message });
                 }
-                const partialEarning = result1[0]?.partial_expert_earning;
-                const query3 = `SELECT SUM(withdraw_amount) AS total_withdraw_amount FROM expert_withdraw_master WHERE expert_id = ? AND withdraw_status=1 AND delete_flag = 0`;
-                connection.query(query3, [user_id], async (err2, result2) => {
-                    if (err2) { 
-                        return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err2.message });
+                let minimum_amount = parseInt(infoRes[0].mini_withdrawal_amt);
+
+                const query2 = `SELECT SUM(expert_earning) AS partial_expert_earning FROM expert_earning_master WHERE expert_id = ?`;
+                connection.query(query2, [user_id], async (err1, result1) => {
+                    if (err1) {
+                        return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err1.message });
                     }
-                    const withdraws = result2[0]?.total_withdraw_amount;
-                    const total_expert_earning = parseInt(partialEarning - withdraws);
-                    // return response.status(200).json({ success: false, msg: languageMessage.internalServerError, partialEarning,  withdraws, total_expert_earning, });
-                      
-                if(total_expert_earning >= 10000){
-                if(withdraw_amount == minimum_amount){
-            const newUserQuery = `INSERT INTO expert_withdraw_master (expert_id,withdraw_amount,withdraw_message,createtime,updatetime)VALUES (?,?,?,now(),now())`;
-            const values = [user_id, withdraw_amount, withdraw_message]
-            connection.query(newUserQuery, values, async (err, requestresult) => {
-                if (err) {
-                    return response.status(200).json({ success: false, msg: languageMessage.withdrawSendError, key: err });
-                }
-                const userDetails = await getUserDetails(user_id);
-                return response.status(200).json({ success: true, msg: languageMessage.withdrawSend, userDetails: userDetails });
-            });
-        }
-        else{
-            return response.status(200).json({ success: false, msg: [`${languageMessage.MinimumWithdrawalAmount} ${minimum_amount}`]});
-        }
-        }
-        else{
-            return response.status(200).json({ success: false, msg: languageMessage.CannotWithdraw})
-        }
-        });
-    })
-    })
-})
+                    const partialEarning = result1[0]?.partial_expert_earning;
+                    const query3 = `SELECT SUM(withdraw_amount) AS total_withdraw_amount FROM expert_withdraw_master WHERE expert_id = ? AND withdraw_status=1 AND delete_flag = 0`;
+                    connection.query(query3, [user_id], async (err2, result2) => {
+                        if (err2) {
+                            return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err2.message });
+                        }
+                        const withdraws = result2[0]?.total_withdraw_amount;
+                        const total_expert_earning = parseInt(partialEarning - withdraws);
+                        // return response.status(200).json({ success: false, msg: languageMessage.internalServerError, partialEarning,  withdraws, total_expert_earning, });
+
+                        if (total_expert_earning >= 10000) {
+                            if (withdraw_amount == minimum_amount) {
+                                const newUserQuery = `INSERT INTO expert_withdraw_master (expert_id,withdraw_amount,withdraw_message,createtime,updatetime)VALUES (?,?,?,now(),now())`;
+                                const values = [user_id, withdraw_amount, withdraw_message]
+                                connection.query(newUserQuery, values, async (err, requestresult) => {
+                                    if (err) {
+                                        return response.status(200).json({ success: false, msg: languageMessage.withdrawSendError, key: err });
+                                    }
+                                    const userDetails = await getUserDetails(user_id);
+                                    return response.status(200).json({ success: true, msg: languageMessage.withdrawSend, userDetails: userDetails });
+                                });
+                            }
+                            else {
+                                return response.status(200).json({ success: false, msg: [`${languageMessage.MinimumWithdrawalAmount} ${minimum_amount}`] });
+                            }
+                        }
+                        else {
+                            return response.status(200).json({ success: false, msg: languageMessage.CannotWithdraw })
+                        }
+                    });
+                })
+            })
+        })
     } catch (err) {
         return response.status(200).json({ success: false, msg: languageMessage.withdrawSendError, key: err.message });
     }
@@ -2197,9 +2197,9 @@ const getExpertMyJobs = (request, response) => {
             if (result[0]?.active_flag === 0) {
                 return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
             }
-                 const checkSubscription = `SELECT esm.createtime, sm.duration FROM expert_subscription_master esm JOIN subscription_master sm ON esm.subscription_id = sm.subscription_id WHERE esm.expert_id = ? AND sm.delete_flag = 0 AND esm.delete_flag = 0 ORDER BY esm.createtime DESC LIMIT 1`;
+            const checkSubscription = `SELECT esm.createtime, sm.duration FROM expert_subscription_master esm JOIN subscription_master sm ON esm.subscription_id = sm.subscription_id WHERE esm.expert_id = ? AND sm.delete_flag = 0 AND esm.delete_flag = 0 ORDER BY esm.createtime DESC LIMIT 1`;
 
-            connection.query(checkSubscription, [user_id], async(subErr, subRes) => {
+            connection.query(checkSubscription, [user_id], async (subErr, subRes) => {
                 if (subErr) {
                     return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: subErr.message });
                 }
@@ -2216,64 +2216,64 @@ const getExpertMyJobs = (request, response) => {
                     }
                 }
 
-            const query2 = `
+                const query2 = `
                 SELECT job_post_id, user_id,assign_expert_id, title, category, sub_category, max_price, min_price, duration, duration_type, status, updatetime
                 ,createtime FROM job_post_master 
                 WHERE assign_expert_id = ? AND delete_flag = 0 ORDER BY createtime DESC`;
-            connection.query(query2, [user_id], async (err, jobPosts) => {
-                if (err) {
-                    return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
-                }
-                if (jobPosts.length === 0) {
-                    return response.status(200).json({ success: false, msg: languageMessage.dataNotFound });
-                }
-                // Fetch category and subcategory names
-                const jobPostDetails = await Promise.all(
-                    jobPosts.map(async (job) => {
-                        // Fetch subcategory name
-                        const subCategoryQuery = "SELECT sub_category_name FROM sub_categories_master WHERE sub_category_id = ? AND delete_flag = 0";
-                        const subCategory = await new Promise((resolve) => {
-                            connection.query(subCategoryQuery, [job.sub_category], (err, result) => {
-                                resolve(err ? null : result[0]?.sub_category_name);
+                connection.query(query2, [user_id], async (err, jobPosts) => {
+                    if (err) {
+                        return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
+                    }
+                    if (jobPosts.length === 0) {
+                        return response.status(200).json({ success: false, msg: languageMessage.dataNotFound });
+                    }
+                    // Fetch category and subcategory names
+                    const jobPostDetails = await Promise.all(
+                        jobPosts.map(async (job) => {
+                            // Fetch subcategory name
+                            const subCategoryQuery = "SELECT sub_category_name FROM sub_categories_master WHERE sub_category_id = ? AND delete_flag = 0";
+                            const subCategory = await new Promise((resolve) => {
+                                connection.query(subCategoryQuery, [job.sub_category], (err, result) => {
+                                    resolve(err ? null : result[0]?.sub_category_name);
+                                });
                             });
-                        });
-                        // Fetch category name
-                        const categoryQuery = "SELECT name FROM categories_master WHERE category_id = ? AND delete_flag = 0";
-                        const category = await new Promise((resolve) => {
-                            connection.query(categoryQuery, [job.category], (err, result) => {
-                                resolve(err ? null : result[0]?.name);
+                            // Fetch category name
+                            const categoryQuery = "SELECT name FROM categories_master WHERE category_id = ? AND delete_flag = 0";
+                            const category = await new Promise((resolve) => {
+                                connection.query(categoryQuery, [job.category], (err, result) => {
+                                    resolve(err ? null : result[0]?.name);
+                                });
                             });
-                        });
-                        // Fetch user name
-                        const userNameQuery = await new Promise((resolve) => {
-                            const userQuery = `SELECT name,image FROM user_master WHERE user_id = ? AND delete_flag = 0`;
-                            connection.query(userQuery, [job.user_id], (err, result) => {
-                                resolve(err ? null : result[0]?.name || 'NA');
+                            // Fetch user name
+                            const userNameQuery = await new Promise((resolve) => {
+                                const userQuery = `SELECT name,image FROM user_master WHERE user_id = ? AND delete_flag = 0`;
+                                connection.query(userQuery, [job.user_id], (err, result) => {
+                                    resolve(err ? null : result[0]?.name || 'NA');
+                                });
                             });
-                        });
-                        // Fetch user name
-                        const userimageQuery = await new Promise((resolve) => {
-                            const imageQuery = `SELECT image FROM user_master WHERE user_id = ? AND delete_flag = 0`;
-                            connection.query(imageQuery, [job.user_id], (err, result) => {
-                                resolve(err ? null : result[0]?.image || 'NA');
+                            // Fetch user name
+                            const userimageQuery = await new Promise((resolve) => {
+                                const imageQuery = `SELECT image FROM user_master WHERE user_id = ? AND delete_flag = 0`;
+                                connection.query(imageQuery, [job.user_id], (err, result) => {
+                                    resolve(err ? null : result[0]?.image || 'NA');
+                                });
                             });
-                        });
-                        return {
-                            ...job,
-                            sub_category: subCategory,
-                            category: category,
-                            posted_time: getRelativeTime(job.createtime),
-                            status_label: '0=pending,1=hired,2=inprogress,3=completed',
-                             duration_type_label: '1=days,2=month,3=year',
-                            user_name: userNameQuery,
-                            user_image: userimageQuery,
-                        };
-                    })
-                );
-                return response.status(200).json({ success: true, msg: languageMessage.dataFound, jobPostDetails: jobPostDetails });
+                            return {
+                                ...job,
+                                sub_category: subCategory,
+                                category: category,
+                                posted_time: getRelativeTime(job.createtime),
+                                status_label: '0=pending,1=hired,2=inprogress,3=completed',
+                                duration_type_label: '1=days,2=month,3=year',
+                                user_name: userNameQuery,
+                                user_image: userimageQuery,
+                            };
+                        })
+                    );
+                    return response.status(200).json({ success: true, msg: languageMessage.dataFound, jobPostDetails: jobPostDetails });
+                });
             });
-        });
-})
+        })
     } catch (err) {
         return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
     }
@@ -2324,7 +2324,7 @@ const getSubscriptionPlans = (request, response) => {
                     // expiryDate.setDate(expiryDate.getDate() + duration);
 
                     // if (new Date() > expiryDate) {
-                        excludeFree = true; // free plan expired, so exclude it
+                    excludeFree = true; // free plan expired, so exclude it
                     // }
                 }
 
@@ -2364,12 +2364,12 @@ const getSubscriptionPlans = (request, response) => {
 
 
 const buySubscription = (request, response) => {
-    let { user_id, subscription_id,  transaction_id } = request.body;
+    let { user_id, subscription_id, transaction_id } = request.body;
     if (!user_id || !subscription_id) {
         return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param });
     }
-    if (!transaction_id ) {
-        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key:'transaction_id' });
+    if (!transaction_id) {
+        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'transaction_id' });
     }
     try {
         const query1 = "SELECT mobile, active_flag FROM user_master WHERE user_id = ? AND delete_flag = 0 AND user_type=2";
@@ -2821,7 +2821,7 @@ JOIN subscription_master sm ON esm.subscription_id = sm.subscription_id
 WHERE esm.expert_id = ? AND sm.delete_flag = 0 AND esm.delete_flag = 0
 ORDER BY esm.createtime DESC LIMIT 1
 `;
-            connection.query(checkSubscription, [user_id], async(subErr, subRes) => {
+            connection.query(checkSubscription, [user_id], async (subErr, subRes) => {
                 if (subErr) {
                     return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: subErr.message });
                 }
@@ -2840,19 +2840,19 @@ ORDER BY esm.createtime DESC LIMIT 1
                     const { createtime, duration } = subRes[0]; // duration is in days
                     const createdAt = new Date(createtime);
                     const expiryDate = new Date(createdAt.getTime() + duration * 24 * 60 * 60 * 1000); // Add full days in milliseconds
-            
+
                     const now = new Date();
                     if (now > expiryDate) {
                         return response.status(200).json({ success: false, msg: languageMessage.SubscriptionExpired });
                     }
                 }
-            const jobPostDetails = await getHomeExpertJob(user_id);
-            const completedJobDetails = await getHomeExpertCompletedJob(user_id);
-            const userjobPost = await getHomeExpertUserJob(user_id);
-            const userjobPostCount = await getHomeUserJobCount();
-            return response.status(200).json({ success: true, msg: languageMessage.dataFound, jobPostDetails: jobPostDetails, userjobPost: userjobPost, userjobPostCount: userjobPostCount, completedJobDetails: completedJobDetails })
+                const jobPostDetails = await getHomeExpertJob(user_id);
+                const completedJobDetails = await getHomeExpertCompletedJob(user_id);
+                const userjobPost = await getHomeExpertUserJob(user_id);
+                const userjobPostCount = await getHomeUserJobCount();
+                return response.status(200).json({ success: true, msg: languageMessage.dataFound, jobPostDetails: jobPostDetails, userjobPost: userjobPost, userjobPostCount: userjobPostCount, completedJobDetails: completedJobDetails })
 
-        });
+            });
         })
     } catch (err) {
         return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
@@ -3074,7 +3074,7 @@ const createJobMilestone = async (request, response) => {
     try {
         const query1 = "SELECT name,mobile, active_flag, wallet_balance FROM user_master WHERE user_id = ? AND delete_flag = 0";
         const values1 = [user_id];
-        connection.query(query1, values1, async(err, userResult) => {
+        connection.query(query1, values1, async (err, userResult) => {
             if (err) {
                 return response.status(500).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
             }
@@ -3087,7 +3087,7 @@ const createJobMilestone = async (request, response) => {
             const user_name = userResult[0].name;
             const checkJob = "SELECT job_post_id,title,assign_expert_id FROM job_post_master WHERE delete_flag = 0 AND job_post_id=? and user_id = ? and assign_expert_id!=0";
             const jobvalues = [job_post_id, user_id];
-            connection.query(checkJob, jobvalues, async(err, jobResult) => {
+            connection.query(checkJob, jobvalues, async (err, jobResult) => {
                 if (err) {
                     return response.status(500).json({ success: false, msg: languageMessage.jobNotFound, key: err.message });
                 }
@@ -3777,7 +3777,7 @@ const getExpertByFilterSubLabel = async (request, response) => {
 
             // Prepare query for experts
             // let query2 = `SELECT user_id as expert_id FROM user_master WHERE delete_flag = 0 AND active_flag = 1 AND user_type = 2 and expert_status=1`;
-              let query2  = `
+            let query2 = `
             SELECT um.user_id AS expert_id
             FROM user_master um
             JOIN expert_subscription_master esm ON um.user_id = esm.expert_id
@@ -4058,7 +4058,7 @@ const add_availability = (req, res) => {
             });
         });
         Promise.all(queries)
-        // Promise.all(queries)
+            // Promise.all(queries)
             .then(async () => {
                 try {
                     // const updateAvailabilityStatus = `UPDATE user_master SET availability_status = 1,updatetime=NOW() WHERE user_id = ?`;
@@ -4685,7 +4685,7 @@ const checkWalletAmount = async (request, response) => {
 //end
 //debitWalletAmount
 const debitWalletAmount = async (request, response) => {
-    const { user_id, amount, expert_id} = request.body;
+    const { user_id, amount, expert_id } = request.body;
     if (!user_id) {
         return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'user_id' });
     }
@@ -4881,8 +4881,8 @@ async function getExpertEarningg(milestone_id, user_id) {
                   (type, user_id, expert_id, milestone_id, total_amount, commission_percentage, admin_commission_amount, expert_earning, expert_type, gst_per, gst_amt, net_expert_earning, tds_per, tds_amt, tcs_per, tcs_amt, platform_fees, platform_fees_gst_amt, grand_total_expert_earning, createtime, updatetime) 
                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
               `;
-           
-                    connection.query(insert, [0, user_id, expert_id, milestone_id, received_amount, commission_percentage, admin_commission_amount, grand_total_earning, 0, gst, net_apply_gst_amount,  net_amount, 0, 0, 0, 0, platform_fee_amount, platform_fee_amount, grand_total_earning], (err3, res3) => {
+
+                    connection.query(insert, [0, user_id, expert_id, milestone_id, received_amount, commission_percentage, admin_commission_amount, grand_total_earning, 0, gst, net_apply_gst_amount, net_amount, 0, 0, 0, 0, platform_fee_amount, platform_fee_amount, grand_total_earning], (err3, res3) => {
                         if (err3) {
                             reject(err3);
                         }
@@ -4923,50 +4923,50 @@ const completeJob = async (request, response) => {
             if (res[0].active_flag == 0) {
                 return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
             }
-        const jobSql = 'SELECT title FROM job_post_master WHERE job_post_id = ? AND delete_flag = 0';
-        connection.query(jobSql, [job_post_id], async(jobErr, jobRes) => {
-            if(jobErr){
-                return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: jobErr.message});
-            }
-            if(jobRes.length == 0 ){
-                return response.status(200).json({ sucesss: false, msg: languageMessage.jobNotFound});
-            }
-
-            let job_name = jobRes[0].title;
-       
-            const sql = 'UPDATE job_post_master SET status = 3, updatetime = now() WHERE job_post_id = ? AND delete_flag = 0';
-            connection.query(sql, [job_post_id], async (err1, res1) => {
-                if (err1) {
-                    return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err1.message });
+            const jobSql = 'SELECT title FROM job_post_master WHERE job_post_id = ? AND delete_flag = 0';
+            connection.query(jobSql, [job_post_id], async (jobErr, jobRes) => {
+                if (jobErr) {
+                    return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: jobErr.message });
                 }
-                if (res1.affectedRows == 0) {
-                    return response.status(200).json({ success: false, msg: languageMessage.updateErr });
+                if (jobRes.length == 0) {
+                    return response.status(200).json({ sucesss: false, msg: languageMessage.jobNotFound });
                 }
-                //    const user_email = res[0].email;
 
-                // const fromName = res[0].name;
-    
-                // const app_name = 'Team Xpertnow';
-    
-                // const message = `We are pleased to inform you that the job you created- <b> ${job_name} </b> has been successfully completed. We appreciate your engagement and look forward to assisting you with future tasks. <br> If you have any questions or need further support, please do not hesitate to contact us.`;
-    
-                // const title = "Job Completion Confirmation";
-    
-                // const subject = "Job Completion Confirmation";
-    
-                // const app_logo = "https://xpertnowbucket.s3.ap-south-1.amazonaws.com/uploads/1743577170167-xpertlog.png";
+                let job_name = jobRes[0].title;
 
-                // await JobcompleteMailer(user_email, fromName, app_name, message, title, subject, app_logo).then(data => {
-    
-                //     if (data.status === 'yes') {
+                const sql = 'UPDATE job_post_master SET status = 3, updatetime = now() WHERE job_post_id = ? AND delete_flag = 0';
+                connection.query(sql, [job_post_id], async (err1, res1) => {
+                    if (err1) {
+                        return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err1.message });
+                    }
+                    if (res1.affectedRows == 0) {
+                        return response.status(200).json({ success: false, msg: languageMessage.updateErr });
+                    }
+                    //    const user_email = res[0].email;
 
-                return response.status(200).json({ success: true, msg: languageMessage.JobCompleted });
-            // }
-            // });
-        });
-    })
-})
-}
+                    // const fromName = res[0].name;
+
+                    // const app_name = 'Team Xpertnow';
+
+                    // const message = `We are pleased to inform you that the job you created- <b> ${job_name} </b> has been successfully completed. We appreciate your engagement and look forward to assisting you with future tasks. <br> If you have any questions or need further support, please do not hesitate to contact us.`;
+
+                    // const title = "Job Completion Confirmation";
+
+                    // const subject = "Job Completion Confirmation";
+
+                    // const app_logo = "https://xpertnowbucket.s3.ap-south-1.amazonaws.com/uploads/1743577170167-xpertlog.png";
+
+                    // await JobcompleteMailer(user_email, fromName, app_name, message, title, subject, app_logo).then(data => {
+
+                    //     if (data.status === 'yes') {
+
+                    return response.status(200).json({ success: true, msg: languageMessage.JobCompleted });
+                    // }
+                    // });
+                });
+            })
+        })
+    }
     catch (error) {
         return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: error.message });
     }
@@ -5010,15 +5010,15 @@ const getExpertEarningPdf = async (request, response) => {
             }
 
             else {
-                gst_amount = info.gst_amt 
+                gst_amount = info.gst_amt
             }
 
             let earning_data;
-            let customer_address = ''; 
-            if(info.user_address == null ){
-                customer_address  = ''
+            let customer_address = '';
+            if (info.user_address == null) {
+                customer_address = ''
             }
-            else{
+            else {
                 customer_address = info.user_address
             }
             earning_data = {
@@ -5040,7 +5040,7 @@ const getExpertEarningPdf = async (request, response) => {
                 email: info.email,
                 address: info.address,
                 city_name: info.city_name,
-                user_name : info.user_name,
+                user_name: info.user_name,
                 user_city: info.user_city,
                 // user_city_name : info.user_city_name,
                 user_email: info.user_email,
@@ -5060,7 +5060,7 @@ const getExpertEarningPdf = async (request, response) => {
                     return response.status(200).json({ success: true, msg: languageMessage.PdfGeneratedSuccess, invoice_url: invoiceUrl });
                 });
             } catch (pdfError) {
-                    console.error('Invoice generation failed:', pdfError);
+                console.error('Invoice generation failed:', pdfError);
                 return response.status(200).json({ success: false, msg: languageMessage.ErrorGeneratingPdf, error: pdfError.message });
             }
         });
@@ -5079,32 +5079,32 @@ const path = require('path');
 
 
 const s3 = new AWS.S3({
-  accessKeyId: "AKIAUGO4KNQULGJQFZIA",
-  secretAccessKey: "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",
-  region: "ap-south-1",
+    accessKeyId: "AKIAUGO4KNQULGJQFZIA",
+    secretAccessKey: "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",
+    region: "ap-south-1",
 });
 
 const BUCKET_NAME = "xpertnowbucket";
 const BASE_S3_URL = 'https://xpertnowbucket.s3.ap-south-1.amazonaws.com/uploads/';
 
 function generateUniqueFilename(prefix = 'invoice') {
-  const timestamp = Date.now();
-  const random = Math.floor(Math.random() * 100000);
-  return `${prefix}-${timestamp}-${random}.pdf`;
+    const timestamp = Date.now();
+    const random = Math.floor(Math.random() * 100000);
+    return `${prefix}-${timestamp}-${random}.pdf`;
 }
 
 // // ... (same AWS & imports as before)
 // async function generateInvoicePdf(invoiceData) {
 //     return new Promise(async (resolve, reject) => {
 //       const fileName = generateUniqueFilename();
-  
+
 //       const doc = new PDFDocument({ size: 'A4', margin: 50 });
 //       const buffers = [];
-  
+
 //       doc.on('data', buffers.push.bind(buffers));
 //       doc.on('end', async () => {
 //         const pdfBuffer = Buffer.concat(buffers);
-  
+
 //         const s3Key = `uploads/${fileName}`;
 //         const uploadParams = {
 //           Bucket: BUCKET_NAME,
@@ -5113,7 +5113,7 @@ function generateUniqueFilename(prefix = 'invoice') {
 //           ContentType: 'application/pdf',
 //           ACL: 'public-read',
 //         };
-  
+
 //         try {
 //           await s3.upload(uploadParams).promise();
 //           resolve(`${BASE_S3_URL}${fileName}`);
@@ -5123,142 +5123,142 @@ function generateUniqueFilename(prefix = 'invoice') {
 //       });
 const { PassThrough } = require('stream');
 async function generateInvoicePdf(invoiceData) {
-  return new Promise((resolve, reject) => {
-    const fileName = generateUniqueFilename();
-    const s3Key = `uploads/${fileName}`;
+    return new Promise((resolve, reject) => {
+        const fileName = generateUniqueFilename();
+        const s3Key = `uploads/${fileName}`;
 
-    const doc = new PDFDocument({ size: 'A4', margin: 50 });
-    const passThroughStream = new PassThrough();
+        const doc = new PDFDocument({ size: 'A4', margin: 50 });
+        const passThroughStream = new PassThrough();
 
-    // Prepare S3 upload as stream
-    const uploadParams = {
-      Bucket: BUCKET_NAME,
-      Key: s3Key,
-      Body: passThroughStream,
-      ContentType: 'application/pdf',
-      ACL: 'public-read',
-    };
+        // Prepare S3 upload as stream
+        const uploadParams = {
+            Bucket: BUCKET_NAME,
+            Key: s3Key,
+            Body: passThroughStream,
+            ContentType: 'application/pdf',
+            ACL: 'public-read',
+        };
 
-    s3.upload(uploadParams, (err, data) => {
-      if (err) {
-        console.error('S3 Upload Error:', err);
-        return reject(err);
-      }
-      console.log('PDF uploaded successfully:', data.Location);
-      return resolve(`${BASE_S3_URL}${fileName}`);
-    });
+        s3.upload(uploadParams, (err, data) => {
+            if (err) {
+                console.error('S3 Upload Error:', err);
+                return reject(err);
+            }
+            console.log('PDF uploaded successfully:', data.Location);
+            return resolve(`${BASE_S3_URL}${fileName}`);
+        });
 
-    // Pipe the PDF doc to S3 upload stream
-    doc.pipe(passThroughStream);
-  
-      try {
-        // const imageUrl = 'https://xpertnowbucket.s3.ap-south-1.amazonaws.com/uploads/1743577170167-xpertlog.png';
-        // const imageResponse = await axios.get(imageUrl, { responseType: 'arraybuffer' });
-        // const imageBuffer = Buffer.from(imageResponse.data, 'binary');
-  
-        // // Add Logo
-        // doc.image(imageBuffer, doc.page.width / 2 - 75, 30, { width: 150 });
-    //     const logoPath = path.join(__dirname, '..', 'assets', 'xpertlogo.png');
-    //     if (fs.existsSync(logoPath)) {
-    //       doc.image(logoPath, doc.page.width / 2 - 75, 30, { width: 150 });
-    //     }
-  
-    // console.log(logoPath);
-    //     doc.moveDown(5);
-  
-        // Title
-        doc
-          .font('Helvetica-Bold')
-          .fontSize(26)
-          .text('', { align: 'center' });
-  
-        doc.moveDown(3);
-  
-        // Greeting & Intro
-        doc
-          .font('Helvetica')
-          .fontSize(16)
-          .text(`Hey ${invoiceData.name},`)
-          .moveDown(0.5)
-          .text(`This is the receipt for a payment of Rs ${invoiceData.grand_total_expert_earning} you made to milestone.`)
-          .moveDown(2);
-  
-        // Milestone Number
-        doc
-          .fontSize(14)
-          .font('Helvetica-Bold')
-          .text('Milestone Number:')
-          .font('Helvetica')
-          .text(invoiceData.milestone_number)
-          .moveDown(1);
-  
-        // Payment Date
-        doc
-          .font('Helvetica-Bold')
-          .text('Payment Date:')
-          .font('Helvetica')
-          .text(moment(invoiceData.createtime).format("MMM DD, YYYY"))
-          .moveDown(1);
-  
-        // Client
-        doc
-          .fontSize(14)
-          .font('Helvetica-Bold')
-          .text('Client:')
-          .font('Helvetica')
-          .text(invoiceData.user_name)
-          .text(`${invoiceData.user_address},`)
-          .text(invoiceData.user_email)
-          .moveDown(1);
-  
-        // Payment To
-        doc
-          .font('Helvetica-Bold')
-          .text('Payment To:')
-          .font('Helvetica')
-          .text(invoiceData.name)
-          .text(`${invoiceData.address}, ${invoiceData.city_name}`)
-          .text(invoiceData.email)
-          .moveDown(2);
-  
-        // Charges Table
-        const tableData = [
-          ['Total Amount', invoiceData.total_amount],
-          ['Platform Fee', invoiceData.platform_fees],
-          ['GST (18%)', invoiceData.gst_amt],
-          [`TCS (${invoiceData.tcs_per}%)`, invoiceData.tcs_amt],
-          [`TDS (${invoiceData.tds_per}%)`, invoiceData.tds_amt],
-        ];
-  
-        const startX = 50;
-        let startY = doc.y;
-  
-        doc.fontSize(14).font('Helvetica-Bold');
-        doc.text('Description', startX, startY);
-        doc.text('Amount (Rs)', 400, startY, { align: 'right' });
-        doc.font('Helvetica');
-        doc.moveDown(0.8);
-  
-        for (let i = 0; i < tableData.length; i++) {
-          const y = doc.y;
-          doc.text(tableData[i][0], startX, y);
-          doc.text(`${tableData[i][1]}`, 400, y, { align: 'right' });
-          doc.moveDown(0.8);
+        // Pipe the PDF doc to S3 upload stream
+        doc.pipe(passThroughStream);
+
+        try {
+            // const imageUrl = 'https://xpertnowbucket.s3.ap-south-1.amazonaws.com/uploads/1743577170167-xpertlog.png';
+            // const imageResponse = await axios.get(imageUrl, { responseType: 'arraybuffer' });
+            // const imageBuffer = Buffer.from(imageResponse.data, 'binary');
+
+            // // Add Logo
+            // doc.image(imageBuffer, doc.page.width / 2 - 75, 30, { width: 150 });
+            //     const logoPath = path.join(__dirname, '..', 'assets', 'xpertlogo.png');
+            //     if (fs.existsSync(logoPath)) {
+            //       doc.image(logoPath, doc.page.width / 2 - 75, 30, { width: 150 });
+            //     }
+
+            // console.log(logoPath);
+            //     doc.moveDown(5);
+
+            // Title
+            doc
+                .font('Helvetica-Bold')
+                .fontSize(26)
+                .text('', { align: 'center' });
+
+            doc.moveDown(3);
+
+            // Greeting & Intro
+            doc
+                .font('Helvetica')
+                .fontSize(16)
+                .text(`Hey ${invoiceData.name},`)
+                .moveDown(0.5)
+                .text(`This is the receipt for a payment of Rs ${invoiceData.grand_total_expert_earning} you made to milestone.`)
+                .moveDown(2);
+
+            // Milestone Number
+            doc
+                .fontSize(14)
+                .font('Helvetica-Bold')
+                .text('Milestone Number:')
+                .font('Helvetica')
+                .text(invoiceData.milestone_number)
+                .moveDown(1);
+
+            // Payment Date
+            doc
+                .font('Helvetica-Bold')
+                .text('Payment Date:')
+                .font('Helvetica')
+                .text(moment(invoiceData.createtime).format("MMM DD, YYYY"))
+                .moveDown(1);
+
+            // Client
+            doc
+                .fontSize(14)
+                .font('Helvetica-Bold')
+                .text('Client:')
+                .font('Helvetica')
+                .text(invoiceData.user_name)
+                .text(`${invoiceData.user_address},`)
+                .text(invoiceData.user_email)
+                .moveDown(1);
+
+            // Payment To
+            doc
+                .font('Helvetica-Bold')
+                .text('Payment To:')
+                .font('Helvetica')
+                .text(invoiceData.name)
+                .text(`${invoiceData.address}, ${invoiceData.city_name}`)
+                .text(invoiceData.email)
+                .moveDown(2);
+
+            // Charges Table
+            const tableData = [
+                ['Total Amount', invoiceData.total_amount],
+                ['Platform Fee', invoiceData.platform_fees],
+                ['GST (18%)', invoiceData.gst_amt],
+                [`TCS (${invoiceData.tcs_per}%)`, invoiceData.tcs_amt],
+                [`TDS (${invoiceData.tds_per}%)`, invoiceData.tds_amt],
+            ];
+
+            const startX = 50;
+            let startY = doc.y;
+
+            doc.fontSize(14).font('Helvetica-Bold');
+            doc.text('Description', startX, startY);
+            doc.text('Amount (Rs)', 400, startY, { align: 'right' });
+            doc.font('Helvetica');
+            doc.moveDown(0.8);
+
+            for (let i = 0; i < tableData.length; i++) {
+                const y = doc.y;
+                doc.text(tableData[i][0], startX, y);
+                doc.text(`${tableData[i][1]}`, 400, y, { align: 'right' });
+                doc.moveDown(0.8);
+            }
+
+            // doc.moveDown(1.5);
+
+            // Grand Total
+            doc.font('Helvetica-Bold').fontSize(12);
+            doc.text(`Grand Total: Rs ${invoiceData.grand_total_expert_earning}`, { align: 'right' });
+            doc.end();
+
+        } catch (error) {
+            reject(`Error generating PDF: ${error.message}`);
         }
-  
-        // doc.moveDown(1.5);
-  
-        // Grand Total
-        doc.font('Helvetica-Bold').fontSize(12);
-        doc.text(`Grand Total: Rs ${invoiceData.grand_total_expert_earning}`, { align: 'right' });
-        doc.end();
-
-      } catch (error) {
-        reject(`Error generating PDF: ${error.message}`);
-      }
     });
-  }
-  
+}
+
 
 
 
@@ -5305,97 +5305,97 @@ const getWalletPdf = async (request, response) => {
 // generate wallet invoice
 const generateWalletInvoice = async (invoiceData, type_label) => {
     return new Promise(async (resolve, reject) => {
-      const fileName = `invoice_${Date.now()}_${Math.floor(Math.random() * 1000)}.pdf`;
-  
-      const doc = new PDFDocument({ size: 'A4', margin: 50 });
-      const buffers = [];
-  
-      doc.on('data', buffers.push.bind(buffers));
-      doc.on('end', async () => {
-        const pdfBuffer = Buffer.concat(buffers);
-        const uploadParams = {
-          Bucket: BUCKET_NAME,
-          Key: `uploads/${fileName}`,
-          Body: pdfBuffer,
-          ContentType: 'application/pdf',
-          ACL: 'public-read',
-        };
-  
+        const fileName = `invoice_${Date.now()}_${Math.floor(Math.random() * 1000)}.pdf`;
+
+        const doc = new PDFDocument({ size: 'A4', margin: 50 });
+        const buffers = [];
+
+        doc.on('data', buffers.push.bind(buffers));
+        doc.on('end', async () => {
+            const pdfBuffer = Buffer.concat(buffers);
+            const uploadParams = {
+                Bucket: BUCKET_NAME,
+                Key: `uploads/${fileName}`,
+                Body: pdfBuffer,
+                ContentType: 'application/pdf',
+                ACL: 'public-read',
+            };
+
+            try {
+                const s3Data = await s3.upload(uploadParams).promise();
+                resolve(s3Data.Location);
+            } catch (err) {
+                reject(err);
+            }
+        });
+
         try {
-          const s3Data = await s3.upload(uploadParams).promise();
-          resolve(s3Data.Location);
-        } catch (err) {
-          reject(err);
+            // Fetch logo
+            const logoPath = path.join(__dirname, '..', 'assets', 'xpertlogo.png');
+            if (fs.existsSync(logoPath)) {
+                doc.image(logoPath, doc.page.width / 2 - 75, 30, { width: 150 });
+            }
+
+
+            // Move below image for greeting
+            doc.moveDown(5);
+
+
+            doc
+                .font('Helvetica-Bold')
+                .fontSize(26)
+                .text('', { align: 'center' });
+
+            doc.moveDown(4);
+
+            // Greeting & Intro
+            doc
+                .font('Helvetica')
+                .fontSize(16)
+                .text(`Hey ${invoiceData.name},`)
+                .moveDown(0.5)
+                .text(`This is the receipt for a payment of Rs ${invoiceData.amount} you made to ${type_label}.`)
+                .moveDown(2);
+
+            // Payment Info
+            doc.fontSize(14).font('Helvetica-Bold').text('Payment Date:');
+            doc.font('Helvetica').text(moment(invoiceData.createtime).format("MMM DD, YYYY"));
+            doc.moveDown(2);
+
+
+            const startX = 50;
+            let startY = doc.y;
+
+            doc.fontSize(14).font('Helvetica-Bold');
+            doc.text('Description', startX, startY);
+            doc.text('Amount (Rs)', 400, startY, { align: 'right' });
+            doc.font('Helvetica');
+            doc.moveDown(0.8);
+
+
+            const y = doc.y;
+            doc.text(type_label, startX, y);
+            doc.text(`Rs ${invoiceData.amount}`, 400, y, { align: 'right' });
+            doc.moveDown(0.8);
+
+            // Total
+            doc.font('Helvetica-Bold').fontSize(14);
+            doc.text(`Total Amount: Rs ${invoiceData.amount}`, { align: 'right' });
+
+            doc.end();
+
+        } catch (error) {
+            reject(`Error generating PDF: ${error.message}`);
         }
-      });
-  
-      try {
-        // Fetch logo
-        const logoPath = path.join(__dirname, '..', 'assets', 'xpertlogo.png');
-        if (fs.existsSync(logoPath)) {
-          doc.image(logoPath, doc.page.width / 2 - 75, 30, { width: 150 });
-        }
-  
-  
-        // Move below image for greeting
-        doc.moveDown(5);
-  
-    
-      doc
-        .font('Helvetica-Bold')
-        .fontSize(26)
-        .text('', { align: 'center' });
-  
-    doc.moveDown(4);
-  
-    // Greeting & Intro
-    doc
-       .font('Helvetica')
-       .fontSize(16)
-       .text(`Hey ${invoiceData.name},`)
-      .moveDown(0.5)
-      .text(`This is the receipt for a payment of Rs ${invoiceData.amount} you made to ${type_label}.`)
-      .moveDown(2);
-  
-        // Payment Info
-        doc.fontSize(14).font('Helvetica-Bold').text('Payment Date:');
-        doc.font('Helvetica').text(moment(invoiceData.createtime).format("MMM DD, YYYY"));
-        doc.moveDown(2);
-  
-  
-      const startX = 50;
-      let startY = doc.y;
-  
-      doc.fontSize(14).font('Helvetica-Bold');
-      doc.text('Description', startX, startY);
-      doc.text('Amount (Rs)', 400, startY, { align: 'right' });
-      doc.font('Helvetica');
-      doc.moveDown(0.8);
-  
-     
-        const y = doc.y;
-        doc.text(type_label, startX, y);
-        doc.text(`Rs ${invoiceData.amount}`, 400, y, { align: 'right' });
-        doc.moveDown(0.8);
-  
-        // Total
-        doc.font('Helvetica-Bold').fontSize(14);
-        doc.text(`Total Amount: Rs ${invoiceData.amount}`, { align: 'right' });
-  
-        doc.end();
-  
-      } catch (error) {
-        reject(`Error generating PDF: ${error.message}`);
-      }
     });
-  };
-  
+};
 
 
 
 
-  // get expert all earning
-  const getExpertAllEarningPdf = async (request, response) => {
+
+// get expert all earning
+const getExpertAllEarningPdf = async (request, response) => {
     const { expert_earning_id } = request.query;
     try {
         if (!expert_earning_id) {
@@ -5434,98 +5434,98 @@ const generateWalletInvoice = async (invoiceData, type_label) => {
 // get expert all earnings
 const generateExpertAllEarningPdf = async (invoiceData, type_label) => {
     return new Promise(async (resolve, reject) => {
-      const fileName = `invoice_${Date.now()}_${Math.floor(Math.random() * 1000)}.pdf`;
-  
-      const doc = new PDFDocument({ size: 'A4', margin: 50 });
-      const buffers = [];
-  
-      doc.on('data', buffers.push.bind(buffers));
-      doc.on('end', async () => {
-        const pdfBuffer = Buffer.concat(buffers);
-        const uploadParams = {
-          Bucket: BUCKET_NAME,
-          Key: `uploads/${fileName}`,
-          Body: pdfBuffer,
-          ContentType: 'application/pdf',
-          ACL: 'public-read',
-        };
-  
+        const fileName = `invoice_${Date.now()}_${Math.floor(Math.random() * 1000)}.pdf`;
+
+        const doc = new PDFDocument({ size: 'A4', margin: 50 });
+        const buffers = [];
+
+        doc.on('data', buffers.push.bind(buffers));
+        doc.on('end', async () => {
+            const pdfBuffer = Buffer.concat(buffers);
+            const uploadParams = {
+                Bucket: BUCKET_NAME,
+                Key: `uploads/${fileName}`,
+                Body: pdfBuffer,
+                ContentType: 'application/pdf',
+                ACL: 'public-read',
+            };
+
+            try {
+                const s3Data = await s3.upload(uploadParams).promise();
+                resolve(s3Data.Location);
+            } catch (err) {
+                reject(err);
+            }
+        });
+
         try {
-          const s3Data = await s3.upload(uploadParams).promise();
-          resolve(s3Data.Location);
-        } catch (err) {
-          reject(err);
+            // Fetch logo
+            const logoPath = path.join(__dirname, '..', 'assets', 'xpertlogo.png');
+            if (fs.existsSync(logoPath)) {
+                doc.image(logoPath, doc.page.width / 2 - 75, 30, { width: 150 });
+            }
+
+            // Move below image for greeting
+            doc.moveDown(5);
+
+
+            doc
+                .font('Helvetica-Bold')
+                .fontSize(26)
+                .text('', { align: 'center' });
+
+            doc.moveDown(4);
+
+            // Greeting & Intro
+            doc
+                .font('Helvetica')
+                .fontSize(16)
+                .text(`Hey ${invoiceData.name},`)
+                .moveDown(0.5)
+                .text(`This is the receipt for a payment of Rs ${invoiceData.expert_earning} you made to ${type_label}.`)
+                .moveDown(2);
+
+            // Payment Info
+            doc.fontSize(14).font('Helvetica-Bold').text('Payment Date:');
+            doc.font('Helvetica').text(moment(invoiceData.createtime).format("MMM DD, YYYY"));
+            doc.moveDown(2);
+
+
+            const startX = 50;
+            let startY = doc.y;
+
+            doc.fontSize(14).font('Helvetica-Bold');
+            doc.text('Description', startX, startY);
+            doc.text('Amount (Rs)', 400, startY, { align: 'right' });
+            doc.font('Helvetica');
+            doc.moveDown(0.8);
+
+
+            const y = doc.y;
+            doc.text(type_label, startX, y);
+            doc.text(`Rs ${invoiceData.expert_earning}`, 400, y, { align: 'right' });
+            doc.moveDown(0.8);
+
+            // Total
+            doc.font('Helvetica-Bold').fontSize(14);
+            doc.text(`Total Amount: Rs ${invoiceData.expert_earning}`, { align: 'right' });
+
+            doc.end();
+
+        } catch (error) {
+            reject(`Error generating PDF: ${error.message}`);
         }
-      });
-  
-      try {
-        // Fetch logo
-        const logoPath = path.join(__dirname, '..', 'assets', 'xpertlogo.png');
-        if (fs.existsSync(logoPath)) {
-          doc.image(logoPath, doc.page.width / 2 - 75, 30, { width: 150 });
-        }
-  
-        // Move below image for greeting
-        doc.moveDown(5);
-  
-    
-      doc
-        .font('Helvetica-Bold')
-        .fontSize(26)
-        .text('', { align: 'center' });
-  
-    doc.moveDown(4);
-  
-    // Greeting & Intro
-    doc
-       .font('Helvetica')
-       .fontSize(16)
-       .text(`Hey ${invoiceData.name},`)
-      .moveDown(0.5)
-      .text(`This is the receipt for a payment of Rs ${invoiceData.expert_earning} you made to ${type_label}.`)
-      .moveDown(2);
-  
-        // Payment Info
-        doc.fontSize(14).font('Helvetica-Bold').text('Payment Date:');
-        doc.font('Helvetica').text(moment(invoiceData.createtime).format("MMM DD, YYYY"));
-        doc.moveDown(2);
-  
-  
-      const startX = 50;
-      let startY = doc.y;
-  
-      doc.fontSize(14).font('Helvetica-Bold');
-      doc.text('Description', startX, startY);
-      doc.text('Amount (Rs)', 400, startY, { align: 'right' });
-      doc.font('Helvetica');
-      doc.moveDown(0.8);
-  
-     
-        const y = doc.y;
-        doc.text(type_label, startX, y);
-        doc.text(`Rs ${invoiceData.expert_earning}`, 400, y, { align: 'right' });
-        doc.moveDown(0.8);
-  
-        // Total
-        doc.font('Helvetica-Bold').fontSize(14);
-        doc.text(`Total Amount: Rs ${invoiceData.expert_earning}`, { align: 'right' });
-  
-        doc.end();
-  
-      } catch (error) {
-        reject(`Error generating PDF: ${error.message}`);
-      }
     });
-  };
-  
-  
+};
 
 
 
 
 
-  // get customer milestone charge
-  const getCustomerMilestoneCharge = async (request, response) => {
+
+
+// get customer milestone charge
+const getCustomerMilestoneCharge = async (request, response) => {
     const { milestone_id } = request.query;
     try {
         if (!milestone_id) {
@@ -5560,130 +5560,131 @@ const generateExpertAllEarningPdf = async (invoiceData, type_label) => {
 // get customer milestone pdf
 const generateCustMilestonePdf = async (invoiceData) => {
     return new Promise(async (resolve, reject) => {
-      const fileName = `invoice_${Date.now()}_${Math.floor(Math.random() * 1000)}.pdf`;
-  
-      const doc = new PDFDocument({ size: 'A4', margin: 50 });
-      const buffers = [];
-  
-      doc.on('data', buffers.push.bind(buffers));
-      doc.on('end', async () => {
-        const pdfBuffer = Buffer.concat(buffers);
-        const uploadParams = {
-          Bucket: BUCKET_NAME,
-          Key: `uploads/${fileName}`,
-          Body: pdfBuffer,
-          ContentType: 'application/pdf',
-          ACL: 'public-read',
-        };
-  
+        const fileName = `invoice_${Date.now()}_${Math.floor(Math.random() * 1000)}.pdf`;
+
+        const doc = new PDFDocument({ size: 'A4', margin: 50 });
+        const buffers = [];
+
+        doc.on('data', buffers.push.bind(buffers));
+        doc.on('end', async () => {
+            const pdfBuffer = Buffer.concat(buffers);
+            const uploadParams = {
+                Bucket: BUCKET_NAME,
+                Key: `uploads/${fileName}`,
+                Body: pdfBuffer,
+                ContentType: 'application/pdf',
+                ACL: 'public-read',
+            };
+
+            try {
+                const s3Data = await s3.upload(uploadParams).promise();
+                resolve(s3Data.Location);
+            } catch (err) {
+                reject(err);
+            }
+        });
+
         try {
-          const s3Data = await s3.upload(uploadParams).promise();
-          resolve(s3Data.Location);
-        } catch (err) {
-          reject(err);
+            // Fetch logo
+            const logoPath = path.join(__dirname, '..', 'assets', 'xpertlogo.png');
+            if (fs.existsSync(logoPath)) {
+                doc.image(logoPath, doc.page.width / 2 - 75, 30, { width: 150 });
+            }
+
+            // Move below image for greeting
+            doc.moveDown(5);
+
+
+            doc
+                .font('Helvetica-Bold')
+                .fontSize(26)
+                .text('', { align: 'center' });
+
+            doc.moveDown(4);
+
+            // Greeting & Intro
+            doc
+                .font('Helvetica')
+                .fontSize(16)
+                .text(`Hey ${invoiceData.cust_name},`)
+                .moveDown(0.5)
+                .text(`This is the receipt for a payment of Rs ${invoiceData.grand_total_expert_earning} you paid to ${invoiceData.name}.`)
+                .moveDown(2);
+
+            //  milestone number 
+            doc.fontSize(14).font('Helvetica-Bold').text('Milestone No.');
+            doc.font('Helvetica').text(invoiceData.milestone_number);
+            doc.moveDown(1);
+
+            // Payment Info
+            doc.fontSize(14).font('Helvetica-Bold').text('Payment Date:');
+            doc.font('Helvetica').text(moment(invoiceData.createtime).format("MMM DD, YYYY"));
+            doc.moveDown(2);
+
+
+            const startX = 50;
+            let startY = doc.y;
+
+            doc.fontSize(14).font('Helvetica-Bold');
+            doc.text('Description', startX, startY);
+            doc.text('Amount (Rs)', 400, startY, { align: 'right' });
+            doc.font('Helvetica');
+            doc.moveDown(0.8);
+
+
+            const y = doc.y;
+            doc.text('Milestone Payment', startX, y);
+            doc.text(` ${invoiceData.grand_total_expert_earning}`, 400, y, { align: 'right' });
+            doc.moveDown(0.8);
+
+            // Total
+            doc.font('Helvetica-Bold').fontSize(12);
+            doc.text(`Total Amount: Rs ${invoiceData.grand_total_expert_earning}`, { align: 'right' });
+
+            doc.end();
+
+        } catch (error) {
+            reject(`Error generating PDF: ${error.message}`);
         }
-      });
-  
-      try {
-        // Fetch logo
-        const logoPath = path.join(__dirname, '..', 'assets', 'xpertlogo.png');
-        if (fs.existsSync(logoPath)) {
-          doc.image(logoPath, doc.page.width / 2 - 75, 30, { width: 150 });
-        }
-  
-        // Move below image for greeting
-        doc.moveDown(5);
-  
-    
-      doc
-        .font('Helvetica-Bold')
-        .fontSize(26)
-        .text('', { align: 'center' });
-  
-    doc.moveDown(4);
-  
-    // Greeting & Intro
-    doc
-       .font('Helvetica')
-       .fontSize(16)
-       .text(`Hey ${invoiceData.cust_name},`)
-      .moveDown(0.5)
-      .text(`This is the receipt for a payment of Rs ${invoiceData.grand_total_expert_earning} you paid to ${invoiceData.name}.`)
-      .moveDown(2);
-  
-      //  milestone number 
-        doc.fontSize(14).font('Helvetica-Bold').text('Milestone No.');
-        doc.font('Helvetica').text(invoiceData.milestone_number);
-        doc.moveDown(1);
-  
-        // Payment Info
-        doc.fontSize(14).font('Helvetica-Bold').text('Payment Date:');
-        doc.font('Helvetica').text(moment(invoiceData.createtime).format("MMM DD, YYYY"));
-        doc.moveDown(2);
-  
-  
-      const startX = 50;
-      let startY = doc.y;
-  
-      doc.fontSize(14).font('Helvetica-Bold');
-      doc.text('Description', startX, startY);
-      doc.text('Amount (Rs)', 400, startY, { align: 'right' });
-      doc.font('Helvetica');
-      doc.moveDown(0.8);
-  
-     
-        const y = doc.y;
-        doc.text('Milestone Payment', startX, y);
-        doc.text(` ${invoiceData.grand_total_expert_earning}`, 400, y, { align: 'right' });
-        doc.moveDown(0.8);
-  
-        // Total
-        doc.font('Helvetica-Bold').fontSize(12);
-        doc.text(`Total Amount: Rs ${invoiceData.grand_total_expert_earning}`, { align: 'right' });
-  
-        doc.end();
-  
-      } catch (error) {
-        reject(`Error generating PDF: ${error.message}`);
-      }
     });
-  };
-  
+};
+
 
 //get nda price
-const getNdaPrice = async( request, response) => {
-    const { user_id} = request.query;
-    try{
-        if(!user_id){
-            return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key:'user_id'});
+const getNdaPrice = async (request, response) => {
+    const { user_id } = request.query;
+    try {
+        if (!user_id) {
+            return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'user_id' });
         }
         const checkUser = 'SELECT user_id, active_flag FROM user_master WHERE user_id = ? AND delete_flag = 0';
-        connection.query(checkUser, [user_id], async(err, res) => {
-            if(err){
-                return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err.message});
+        connection.query(checkUser, [user_id], async (err, res) => {
+            if (err) {
+                return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err.message });
             }
-            if(res.length == 0){
-                return response.status(200).json({ success: false, msg: languageMessage.userNotFound});
+            if (res.length == 0) {
+                return response.status(200).json({ success: false, msg: languageMessage.userNotFound });
             }
-            if(res[0].active_flag == 0){
-                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status:0});
+            if (res[0].active_flag == 0) {
+                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
             }
-        const sql = 'SELECT price, image FROM nda_price_master WHERE delete_flag = 0';
-        connection.query(sql, async(err1, res1) =>{
-            if(err1){
-                return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err1.message});
-            }
-            if(res1.length == 0){
-                return response.status(200).json({ success: false, msg: languageMessage.dataNotFound});
-            }
-            return response.status(200).json({ success: true, msg: languageMessage.dataFound, nda_price: res1[0].price.toString(),
-            image: res1[0].image
+            const sql = 'SELECT price, image FROM nda_price_master WHERE delete_flag = 0';
+            connection.query(sql, async (err1, res1) => {
+                if (err1) {
+                    return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err1.message });
+                }
+                if (res1.length == 0) {
+                    return response.status(200).json({ success: false, msg: languageMessage.dataNotFound });
+                }
+                return response.status(200).json({
+                    success: true, msg: languageMessage.dataFound, nda_price: res1[0].price.toString(),
+                    image: res1[0].image
+                });
             });
         });
-        });
     }
-    catch(error){
-        return response.status(200).json({ success: false , msg: languageMessage.internalServerError, error: error.message});
+    catch (error) {
+        return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: error.message });
     }
 }
 
@@ -5817,44 +5818,44 @@ const salt = '3qjFQW3C5c2b1eZquRYJXLDgBB0qvpE4';
 const PAYU_BASE_URL = 'https://secure.payu.in/_payment';
 
 const initiatePayment = (req, res) => {
-  const { amount, user_id  } = req.query;
-//   firstname, email, phone 
+    const { amount, user_id } = req.query;
+    //   firstname, email, phone 
 
-  if (!amount) {
-    return res.status(200).send('Missing amount');
-  }
-  if(!user_id ){
-    return res.status(200).send('Please send data ')
-  } 
-  const checkUser = 'SELECT email, mobile, name, active_flag FROM user_master WHERE user_id = ? AND delete_flag = 0';
-  connection.query(checkUser, [ user_id], async( err, result) =>{
-    if(err){
-        return res.status(200).send('Internal server error');
+    if (!amount) {
+        return res.status(200).send('Missing amount');
     }
-    if( result[0].active_flag == 0){
-        return res.status(200).send('Account deactivated')
+    if (!user_id) {
+        return res.status(200).send('Please send data ')
     }
-    let data = result[0];
- 
-  const txnid = crypto.randomBytes(6).toString('hex'); // 12-character alphanumeric ID
-  const productinfo = 'Test Product';
-  const firstname = data.name;
-  const email = data.email;
-  const phone = data.mobile;
-  const udf1 = '';
-  const udf2 = '';
-  const udf3 = '';
-  const udf4 = '';
-  const udf5 = '';
-  const surl = `https://zqd422dn6n.ap-south-1.awsapprunner.com/payment_success?transaction_id=${txnid}`;
-  const furl = 'https://zqd422dn6n.ap-south-1.awsapprunner.com/payment_failure';
-  
-  // Correct hash string format as per PayU's requirements
-  const hashString = `${key}|${txnid}|${amount}|${productinfo}|${firstname}|${email}|${udf1}|${udf2}|${udf3}|${udf4}|${udf5}||||||${salt}`;
-  const hash = crypto.createHash('sha512').update(hashString).digest('hex');
+    const checkUser = 'SELECT email, mobile, name, active_flag FROM user_master WHERE user_id = ? AND delete_flag = 0';
+    connection.query(checkUser, [user_id], async (err, result) => {
+        if (err) {
+            return res.status(200).send('Internal server error');
+        }
+        if (result[0].active_flag == 0) {
+            return res.status(200).send('Account deactivated')
+        }
+        let data = result[0];
 
-  
-  const htmlForm = `
+        const txnid = crypto.randomBytes(6).toString('hex'); // 12-character alphanumeric ID
+        const productinfo = 'Test Product';
+        const firstname = data.name;
+        const email = data.email;
+        const phone = data.mobile;
+        const udf1 = '';
+        const udf2 = '';
+        const udf3 = '';
+        const udf4 = '';
+        const udf5 = '';
+        const surl = `https://zqd422dn6n.ap-south-1.awsapprunner.com/payment_success?transaction_id=${txnid}`;
+        const furl = 'https://zqd422dn6n.ap-south-1.awsapprunner.com/payment_failure';
+
+        // Correct hash string format as per PayU's requirements
+        const hashString = `${key}|${txnid}|${amount}|${productinfo}|${firstname}|${email}|${udf1}|${udf2}|${udf3}|${udf4}|${udf5}||||||${salt}`;
+        const hash = crypto.createHash('sha512').update(hashString).digest('hex');
+
+
+        const htmlForm = `
     <!DOCTYPE html>
     <html>
       <head><title>Redirecting to PayU</title></head>
@@ -5872,15 +5873,16 @@ const initiatePayment = (req, res) => {
           <input type="hidden" name="furl" value="${furl}" />
           <input type="hidden" name="hash" value="${hash}" />
           <input type="hidden" name="service_provider" value="payu_paisa" />
+          <input type="hidden" name="pg" value="UPI" />
           <p>Redirecting to PayU...</p>
         </form>
       </body>
     </html>
   `;
-  res.setHeader('Content-Type', 'text/html');
-  res.send(htmlForm);
+        res.setHeader('Content-Type', 'text/html');
+        res.send(htmlForm);
 
-})
+    })
 }
 
 
@@ -5888,75 +5890,75 @@ const initiatePayment = (req, res) => {
 // Payment success API
 const verifyHash = (body) => {
     const {
-      key, txnid, amount, productinfo,
-      firstname, email, status, hash, user_id
+        key, txnid, amount, productinfo,
+        firstname, email, status, hash, user_id
     } = body;
-  
+
     // Hash sequence in reverse (as per PayU docs)
     const hashSequence = `${salt}|${status}|||||||||||${email}|${firstname}|${productinfo}|${amount}|${txnid}|${key}`;
     const calculatedHash = crypto.createHash('sha512').update(hashSequence).digest('hex');
     return hash === calculatedHash;
-  };
-  
+};
 
-  
+
+
 // Payment success api ...
 const paymentSuccess = (req, res) => {
-  const body = req.body;
+    const body = req.body;
 
-  // Step 1: Verify the hash
-  if (!verifyHash(body)) {
-    return res.status(400).send('Hash verification failed');
-  }
+    // Step 1: Verify the hash
+    if (!verifyHash(body)) {
+        return res.status(400).send('Hash verification failed');
+    }
 
-  // Step 2: Extract data
-  const { txnid, status, amount, email, user_id } = body;
+    // Step 2: Extract data
+    const { txnid, status, amount, email, user_id } = body;
 
-  // Step 3: Check if payment was successful
-  if (status.toLowerCase() !== 'success') {
-    return res.status(400).send('Payment failed or incomplete');
-  }
+    // Step 3: Check if payment was successful
+    if (status.toLowerCase() !== 'success') {
+        return res.status(400).send('Payment failed or incomplete');
+    }
 
-  // Step 4: Send immediate response to user
-  res.send({
-    message: 'Payment Successful!',
-    txnid,
-    status,
-  });
+    // Step 4: Send immediate response to user
+    res.send({
+        message: 'Payment Successful!',
+        txnid,
+        status,
+    });
 };
 
 // Payment failure API
 const paymentFailure = (req, res) => {
-  const body = req.query;
-  return res.send('Payment Failed. Please try again.');
+    const body = req.query;
+    return res.send('Payment Failed. Please try again.');
 };
-  
+
 
 
 // get subscription status
 const getSubscriptionStatus = async (request, response) => {
     const { user_id } = request.query;
-  
+
     try {
-      if (!user_id) {
-        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'user_id' });
-      }
-  
-      const checkUser = 'SELECT user_id, active_flag FROM user_master WHERE user_id = ? AND delete_flag = 0';
-      connection.query(checkUser, [user_id], (err, userRes) => {
-        if (err) {
-          return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err.message });
+        if (!user_id) {
+            return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'user_id' });
         }
-  
-        if (userRes.length === 0) {
-          return response.status(200).json({ success: false, msg: languageMessage.UserNotFound });
-        }
-  
-        if (userRes[0].active_flag === 0) {
-          return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
-        }
-  
-        const checkSubscription = `
+
+        const checkUser = 'SELECT user_id, active_flag FROM user_master WHERE user_id = ? AND delete_flag = 0';
+        connection.query(checkUser, [user_id], (err, userRes) => {
+            if (err) {
+                return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err.message });
+            }
+
+            if (userRes.length === 0) {
+                return response.status(200).json({ success: false, msg: languageMessage.UserNotFound });
+            }
+
+            if (userRes[0].active_flag === 0) {
+                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
+            }
+
+            const checkSubscription = `
           SELECT esm.createtime, sm.duration 
           FROM expert_subscription_master esm 
           JOIN subscription_master sm ON esm.subscription_id = sm.subscription_id 
@@ -5964,59 +5966,59 @@ const getSubscriptionStatus = async (request, response) => {
           ORDER BY esm.createtime DESC 
           LIMIT 1
         `;
-  
-        connection.query(checkSubscription, [user_id], (subErr, subRes) => {
-          if (subErr) {
-            return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: subErr.message });
-          }
-  
-          if (subRes.length === 0) {
-            return response.status(200).json({ success: true, subscription_status: 3, msg: 'No subscription found' }); // 3 = No subscription
-          }
 
-          const { createtime, duration } = subRes[0];
-          const createdAt = new Date(createtime);
-  const expiryDate = new Date(createdAt.getTime() + duration * 24 * 60 * 60 * 1000); // Add full days in milliseconds
-  
-          const now = new Date();
-          const status_label = '1 = Active, 2 = Expired';
-  
-          if (now < expiryDate) {
-            return response.status(200).json({ success: true,  msg: languageMessage.dataFound, subscription_status: 1,  status_label }); // Active
-          } else {
-            return response.status(200).json({ success: true, msg: languageMessage.dataFound,  subscription_status: 2, status_label }); // Expired
-          }
+            connection.query(checkSubscription, [user_id], (subErr, subRes) => {
+                if (subErr) {
+                    return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: subErr.message });
+                }
+
+                if (subRes.length === 0) {
+                    return response.status(200).json({ success: true, subscription_status: 3, msg: 'No subscription found' }); // 3 = No subscription
+                }
+
+                const { createtime, duration } = subRes[0];
+                const createdAt = new Date(createtime);
+                const expiryDate = new Date(createdAt.getTime() + duration * 24 * 60 * 60 * 1000); // Add full days in milliseconds
+
+                const now = new Date();
+                const status_label = '1 = Active, 2 = Expired';
+
+                if (now < expiryDate) {
+                    return response.status(200).json({ success: true, msg: languageMessage.dataFound, subscription_status: 1, status_label }); // Active
+                } else {
+                    return response.status(200).json({ success: true, msg: languageMessage.dataFound, subscription_status: 2, status_label }); // Expired
+                }
+            });
         });
-      });
     } catch (error) {
-      return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: error.message });
+        return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: error.message });
     }
-  };
-  
+};
 
- 
+
+
 // Payment hide and show
-const paymentHideShow = async( request, response) =>{ 
-  
-    try{
-   
+const paymentHideShow = async (request, response) => {
+
+    try {
+
         const sql = 'SELECT status FROM payment_master WHERE payment_id = 1 AND  delete_flag = 0';
-        connection.query(sql, async( err, res) => {
-             if(err){
-                return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err.message});
-             }
-             if(res.length ==  0){
-                return response.status(200).json({ success: false, msg: languageMessage.dataNotFound});
-             }
-             let status = res[0].status;
-             let status_label = '0 = hide, 1 = show';
-             return response.status(200).json({ success: true, msg: languageMessage.dataFound, status, status_label})
+        connection.query(sql, async (err, res) => {
+            if (err) {
+                return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err.message });
+            }
+            if (res.length == 0) {
+                return response.status(200).json({ success: false, msg: languageMessage.dataNotFound });
+            }
+            let status = res[0].status;
+            let status_label = '0 = hide, 1 = show';
+            return response.status(200).json({ success: true, msg: languageMessage.dataFound, status, status_label })
         });
-        }
-    catch(error){
-        return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: error.message});
     }
-} 
+    catch (error) {
+        return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: error.message });
+    }
+}
 
 
 
@@ -6027,4 +6029,4 @@ const paymentHideShow = async( request, response) =>{
 
 
 
-module.exports = { getExpertDetails, getExpertDetailsById, getExpertByRating, getMyJobs, getJobPostDetails, createJobPost, chatConsultationHistory, chatJobsHistory, callConsultationHistory, callJobsHistory, getExpertByFilter, walletRecharge, walletHistory, getExpertByName, getExpertEarning, withdrawRequest, withdrawHistory, expertCallConsultationHistory, expertCallJobsHistory, getJobPostsForExpert, getExpertEarningHistory, expertChatConsultationHistory, expertChatJobsHistory, getReviewsOfExpert, getExpertMyJobs, getBidsOfJobPost, hireTheExpert, createProjectCost, getSubscriptionPlans, buySubscription, reviewReply, rateExpert, ExpertBidJob, CustomerCallHistory, ExpertCallHistory, getExpertHomeJobs, bookMarkJob, reportOnJob, customerJobFilter, expertJobFilter, createJobCost, createJobMilestone, getJobWorkMilestone, acceptRejectMilestone, sentMilestoneRequest, checkMilestoneRequest, getExpertJobDetails, getUserProfile, downloadApp, deepLink, getExpertByFilterSubLabel, logOut, chatFileUpload, getExpertCompletedJobs, add_availability, edit_availability, get_available_slots, userBookSlot, getExpertScheduleSlot, convertIntoMilestone, updateJobMilestone, getWalletAmount, checkWalletAmount, debitWalletAmount, generateUniqueId, getTokenVariable, completeJob, getExpertEarningPdf, getWalletPdf, getExpertAllEarningPdf, getCustomerMilestoneCharge,  getNdaPrice,  userChatStatus, getActiveStatus, paymentFailure, initiatePayment, paymentSuccess, getSubscriptionStatus, paymentHideShow };
+module.exports = { getExpertDetails, getExpertDetailsById, getExpertByRating, getMyJobs, getJobPostDetails, createJobPost, chatConsultationHistory, chatJobsHistory, callConsultationHistory, callJobsHistory, getExpertByFilter, walletRecharge, walletHistory, getExpertByName, getExpertEarning, withdrawRequest, withdrawHistory, expertCallConsultationHistory, expertCallJobsHistory, getJobPostsForExpert, getExpertEarningHistory, expertChatConsultationHistory, expertChatJobsHistory, getReviewsOfExpert, getExpertMyJobs, getBidsOfJobPost, hireTheExpert, createProjectCost, getSubscriptionPlans, buySubscription, reviewReply, rateExpert, ExpertBidJob, CustomerCallHistory, ExpertCallHistory, getExpertHomeJobs, bookMarkJob, reportOnJob, customerJobFilter, expertJobFilter, createJobCost, createJobMilestone, getJobWorkMilestone, acceptRejectMilestone, sentMilestoneRequest, checkMilestoneRequest, getExpertJobDetails, getUserProfile, downloadApp, deepLink, getExpertByFilterSubLabel, logOut, chatFileUpload, getExpertCompletedJobs, add_availability, edit_availability, get_available_slots, userBookSlot, getExpertScheduleSlot, convertIntoMilestone, updateJobMilestone, getWalletAmount, checkWalletAmount, debitWalletAmount, generateUniqueId, getTokenVariable, completeJob, getExpertEarningPdf, getWalletPdf, getExpertAllEarningPdf, getCustomerMilestoneCharge, getNdaPrice, userChatStatus, getActiveStatus, paymentFailure, initiatePayment, paymentSuccess, getSubscriptionStatus, paymentHideShow };
