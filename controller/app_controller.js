@@ -106,7 +106,6 @@ const getExpertByRating = async (request, response) => {
             await queryAsync(updateTimeQuery, [user_id]);
         }
 
-
         const chatSql = 'DELETE FROM chat_status_master WHERE user_id = ? '
         connection.query(chatSql, [user_id], async (chatErr, chatRes) => {
             if (chatErr) {
@@ -4164,7 +4163,7 @@ const edit_availability = (req, res) => {
                             if (currentStatus === 0) {
                                 clearAndInsertSlots(availabilityId, req.body, day).then(resolve).catch(reject);
                             } else {
-                                resolve()
+                                clearSlots(availabilityId).then(resolve).catch(reject);
                             }
                         });
                     } else {
