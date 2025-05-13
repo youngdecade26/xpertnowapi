@@ -4173,7 +4173,7 @@ const edit_availability = (req, res) => {
             .then(() => res.status(200).json({ success: true, msg: languageMessage.availabilityUpdated }))
             .catch((error) => {
                 console.error("Error updating availability:", error);
-                res.status(200).json({ success: false, msg: languageMessage.internalServerError });
+                res.status(200).json({ success: false, msg: languageMessage.internalServerError, error: error.message });
             });
     });
 };
