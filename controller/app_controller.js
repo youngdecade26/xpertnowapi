@@ -102,17 +102,23 @@ const getExpertByRating = async (request, response) => {
             if (userResult[0].active_flag === 0) {
                 return response.status(403).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
             }
-
-
             const updateTimeQuery = `UPDATE user_master SET last_login_date_time = NOW() WHERE user_id = ?`;
             await queryAsync(updateTimeQuery, [user_id]);
         }
-        // Fetch top-rated experts
-        // const expertQuery = `
-        //     SELECT user_id as expert_id
-        //     FROM user_master 
-        //     WHERE delete_flag = 0 AND user_type = 2 AND active_flag = 1 AND profile_completed = 1 and expert_status=1`;
-        const expertQuery = `
+
+
+        const chatSql = 'DELETE FROM chat_status_master WHERE user_id = ? '
+        connection.query(chatSql, [user_id], async (chatErr, chatRes) => {
+            if (chatErr) {
+                return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: chatErr.message });
+            }
+
+            // Fetch top-rated experts
+            // const expertQuery = `
+            //     SELECT user_id as expert_id
+            //     FROM user_master 
+            //     WHERE delete_flag = 0 AND user_type = 2 AND active_flag = 1 AND profile_completed = 1 and expert_status=1`;
+            const expertQuery = `
         SELECT um.user_id AS expert_id
         FROM user_master um
         JOIN expert_subscription_master esm ON um.user_id = esm.expert_id
@@ -128,23 +134,24 @@ const getExpertByRating = async (request, response) => {
             AND DATE_ADD(esm.createtime, INTERVAL sm.duration DAY) >= NOW()
         GROUP BY um.user_id
     `;
-        const expertResults = await queryAsync(expertQuery);
-        if (expertResults.length === 0) {
-            return response.status(200).json({ success: true, msg: languageMessage.dataFound, expertDetails: 'NA' });
-        }
-        // Fetch user details for each expert and filter out "NA"
-        const expertDetails = await Promise.all(
-            expertResults.map(async (expert) => {
-                const userDetails = await getUserDetails(expert.expert_id);
-                return userDetails === "NA" ? null : { ...expert, userDetails };
-            })
-        );
-        // Filter out null values
-        const filteredDetails = expertDetails.filter((expert) => expert !== null);
+            const expertResults = await queryAsync(expertQuery);
+            if (expertResults.length === 0) {
+                return response.status(200).json({ success: true, msg: languageMessage.dataFound, expertDetails: 'NA' });
+            }
+            // Fetch user details for each expert and filter out "NA"
+            const expertDetails = await Promise.all(
+                expertResults.map(async (expert) => {
+                    const userDetails = await getUserDetails(expert.expert_id);
+                    return userDetails === "NA" ? null : { ...expert, userDetails };
+                })
+            );
+            // Filter out null values
+            const filteredDetails = expertDetails.filter((expert) => expert !== null);
 
-        filteredDetails.sort((a, b) => (b.userDetails.average_rating || 0) - (a.userDetails.average_rating || 0));
-        // Respond with success
-        return response.status(200).json({ success: true, msg: languageMessage.dataFound, expertDetails: filteredDetails });
+            filteredDetails.sort((a, b) => (b.userDetails.average_rating || 0) - (a.userDetails.average_rating || 0));
+            // Respond with success
+            return response.status(200).json({ success: true, msg: languageMessage.dataFound, expertDetails: filteredDetails });
+        })
     } catch (err) {
         // Handle unexpected errors
         return response.status(500).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
@@ -1508,23 +1515,30 @@ const getExpertEarning = async (request, response) => {
             if (result[0]?.active_flag === 0) {
                 return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
             }
-            const query2 = `SELECT SUM(expert_earning) AS partial_expert_earning FROM expert_earning_master WHERE expert_id = ?`;
-            connection.query(query2, [user_id], async (err, result) => {
-                if (err) {
-                    return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
+            const chatSql = 'DELETE FROM chat_status_master WHERE user_id = ? '
+            connection.query(chatSql, [user_id], async (chatErr, chatRes) => {
+                if (chatErr) {
+                    return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: chatErr.message });
                 }
-                const partialEarning = result[0]?.partial_expert_earning;
-                const query2 = `SELECT SUM(withdraw_amount) AS total_withdraw_amount FROM expert_withdraw_master WHERE expert_id = ? AND withdraw_status=1`;
+
+                const query2 = `SELECT SUM(expert_earning) AS partial_expert_earning FROM expert_earning_master WHERE expert_id = ?`;
                 connection.query(query2, [user_id], async (err, result) => {
                     if (err) {
                         return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
                     }
-                    const withdraws = result[0]?.total_withdraw_amount;
-                    const total_expert_earning = partialEarning - withdraws;
-                    return response.status(200).json({ success: true, msg: languageMessage.dataFound, total_expert_earning: total_expert_earning.toString() });
+                    const partialEarning = result[0]?.partial_expert_earning;
+                    const query2 = `SELECT SUM(withdraw_amount) AS total_withdraw_amount FROM expert_withdraw_master WHERE expert_id = ? AND withdraw_status=1`;
+                    connection.query(query2, [user_id], async (err, result) => {
+                        if (err) {
+                            return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
+                        }
+                        const withdraws = result[0]?.total_withdraw_amount;
+                        const total_expert_earning = partialEarning - withdraws;
+                        return response.status(200).json({ success: true, msg: languageMessage.dataFound, total_expert_earning: total_expert_earning.toString() });
+                    });
                 });
             });
-        });
+        })
     } catch (err) {
         return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
     }
