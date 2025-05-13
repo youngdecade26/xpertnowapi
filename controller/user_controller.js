@@ -198,7 +198,7 @@ const usersignUp_1 = async (request, response) => {
                 //     notiSendStatus = error;
                 // }
 
-                const newUserQuery = "INSERT INTO user_master (mobile, otp, user_type, player_id, device_type, createtime, updatetime, login_type, signup_step) VALUES (?, ?, ?, ?, ?, now(), now(), ?, ?)";
+                const newUserQuery = "INSERT INTO user_master (mobile, otp, user_type, player_id, device_type, createtime, updatetime, login_type, signup_step) VALUES (?, ?, ?, ?, ?, NOW(), NOW(), ?, ?)";
                 const values = [mobile, otp, 1, player_id, id, 0, 0];
 
                 connection.query(newUserQuery, values, async (err, result) => {
@@ -1020,7 +1020,7 @@ const signUp_1 = async (request, response) => {
                 // }
                 const newUserQuery = `
             INSERT INTO user_master (mobile, otp, user_type, player_id, device_type, createtime, updatetime)
-            VALUES (?, ?, ?, ?, ?, now(), now())
+            VALUES (?, ?, ?, ?, ?, NOW(), NOW())
         `;
                 const values = [mobile, otp, 2, player_id, id]
                 connection.query(newUserQuery, values, async (err, result) => {
@@ -2053,7 +2053,7 @@ const getExpertEye = async (request, response) => {
                     if (err) {
                         return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
                     }
-                    const updateTimeQuery = `UPDATE user_master SET last_login_date_time=now() WHERE user_id = ?`;
+                    const updateTimeQuery = `UPDATE user_master SET last_login_date_time=NOW() WHERE user_id = ?`;
                     connection.query(updateTimeQuery, [user_id], async (err, timeresult) => {
                         if (err) {
                             return response.status(200).json({ success: false, msg: languageMessage.userNotFound });
@@ -2250,7 +2250,7 @@ const deleteSingleNotification = (request, response) => {
                 return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: '6' });
             } else {
                 let delete_flag = 1;
-                var sqlNotification = "UPDATE user_notification_message SET delete_flag = ? ,updatetime= now() WHERE notification_message_id=? AND other_user_id = ? ";
+                var sqlNotification = "UPDATE user_notification_message SET delete_flag = ? ,updatetime= NOW() WHERE notification_message_id=? AND other_user_id = ? ";
                 connection.query(sqlNotification, [delete_flag, notification_message_id, user_id], (err, deleteresult) => {
                     if (err) {
                         return response.status(200).json({ success: false, msg: languageMessage.notificationDeleteUnsuccess, key: '2' });
@@ -2299,7 +2299,7 @@ const deleteAllNotification = (request, response) => {
                 return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: '6' });
             } else {
                 let delete_flag = 1;
-                var sqlNotification = "UPDATE user_notification_message SET delete_flag = ? ,updatetime= now() WHERE other_user_id = ? ";
+                var sqlNotification = "UPDATE user_notification_message SET delete_flag = ? ,updatetime= NOW() WHERE other_user_id = ? ";
                 connection.query(sqlNotification, [delete_flag, user_id], (err, deleteresult) => {
                     if (err) {
                         return response.status(200).json({ success: false, msg: languageMessage.notificationDeleteUnsuccess, key: '2' });
