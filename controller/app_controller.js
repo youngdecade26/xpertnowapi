@@ -1189,7 +1189,7 @@ const walletRecharge = async (request, response) => {
             }
             const newUserQuery = `
             INSERT INTO wallet_master (user_id,type,amount,wallet_balance,createtime,status,payment_transaction_id)
-            VALUES (?, ?, ?, ?, now(),?,?)
+            VALUES (?, ?, ?, ?, NOW(),?,?)
         `;
             const values = [user_id, type, recharge_amount, finalWallet, status, transaction_id]
             connection.query(newUserQuery, values, async (err, result) => {
@@ -1391,7 +1391,7 @@ const hireTheExpert = async (request, response) => {
                     return response.status(404).json({ success: false, msg: languageMessage.jobNotFound });
                 }
 
-                const newUserQuery = `UPDATE job_post_master  SET assign_expert_id = ?, status = 1,updatetime=now() WHERE job_post_id = ? and user_id=?`;
+                const newUserQuery = `UPDATE job_post_master  SET assign_expert_id = ?, status = 1,updatetime=NOW() WHERE job_post_id = ? and user_id=?`;
                 connection.query(newUserQuery, [expert_id, job_post_id, user_id], async (err, result) => {
                     if (err) {
                         return response.status(200).json({ success: false, msg: languageMessage.expertHireUnsuccess, key: err });
@@ -1406,7 +1406,7 @@ const hireTheExpert = async (request, response) => {
                             if (bidResult.length === 0) {
                                 return response.status(404).json({ success: false, msg: languageMessage.jobBidNotFound });
                             }
-                            const bidQuery = `UPDATE bid_master  SET status = 1,updatetime=now() WHERE job_post_id = ? and bid_id=? and expert_id=?`;
+                            const bidQuery = `UPDATE bid_master  SET status = 1,updatetime=NOW() WHERE job_post_id = ? and bid_id=? and expert_id=?`;
                             connection.query(bidQuery, [job_post_id, bid_id, expert_id], async (err, resultbid) => {
                                 if (err) {
                                     return response.status(200).json({ success: false, msg: languageMessage.expertHireUnsuccess, key: err });
@@ -1573,7 +1573,7 @@ const withdrawRequest = async (request, response) => {
 
                         if (total_expert_earning >= 10000) {
                             if (withdraw_amount == minimum_amount) {
-                                const newUserQuery = `INSERT INTO expert_withdraw_master (expert_id,withdraw_amount,withdraw_message,createtime,updatetime)VALUES (?,?,?,now(),now())`;
+                                const newUserQuery = `INSERT INTO expert_withdraw_master (expert_id,withdraw_amount,withdraw_message,createtime,updatetime)VALUES (?,?,?,NOW(),NOW())`;
                                 const values = [user_id, withdraw_amount, withdraw_message]
                                 connection.query(newUserQuery, values, async (err, requestresult) => {
                                     if (err) {
@@ -2404,7 +2404,7 @@ const buySubscription = (request, response) => {
                 const plan_type = subscriptions[0].plan_type;
                 enddate.setMonth(startdate.getMonth() + subscriptions[0].duration);
                 const subscriptionQuery = `INSERT INTO expert_subscription_master(expert_id,subscription_id,amount,start_date,end_date,transaction_id,status,duration,plan_type,createtime,updatetime)
-                VALUES (?,?,?,?,?,?,?,?,?,now(),now())`;
+                VALUES (?,?,?,?,?,?,?,?,?,NOW(),NOW())`;
                 const values = [user_id, subscription_id, amount, startdate, enddate, transaction_id, status, duration, plan_type]
                 connection.query(subscriptionQuery, values, async (err, buyresult) => {
                     if (err) {
@@ -2449,7 +2449,7 @@ const reviewReply = async (request, response) => {
                 return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
             }
             const newUserQuery = `INSERT INTO rating_reply_master (expert_id,rating_id,reply_message,createtime,updatetime)
-            VALUES (?, ?, ?, now(),now())`;
+            VALUES (?, ?, ?, NOW(),NOW())`;
             const values = [user_id, rating_id, message]
             connection.query(newUserQuery, values, async (err, result) => {
                 if (err) {
@@ -2494,7 +2494,7 @@ const rateExpert = async (request, response) => {
             }
             const user_name = result[0].name ? result[0].name : "NA";
             const newUserQuery = `INSERT INTO rating_master(user_id,expert_id,rating,review,createtime,updatetime)
-            VALUES (?, ?, ?,?, now(),now())`;
+            VALUES (?, ?, ?,?, NOW(),NOW())`;
             const values = [user_id, expert_id, rating, review]
             connection.query(newUserQuery, values, async (err, ratingresult) => {
                 if (err) {
@@ -2749,7 +2749,7 @@ const ExpertBidJob = async (request, response) => {
 
                 const other_user_id = jobresult[0].user_id ? jobresult[0].user_id : 0;
                 const bidQuery = `INSERT INTO bid_master(job_post_id,expert_id,price,duration,files,nda_file,duration_type,createtime,updatetime)
-                VALUES (?,?,?,?,?,?,?,now(),now())`;
+                VALUES (?,?,?,?,?,?,?,NOW(),NOW())`;
                 const values = [job_post_id, user_id, price, duration, pdf_file, nda_file, duration_type]
                 connection.query(bidQuery, values, async (err, bidresult) => {
                     if (err) {
@@ -2889,7 +2889,7 @@ const bookMarkJob = async (request, response) => {
                 }
                 if (type == 0) {
                     const bookMarkQuery = `INSERT INTO job_bookmark_master(expert_id,job_post_id,createtime,updatetime)
-                    VALUES (?,?,now(),now())`;
+                    VALUES (?,?,NOW(),NOW())`;
                     connection.query(bookMarkQuery, [user_id, job_post_id], async (err, result) => {
                         if (err) {
                             return response.status(200).json({ success: false, msg: languageMessage.bookMarkUnsuccess, key: err });
@@ -2947,7 +2947,7 @@ const reportOnJob = async (request, response) => {
                     return response.status(404).json({ success: false, msg: languageMessage.jobNotFound });
                 }
                 const bookMarkQuery = `INSERT INTO report_master(expert_id,job_post_id,type,reason,createtime,updatetime)
-                VALUES (?,?,?,?,now(),now())`;
+                VALUES (?,?,?,?,NOW(),NOW())`;
                 connection.query(bookMarkQuery, [user_id, job_post_id, 0, reason], async (err, result) => {
                     if (err) {
                         return response.status(200).json({ success: false, msg: languageMessage.jobReportUnsuccess, key: err });
@@ -3049,7 +3049,7 @@ const createJobCost = async (request, response) => {
                 if (jobResult.length === 0) {
                     return response.status(404).json({ success: false, msg: languageMessage.jobNotFound });
                 }
-                const bookMarkQuery = `UPDATE job_post_master SET project_cost = ?, updatetime = now(),status=2 WHERE job_post_id=? and user_id = ?`;
+                const bookMarkQuery = `UPDATE job_post_master SET project_cost = ?, updatetime = NOW(),status=2 WHERE job_post_id=? and user_id = ?`;
                 connection.query(bookMarkQuery, [project_cost, job_post_id, user_id], async (err, result) => {
                     if (err) {
                         return response.status(200).json({ success: false, msg: languageMessage.projectCostUnsuccess, key: err });
@@ -3210,10 +3210,10 @@ const acceptRejectMilestone = async (request, response) => {
                     let updateMilestone;
                     let updateValue;
                     if (type == 1) {
-                        updateMilestone = `UPDATE milestone_master SET milestone_status=?,updatetime = now() WHERE milestone_id=?`;
+                        updateMilestone = `UPDATE milestone_master SET milestone_status=?,updatetime = NOW() WHERE milestone_id=?`;
                         updateValue = [type, milestone_id];
                     } else {
-                        updateMilestone = `UPDATE milestone_master SET milestone_status=?,reject_reason=?,updatetime = now() WHERE milestone_id=?`;
+                        updateMilestone = `UPDATE milestone_master SET milestone_status=?,reject_reason=?,updatetime = NOW() WHERE milestone_id=?`;
                         updateValue = [type, reject_reason, milestone_id];
                     }
                     connection.query(updateMilestone, updateValue, async (err, updateResult) => {
@@ -3312,7 +3312,7 @@ const sentMilestoneRequest = async (request, response) => {
                     }
                     const project_title = jobResult[0].title;
 
-                    const updateMilestone = `UPDATE milestone_master SET milestone_status=3,updatetime = now() WHERE milestone_id=?`;
+                    const updateMilestone = `UPDATE milestone_master SET milestone_status=3,updatetime = NOW() WHERE milestone_id=?`;
                     const updateValue = [milestone_id];
 
                     connection.query(updateMilestone, updateValue, async (err, updateResult) => {
@@ -3416,17 +3416,17 @@ const checkMilestoneRequest = async (request, response) => {
                     let updateMilestone;
                     let updateValue;
                     if (type == 4) {
-                        updateMilestone = `UPDATE milestone_master SET milestone_status=?,updatetime = now() WHERE milestone_id=?`;
+                        updateMilestone = `UPDATE milestone_master SET milestone_status=?,updatetime = NOW() WHERE milestone_id=?`;
                         updateValue = [type, milestone_id];
 
 
 
                     } if (type == 5) {
-                        updateMilestone = `UPDATE milestone_master SET milestone_status=?,dispute_title=?,dispute_description=?,dispute_amount=?,dispute_file=?,updatetime = now() WHERE milestone_id=?`;
+                        updateMilestone = `UPDATE milestone_master SET milestone_status=?,dispute_title=?,dispute_description=?,dispute_amount=?,dispute_file=?,updatetime = NOW() WHERE milestone_id=?`;
                         updateValue = [type, dispute_title, dispute_description, dispute_amount, dispute_file, milestone_id];
                     }
                     if (type == 6) {
-                        updateMilestone = `UPDATE milestone_master SET milestone_status=?,reject_reason=?,updatetime = now() WHERE milestone_id=?`;
+                        updateMilestone = `UPDATE milestone_master SET milestone_status=?,reject_reason=?,updatetime = NOW() WHERE milestone_id=?`;
                         updateValue = [type, cancel_reason, milestone_id];
                     }
                     connection.query(updateMilestone, updateValue, async (err, updateResult) => {
@@ -4370,7 +4370,7 @@ const userBookSlot = async (request, response) => {
                         return response.status(200).json({ success: false, msg: languageMessage.SlotNotFound });
                     }
                     //-------------------book slot----------------------------
-                    const bookQuery = `INSERT INTO slot_schedule_master (availability_id,user_id,expert_id,slot_id,day,date,type,createtime,updatetime) VALUES (?, ?, ?, ?, ?, ?, ?, now(),now())`;
+                    const bookQuery = `INSERT INTO slot_schedule_master (availability_id,user_id,expert_id,slot_id,day,date,type,createtime,updatetime) VALUES (?, ?, ?, ?, ?, ?, ?, NOW(),NOW())`;
                     const bookvalues = [availability_id, user_id, expert_id, slot_id, day, date, type]
                     connection.query(bookQuery, bookvalues, async (err, bookresult) => {
                         if (err) {
@@ -4492,7 +4492,7 @@ const convertIntoMilestone = async (request, response) => {
                         return response.status(404).json({ success: false, msg: languageMessage.jobNotFound });
                     }
                     const project_title = jobResult[0].title;
-                    const updateMilestone = `UPDATE milestone_master SET milestone_convert_status=1,milestone_status=7,updatetime = now() WHERE milestone_id=?`;
+                    const updateMilestone = `UPDATE milestone_master SET milestone_convert_status=1,milestone_status=7,updatetime = NOW() WHERE milestone_id=?`;
                     const updateValue = [milestone_id];
                     connection.query(updateMilestone, updateValue, async (err, updateResult) => {
                         if (err) {
@@ -4585,7 +4585,7 @@ const updateJobMilestone = async (request, response) => {
                     return response.status(404).json({ success: false, msg: languageMessage.jobNotFound });
                 }
 
-                const bookMarkQuery = `UPDATE milestone_master SET price=?,duration=?,description=?,title=?,duration_type=?,updatetime=now(),file=? WHERE delete_flag=0 AND milestone_id=?`;
+                const bookMarkQuery = `UPDATE milestone_master SET price=?,duration=?,description=?,title=?,duration_type=?,updatetime=NOW(),file=? WHERE delete_flag=0 AND milestone_id=?`;
                 connection.query(bookMarkQuery, [amount, duration, description, title, duration_type, pdf_file, milestone_id], async (err, result) => {
                     if (err) {
                         return response.status(200).json({ success: false, msg: languageMessage.milestoneUpdatedUnsuccess, key: err });
@@ -4934,7 +4934,7 @@ const completeJob = async (request, response) => {
 
                 let job_name = jobRes[0].title;
 
-                const sql = 'UPDATE job_post_master SET status = 3, updatetime = now() WHERE job_post_id = ? AND delete_flag = 0';
+                const sql = 'UPDATE job_post_master SET status = 3, updatetime = NOW() WHERE job_post_id = ? AND delete_flag = 0';
                 connection.query(sql, [job_post_id], async (err1, res1) => {
                     if (err1) {
                         return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err1.message });
@@ -5088,7 +5088,7 @@ const BUCKET_NAME = "xpertnowbucket";
 const BASE_S3_URL = 'https://xpertnowbucket.s3.ap-south-1.amazonaws.com/uploads/';
 
 function generateUniqueFilename(prefix = 'invoice') {
-    const timestamp = Date.now();
+    const timestamp = Date.NOW();
     const random = Math.floor(Math.random() * 100000);
     return `${prefix}-${timestamp}-${random}.pdf`;
 }
@@ -5305,7 +5305,7 @@ const getWalletPdf = async (request, response) => {
 // generate wallet invoice
 const generateWalletInvoice = async (invoiceData, type_label) => {
     return new Promise(async (resolve, reject) => {
-        const fileName = `invoice_${Date.now()}_${Math.floor(Math.random() * 1000)}.pdf`;
+        const fileName = `invoice_${Date.NOW()}_${Math.floor(Math.random() * 1000)}.pdf`;
 
         const doc = new PDFDocument({ size: 'A4', margin: 50 });
         const buffers = [];
@@ -5434,7 +5434,7 @@ const getExpertAllEarningPdf = async (request, response) => {
 // get expert all earnings
 const generateExpertAllEarningPdf = async (invoiceData, type_label) => {
     return new Promise(async (resolve, reject) => {
-        const fileName = `invoice_${Date.now()}_${Math.floor(Math.random() * 1000)}.pdf`;
+        const fileName = `invoice_${Date.NOW()}_${Math.floor(Math.random() * 1000)}.pdf`;
 
         const doc = new PDFDocument({ size: 'A4', margin: 50 });
         const buffers = [];
@@ -5560,7 +5560,7 @@ const getCustomerMilestoneCharge = async (request, response) => {
 // get customer milestone pdf
 const generateCustMilestonePdf = async (invoiceData) => {
     return new Promise(async (resolve, reject) => {
-        const fileName = `invoice_${Date.now()}_${Math.floor(Math.random() * 1000)}.pdf`;
+        const fileName = `invoice_${Date.NOW()}_${Math.floor(Math.random() * 1000)}.pdf`;
 
         const doc = new PDFDocument({ size: 'A4', margin: 50 });
         const buffers = [];
