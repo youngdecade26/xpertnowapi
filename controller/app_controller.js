@@ -4164,7 +4164,7 @@ const edit_availability = (req, res) => {
                             if (currentStatus === 0) {
                                 clearAndInsertSlots(availabilityId, req.body, day).then(resolve).catch(reject);
                             } else {
-                                clearSlots(availabilityId).then(resolve).catch(reject);
+                                resolve()
                             }
                         });
                     } else {
