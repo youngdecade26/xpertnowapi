@@ -126,9 +126,9 @@ const usersignUp_1 = async (request, response) => {
     if (!/^[6-9]\d{9}$/.test(mobile)) {
         return response.status(200).json({ success: false, msg: languageMessage.InvalidNumber });
     }
-   
+
     try {
-      
+
 
 
         const query1 = "SELECT user_id, active_flag, user_type FROM user_master WHERE mobile = ? AND delete_flag=0";
@@ -142,8 +142,8 @@ const usersignUp_1 = async (request, response) => {
                 const user_id_get = result[0].user_id;
 
                 if (type == 0) {
-                    const otp = 123456;
-                    //  const otp = await generateOTP(6);
+                    // const otp = 123456;
+                    const otp = await generateOTP(6);
                     // const otp = Math.floor(100000 + Math.random() * 900000); // Generate a random OTP
                     // let notiSendStatus;
                     // try {
@@ -187,8 +187,8 @@ const usersignUp_1 = async (request, response) => {
                 if (device_type === 'andriod') { id = 0; }
 
                 if (device_type === 'ios') { id = 1; }
-                const otp = 123456;
-                //  const otp = await generateOTP(6);
+                // const otp = 123456;
+                const otp = await generateOTP(6);
                 // const otp = Math.floor(100000 + Math.random() * 900000); // Generate a random OTP
                 // let notiSendStatus;
                 // try {
@@ -293,8 +293,8 @@ const userResendOtp = async (request, response) => {
                 return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
             }
 
-            // const otp = await generateOTP(6);
-            const otp = 123456;
+            const otp = await generateOTP(6);
+            // const otp = 123456;
 
             // const mobile = result[0].mobile;
             // const otp = Math.floor(100000 + Math.random() * 900000); // Generate a random OTP
@@ -631,20 +631,20 @@ const getSubExpertiseCategoryLevel = async (request, response) => {
 // Manage User Privacy
 const managePrivacy = async (request, response) => {
     let { user_id, chat_access, img_access, screenshot_access, callrecord_access } = request.body;
-    if (!user_id ) {
-        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key:'user_id' });
+    if (!user_id) {
+        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'user_id' });
     }
-    if (!chat_access ) {
-        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key:'chat_access' });
+    if (!chat_access) {
+        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'chat_access' });
     }
-    if ( !img_access ) {
-        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param , key:' img_access'});
+    if (!img_access) {
+        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: ' img_access' });
     }
-    if ( !screenshot_access ) {
-        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param , key:' screenshot_access'});
+    if (!screenshot_access) {
+        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: ' screenshot_access' });
     }
-    if ( !callrecord_access ) {
-        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param , key:'callrecord_access'});
+    if (!callrecord_access) {
+        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'callrecord_access' });
     }
     try {
         const query1 = "SELECT mobile, active_flag FROM user_master WHERE user_id = ? AND delete_flag=0 AND user_type=1";
@@ -936,11 +936,11 @@ const signUp_1 = async (request, response) => {
     }
 
 
-    
+
     if (!/^[6-9]\d{9}$/.test(mobile)) {
         return response.status(200).json({ success: false, msg: languageMessage.InvalidNumber });
     }
-    
+
     try {
         const query1 = "SELECT user_id, active_flag, user_type FROM user_master WHERE mobile = ? AND delete_flag=0";
         const values1 = [mobile];
@@ -955,8 +955,8 @@ const signUp_1 = async (request, response) => {
 
                 const user_id_get = result[0].user_id;
                 if (type == 0) {
-                    const otp = 123456;
-                    //  const otp = await generateOTP(6);
+                    // const otp = 123456;
+                    const otp = await generateOTP(6);
                     // const otp = Math.floor(100000 + Math.random() * 900000); // Generate a random OTP
                     // let notiSendStatus;
                     // try {
@@ -1007,8 +1007,8 @@ const signUp_1 = async (request, response) => {
                 if (device_type === 'andriod') { id = 0; }
                 if (device_type === 'ios') { id = 1; }
                 if (device_type === 'web') { id = 2; }
-                const otp = 123456;
-                    // const otp = await generateOTP(6);
+                // const otp = 123456;
+                const otp = await generateOTP(6);
 
                 // const otp = Math.floor(100000 + Math.random() * 900000); // Generate a random OTP
                 // let notiSendStatus;
@@ -1122,8 +1122,8 @@ const resendOtp = async (request, response) => {
             if (result[0]?.active_flag === 0) {
                 return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
             }
-            // const otp = await generateOTP(6);
-            const otp = 123456;
+            const otp = await generateOTP(6);
+            // const otp = 123456;
             // const mobile = result[0].mobile;
             // const otp = Math.floor(100000 + Math.random() * 900000); // Generate a random OTP
             // let notiSendStatus;
@@ -2463,67 +2463,67 @@ const editProfileRequest = async (request, response) => {
 
 
         const checkAdminEmail = 'SELECT email , name FROM user_master WHERE user_type = 0 AND delete_flag = 0';
-        connection.query(checkAdminEmail, async(error, result) => {
-            if(error){
-                return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: error.message});
+        connection.query(checkAdminEmail, async (error, result) => {
+            if (error) {
+                return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: error.message });
             }
-            if(result.length == 0){
-                return response.status(200).json({ success: false, msg: languageMessage.dataNotFound});
+            if (result.length == 0) {
+                return response.status(200).json({ success: false, msg: languageMessage.dataNotFound });
             }
             let admin_email = result[0].email;
             let admin_name = result[0].name
-      
 
-        const checkUser = 'SELECT user_id, name, email, active_flag FROM user_master WHERE user_id = ? AND delete_flag  = 0';
-        connection.query(checkUser, [user_id], async (err, res) => {
-            if (err) {
-                return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err.message });
-            }
-            if (res.length == 0) {
-                return response.status(200).json({ success: false, msg: languageMessage.userNotFound });
-            }
-            if (res[0].active_flag == 0) {
-                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
-            }
 
-            let expertName = res[0].name;
-            let expertEmail = res[0].email;
-          const sql = 'INSERT INTO  details_request_master( user_id, type, description, createtime, updatetime) VALUES(?, ?, ?, NOW(), NOW())';
-            connection.query(sql, [user_id, type, description], async (err1, res1) => {
-                if (err1) {
-                    return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err1.message });
+            const checkUser = 'SELECT user_id, name, email, active_flag FROM user_master WHERE user_id = ? AND delete_flag  = 0';
+            connection.query(checkUser, [user_id], async (err, res) => {
+                if (err) {
+                    return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err.message });
                 }
-                if (res1.affectedRows == 0) {
-                    return response.status(200).json({ success: false, msg: languageMessage.RequestNotSent });
+                if (res.length == 0) {
+                    return response.status(200).json({ success: false, msg: languageMessage.userNotFound });
                 }
-                 let details_request_id = res1.insertId;
-                // const user_email = admin_email;
+                if (res[0].active_flag == 0) {
+                    return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
+                }
 
-                // const fromName = admin_name;
-    
-                // const app_name = 'Xpertnow';
-    
-                // const message = description;
-    
-                // const title = "Profile Update Request";
-    
-                // const subject = "Profile Update Request";
-    
-                // const app_logo = "https://xpertnowbucket.s3.ap-south-1.amazonaws.com/uploads/1743577170167-xpertlog.png";
+                let expertName = res[0].name;
+                let expertEmail = res[0].email;
+                const sql = 'INSERT INTO  details_request_master( user_id, type, description, createtime, updatetime) VALUES(?, ?, ?, NOW(), NOW())';
+                connection.query(sql, [user_id, type, description], async (err1, res1) => {
+                    if (err1) {
+                        return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err1.message });
+                    }
+                    if (res1.affectedRows == 0) {
+                        return response.status(200).json({ success: false, msg: languageMessage.RequestNotSent });
+                    }
+                    let details_request_id = res1.insertId;
+                    // const user_email = admin_email;
 
-                // const expert_email = expertEmail;
-                // const expert_name = expertName;
-    
-                // await mailer(user_email, fromName, app_name, message, title, subject, app_logo, expert_email, expert_name).then(data => {
-                      
-                //     if (data.status === 'yes') {
-    
-                return response.status(200).json({ success: true, msg: languageMessage.RequestSent });
-            //  }
-            // });
+                    // const fromName = admin_name;
+
+                    // const app_name = 'Xpertnow';
+
+                    // const message = description;
+
+                    // const title = "Profile Update Request";
+
+                    // const subject = "Profile Update Request";
+
+                    // const app_logo = "https://xpertnowbucket.s3.ap-south-1.amazonaws.com/uploads/1743577170167-xpertlog.png";
+
+                    // const expert_email = expertEmail;
+                    // const expert_name = expertName;
+
+                    // await mailer(user_email, fromName, app_name, message, title, subject, app_logo, expert_email, expert_name).then(data => {
+
+                    //     if (data.status === 'yes') {
+
+                    return response.status(200).json({ success: true, msg: languageMessage.RequestSent });
+                    //  }
+                    // });
+                })
+            });
         })
-        });
-    })
     }
     catch (error) {
         return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: error.message });
@@ -2533,52 +2533,52 @@ const editProfileRequest = async (request, response) => {
 
 
 // Get update request status 
-const getRequestStatus = async( request, response) => {
-    const {  user_id} = request.query;
-    try{
-       
+const getRequestStatus = async (request, response) => {
+    const { user_id } = request.query;
+    try {
 
-        if(!user_id){
-            return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key:'user_id'});
+
+        if (!user_id) {
+            return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'user_id' });
         }
- 
+
         const checkUser = 'SELECT user_id, active_flag FROM user_master WHERE user_id = ? AND delete_flag = 0';
-        connection.query(checkUser,[user_id], async(error, result) => {
-            if(error){
-                return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: error.message});
+        connection.query(checkUser, [user_id], async (error, result) => {
+            if (error) {
+                return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: error.message });
             }
-            if(result.length == 0){
-                return response.status(200).json({ success: false, msg: languageMessage.userNotFound});
+            if (result.length == 0) {
+                return response.status(200).json({ success: false, msg: languageMessage.userNotFound });
             }
-            if(result[0].active_flag == 0){
-                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status : 0});
+            if (result[0].active_flag == 0) {
+                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
             }
-    
+
 
             const sql = 'SELECT status, type FROM details_request_master WHERE user_id = ? AND delete_flag = 0 ORDER BY createtime DESC LIMIT 1';
-            connection.query(sql, [user_id], async(err1, res1) => {
-            if(err1){
-                return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err1.message});
-            }
+            connection.query(sql, [user_id], async (err1, res1) => {
+                if (err1) {
+                    return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err1.message });
+                }
 
-            let status = 0;
+                let status = 0;
 
-            if(res1.length > 0){
-           let data = {
-            status : res1[0].status,
-            type: res1[0].type,
-            type_label : '1 = professional details, 2 = gst, pancard',
-            status_label : '0 = pending, 1 = approved, 2 = rejected'
-           }
-           return response.status(200).json({ success: true, msg: languageMessage.dataFound, data : data});
-        }
-        else{
-            return response.status(200).json({ success: true, msg: languageMessage.dataFound, status: status});
-        }
-        })         
+                if (res1.length > 0) {
+                    let data = {
+                        status: res1[0].status,
+                        type: res1[0].type,
+                        type_label: '1 = professional details, 2 = gst, pancard',
+                        status_label: '0 = pending, 1 = approved, 2 = rejected'
+                    }
+                    return response.status(200).json({ success: true, msg: languageMessage.dataFound, data: data });
+                }
+                else {
+                    return response.status(200).json({ success: true, msg: languageMessage.dataFound, status: status });
+                }
+            })
         })
     }
-    catch(error){
+    catch (error) {
         return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: error.message });
     }
 }
@@ -2591,4 +2591,4 @@ const getRequestStatus = async( request, response) => {
 
 
 
-module.exports = { signUp_2, signUp_1, getStates, getCities, getDegree, getCategoryDetails, getExpertLanguages, updateBankDetails, getSubCategoryDetails, getSubCategoryLevelDetails, otpVerify, resendOtp, getContent, getAllContentUrl, managePrivacy, deleteAccount, editProfile, getUserNotification, getCustomerSupport, editCallCharge, editExpertiseAndExperience, editProfessionalDetails, editDocNumber, editProfileDetails, getExpertEye, deleteExpertAccount, deleteSingleNotification, deleteAllNotification, usersignUp_1, userOtpVerify, userResendOtp, usersignUp_2, getExpertiseCategory, getSubExpertiseCategory, getSubExpertiseCategoryLevel, getExpertNotification, getExpertByCatSubCat, getSubLevelTwoCategory, getSubLevelThreeCategory, onlineOffline, editProfileRequest,  getRequestStatus }
+module.exports = { signUp_2, signUp_1, getStates, getCities, getDegree, getCategoryDetails, getExpertLanguages, updateBankDetails, getSubCategoryDetails, getSubCategoryLevelDetails, otpVerify, resendOtp, getContent, getAllContentUrl, managePrivacy, deleteAccount, editProfile, getUserNotification, getCustomerSupport, editCallCharge, editExpertiseAndExperience, editProfessionalDetails, editDocNumber, editProfileDetails, getExpertEye, deleteExpertAccount, deleteSingleNotification, deleteAllNotification, usersignUp_1, userOtpVerify, userResendOtp, usersignUp_2, getExpertiseCategory, getSubExpertiseCategory, getSubExpertiseCategoryLevel, getExpertNotification, getExpertByCatSubCat, getSubLevelTwoCategory, getSubLevelThreeCategory, onlineOffline, editProfileRequest, getRequestStatus }
