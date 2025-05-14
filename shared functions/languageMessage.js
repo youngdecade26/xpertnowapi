@@ -111,34 +111,35 @@ const messages = {
   milestoneUpdatedSuccess: ["Work space updated successfully"],
   milestoneUpdatedUnsuccess: ["Work space updated unsuccessfully , please try again",],
 
-  ExpertRequestNotApproved:['Your request as expert is in being review, please wait for admin approval'],
-  ExpertRejected : ['Your request as expert has been rejected by admin'],
+  ExpertRequestNotApproved: ['Your request as expert is in being review, please wait for admin approval'],
+  ExpertRejected: ['Your request as expert has been rejected by admin'],
 
-  JobCompleted:['Job completed successfully'],
-  ErrorUpdatingUrl:['Error updating invoice url'],
-  PdfGeneratedSuccess : ['Invoice generated successfully'],
-  ErrorGeneratingPdf:['Error generating PDF'],
-  CallScheduled:['Call scheduled successfully'],
+  JobCompleted: ['Job completed successfully'],
+  ErrorUpdatingUrl: ['Error updating invoice url'],
+  PdfGeneratedSuccess: ['Invoice generated successfully'],
+  ErrorGeneratingPdf: ['Error generating PDF'],
+  CallScheduled: ['Call scheduled successfully'],
 
-  statusUpdated:['Status updated successfully'],
-  statusNotUpdated:['Status has not been updated, please try again'],
+  statusUpdated: ['Status updated successfully'],
+  statusNotUpdated: ['Status has not been updated, please try again'],
 
 
-  expertOffline:['Expert is offline'],
-  expertOnline:['Expert is online'],
-  CannotWithdraw:['You cannot withdraw amount. The minimum amount must be ₹10,000'],
+  expertOffline: ['Expert is offline'],
+  expertOnline: ['Expert is online'],
+  CannotWithdraw: ['You cannot withdraw amount. The minimum amount must be ₹10,000'],
 
-  RequestSent :['Profile update request sent successfully'],
-  RequestNotSent:['Profile update request has not been sent, please try again'],
+  RequestSent: ['Profile update request sent successfully'],
+  RequestNotSent: ['Profile update request has not been sent, please try again'],
 
-  NotificationSend:['Notificaion send successfully'],
+  NotificationSend: ['Notificaion send successfully'],
 
-  NdaAmountErr:['Insufficient balance, wallet amount must be equal to nda price'],
+  NdaAmountErr: ['Insufficient balance, wallet amount must be equal to nda price'],
 
-  MinimumWithdrawalAmount:['Minimum withdrawal amount must be '],
-  SubscriptionExpired : ['Your subscription has expired'],
-  InvalidNumber:['Invalid mobile number']
-  
-  
+  MinimumWithdrawalAmount: ['Minimum withdrawal amount must be '],
+  SubscriptionExpired: ['Your subscription has expired'],
+  InvalidNumber: ['Invalid mobile number'],
+  WalletbalanceInvalid: ['Invalid wallet balance']
+
+
 };
 module.exports = messages; 

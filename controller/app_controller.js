@@ -3110,6 +3110,12 @@ const createJobMilestone = async (request, response) => {
                 const project_title = jobResult[0].title;
                 const other_user_id = jobResult[0].assign_expert_id;
                 let milestone_number = await generateOTP(4);
+                const wallet_amount = await getUserTotalWallet(user_id);
+
+                if (wallet_amount < amount) {
+                    return response.status(200).json({ success: false, msg: languageMessage.WalletbalanceInvalid })
+                }
+
                 const bookMarkQuery = `INSERT INTO milestone_master(job_post_id,price,duration,description,file,title,duration_type, milestone_number, createtime,updatetime)
                 VALUES (?,?,?,?,?,?,?,?,NOW(),NOW())`;
                 connection.query(bookMarkQuery, [job_post_id, amount, duration, description, pdf_file, title, duration_type, milestone_number], async (err, result) => {
@@ -3429,12 +3435,21 @@ const checkMilestoneRequest = async (request, response) => {
                     let updateMilestone;
                     let updateValue;
                     if (type == 4) {
-                        updateMilestone = `UPDATE milestone_master SET milestone_status=?,updatetime = NOW() WHERE milestone_id=?`;
-                        updateValue = [type, milestone_id];
+                        const sql = 'SELECT price FROM milestone_master WHERE milestone_id = ? AND delete_flag = 0';
+                        connection.query(sql, [milestone_id], async (err, res) => {
+                            let milestone_price = res[0].price;
+                            const wallet_amount = await getUserTotalWallet(user_id);
 
+                            if (wallet_amount < milestone_price) {
+                                return response.status(200)({ status: false, msg: languageMessage.WalletbalanceInvalid });
+                            }
 
+                            updateMilestone = `UPDATE milestone_master SET milestone_status=?,updatetime = NOW() WHERE milestone_id=?`;
+                            updateValue = [type, milestone_id];
 
-                    } if (type == 5) {
+                        })
+                    }
+                    if (type == 5) {
                         updateMilestone = `UPDATE milestone_master SET milestone_status=?,dispute_title=?,dispute_description=?,dispute_amount=?,dispute_file=?,updatetime = NOW() WHERE milestone_id=?`;
                         updateValue = [type, dispute_title, dispute_description, dispute_amount, dispute_file, milestone_id];
                     }
@@ -3493,6 +3508,7 @@ const checkMilestoneRequest = async (request, response) => {
                             }
                         });
                         if (type == 4) {
+
                             var expert_earning = await getExpertEarningg(milestone_id, user_id);
                             return response.status(200).json({ success: true, msg: languageMessage.milestoneReleaseSuccess, expert_earning_id: expert_earning });
                         }
