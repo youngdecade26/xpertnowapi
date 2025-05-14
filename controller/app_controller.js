@@ -3447,6 +3447,13 @@ const checkMilestoneRequest = async (request, response) => {
                             updateMilestone = `UPDATE milestone_master SET milestone_status=?,updatetime = NOW() WHERE milestone_id=?`;
                             updateValue = [type, milestone_id];
 
+                            const fileInsertQuery = `INSERT INTO wallet_master(user_id, expert_id, amount,status,type, createtime,updatetime) VALUES (?,?,?, 1, 2, NOW(),NOW())`;
+                            connection.query(fileInsertQuery, [user_id, assign_expert_id[0].expert_id, amount], (err, result1) => {
+                                if (err) {
+                                    return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
+                                }
+
+                            })
                         })
                     }
                     if (type == 5) {
