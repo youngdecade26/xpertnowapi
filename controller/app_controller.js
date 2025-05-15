@@ -3431,108 +3431,117 @@ const checkMilestoneRequest = async (request, response) => {
                     if (jobResult.length === 0) {
                         return response.status(404).json({ success: false, msg: languageMessage.jobNotFound });
                     }
+
                     const project_title = jobResult[0].title;
-                    let updateMilestone;
-                    let updateValue;
-                    if (type == 4) {
-                        const sql = 'SELECT price FROM milestone_master WHERE milestone_id = ? AND delete_flag = 0';
-                        connection.query(sql, [milestone_id], async (err, res) => {
-                            let milestone_price = res[0].price;
-                            const wallet_amount = await getUserTotalWallet(user_id);
+                    var expert_id = jobResult[0].assign_expert_id
+                    const sql = 'SELECT price FROM milestone_master WHERE milestone_id = ? AND delete_flag = 0';
+                    connection.query(sql, [milestone_id], async (err, res) => {
+                        var milestone_price = res[0].price;
+                        const wallet_amount = await getUserTotalWallet(user_id);
+
+                        let updateMilestone;
+                        let updateValue;
+                        if (type == 4) {
 
                             if (wallet_amount < milestone_price) {
-                                return response.status(200)({ status: false, msg: languageMessage.WalletbalanceInvalid });
-                            }
-
-                            updateMilestone = `UPDATE milestone_master SET milestone_status=?,updatetime = NOW() WHERE milestone_id=?`;
-                            updateValue = [type, milestone_id];
-
-                            const fileInsertQuery = `INSERT INTO wallet_master(user_id, expert_id, amount,status,type, createtime,updatetime) VALUES (?,?,?, 1, 2, NOW(),NOW())`;
-                            connection.query(fileInsertQuery, [user_id, assign_expert_id[0].expert_id, amount], (err, result1) => {
-                                if (err) {
-                                    return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
-                                }
-
-                            })
-                        })
-                    }
-                    if (type == 5) {
-                        updateMilestone = `UPDATE milestone_master SET milestone_status=?,dispute_title=?,dispute_description=?,dispute_amount=?,dispute_file=?,updatetime = NOW() WHERE milestone_id=?`;
-                        updateValue = [type, dispute_title, dispute_description, dispute_amount, dispute_file, milestone_id];
-                    }
-                    if (type == 6) {
-                        updateMilestone = `UPDATE milestone_master SET milestone_status=?,reject_reason=?,updatetime = NOW() WHERE milestone_id=?`;
-                        updateValue = [type, cancel_reason, milestone_id];
-                    }
-                    connection.query(updateMilestone, updateValue, async (err, updateResult) => {
-                        if (err) {
-                            if (type == 4) {
-                                return response.status(200).json({ success: false, msg: languageMessage.milestoneReleaseUnsuccess, key: err });
-                            }
-                            if (type == 5) {
-                                return response.status(200).json({ success: false, msg: languageMessage.milestoneDisputeUnsuccess, key: err });
-                            }
-                            if (type == 6) {
-                                return response.status(200).json({ success: false, msg: languageMessage.milestoneCancelUnsuccess, key: err });
-                            }
-
-                        }
-                        const user_id_notification = user_id;
-                        const other_user_id_notification = jobResult[0].assign_expert_id;
-                        const action_id = milestone_id;
-                        let action;
-                        let title;
-                        let messages;
-                        if (type == 4) {
-                            action = "milestone_release";
-                            title = "Milestone Release";
-                            messages = `${user_name} has release milestone for the project ${project_title}`;
-                        } if (type == 5) {
-                            action = "milestone_dipute";
-                            title = "Milestone Dispute";
-                            messages = `${user_name} has dipute milestone for the project ${project_title}`;
-                        }
-                        if (type == 6) {
-                            action = "milestone_cancel";
-                            title = "Milestone Cancelled";
-                            messages = `${user_name} has cancel milestone for the project ${project_title}`;
-                        }
-                        const title_2 = title;
-                        const title_3 = title;
-                        const title_4 = title;
-                        const message_2 = messages;
-                        const message_3 = messages;
-                        const message_4 = messages;
-                        const action_data = { user_id: user_id_notification, other_user_id: other_user_id_notification, action_id: action_id, action: action };
-                        await getNotificationArrSingle(user_id_notification, other_user_id_notification, action, action_id, title, title_2, title_3, title_4, messages, message_2, message_3, message_4, action_data, async (notification_arr_check) => {
-                            let notification_arr_check_new = [notification_arr_check];
-
-                            if (notification_arr_check_new && notification_arr_check_new.length !== 0 && notification_arr_check_new != '') {
-                                const notiSendStatus = await oneSignalNotificationSendCall(notification_arr_check_new);
-
+                                return response.status(200).json({ success: false, msg: languageMessage.WalletbalanceInvalid });
                             } else {
-                                console.log("Notification array is empty");
+                                updateMilestone = `UPDATE milestone_master SET milestone_status=?,updatetime = now() WHERE milestone_id=?`;
+                                updateValue = [type, milestone_id];
                             }
-                        });
-                        if (type == 4) {
 
-                            var expert_earning = await getExpertEarningg(milestone_id, user_id);
-                            return response.status(200).json({ success: true, msg: languageMessage.milestoneReleaseSuccess, expert_earning_id: expert_earning });
+
                         }
                         if (type == 5) {
-                            return response.status(200).json({ success: true, msg: languageMessage.milestoneDisputeSuccess });
+                            updateMilestone = `UPDATE milestone_master SET milestone_status=?,dispute_title=?,dispute_description=?,dispute_amount=?,dispute_file=?,updatetime = now() WHERE milestone_id=?`;
+                            updateValue = [type, dispute_title, dispute_description, dispute_amount, dispute_file, milestone_id];
                         }
                         if (type == 6) {
-                            return response.status(200).json({ success: true, msg: languageMessage.milestoneCancelSuccess });
+                            updateMilestone = `UPDATE milestone_master SET milestone_status=?,reject_reason=?,updatetime = now() WHERE milestone_id=?`;
+                            updateValue = [type, cancel_reason, milestone_id];
                         }
+                        connection.query(updateMilestone, updateValue, async (err, updateResult) => {
+                            if (err) {
+                                if (type == 4) {
+                                    return response.status(200).json({ success: false, msg: languageMessage.milestoneReleaseUnsuccess, key: err.message });
+                                }
+                                if (type == 5) {
+                                    return response.status(200).json({ success: false, msg: languageMessage.milestoneDisputeUnsuccess, key: err });
+                                }
+                                if (type == 6) {
+                                    return response.status(200).json({ success: false, msg: languageMessage.milestoneCancelUnsuccess, key: err });
+                                }
+
+                            }
+                            const user_id_notification = user_id;
+                            const other_user_id_notification = jobResult[0].assign_expert_id;
+                            const action_id = milestone_id;
+                            let action;
+                            let title;
+                            let messages;
+                            if (type == 4) {
+                                action = "milestone_release";
+                                title = "Milestone Release";
+                                messages = `${user_name} has release milestone for the project ${project_title}`;
+                            } if (type == 5) {
+                                action = "milestone_dipute";
+                                title = "Milestone Dispute";
+                                messages = `${user_name} has dipute milestone for the project ${project_title}`;
+                            }
+                            if (type == 6) {
+                                action = "milestone_cancel";
+                                title = "Milestone Cancelled";
+                                messages = `${user_name} has cancel milestone for the project ${project_title}`;
+                            }
+                            const title_2 = title;
+                            const title_3 = title;
+                            const title_4 = title;
+                            const message_2 = messages;
+                            const message_3 = messages;
+                            const message_4 = messages;
+                            const action_data = { user_id: user_id_notification, other_user_id: other_user_id_notification, action_id: action_id, action: action };
+                            await getNotificationArrSingle(user_id_notification, other_user_id_notification, action, action_id, title, title_2, title_3, title_4, messages, message_2, message_3, message_4, action_data, async (notification_arr_check) => {
+                                let notification_arr_check_new = [notification_arr_check];
+
+                                if (notification_arr_check_new && notification_arr_check_new.length !== 0 && notification_arr_check_new != '') {
+                                    const notiSendStatus = await oneSignalNotificationSendCall(notification_arr_check_new);
+
+                                } else {
+                                    console.log("Notification array is empty");
+                                }
+                            });
+                            if (type == 4) {
+
+                                const fileInsertQuery = `INSERT INTO wallet_master(user_id, expert_id, amount,status,type, createtime,updatetime) VALUES (?,?,?, 1, 2, NOW(),NOW())`;
+                                connection.query(fileInsertQuery, [user_id, expert_id, milestone_price], async (err, result1) => {
+                                    if (err) {
+                                        return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
+                                    }
+
+                                    var expert_earning = await getExpertEarningg(milestone_id, user_id);
+                                    return response.status(200).json({ success: true, msg: languageMessage.milestoneReleaseSuccess, expert_earning_id: expert_earning });
+                                })
+                            }
+                            if (type == 5) {
+                                return response.status(200).json({ success: true, msg: languageMessage.milestoneDisputeSuccess });
+                            }
+                            if (type == 6) {
+                                return response.status(200).json({ success: true, msg: languageMessage.milestoneCancelSuccess });
+                            }
+                        });
                     });
                 });
             });
-        });
+        })
     } catch (err) {
         return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
     }
 }
+
+
+
+
+
 // get job post details
 const getExpertJobDetails = async (request, response) => {
     const { user_id, job_post_id } = request.query;
