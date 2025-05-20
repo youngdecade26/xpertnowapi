@@ -11,34 +11,94 @@ const { request } = require('http');
 // const { multer} = require('../middleware/multer');
 const { mailer, JobcompleteMailer } = require('./MailerApi');
 // Get Expert Details By category
+// const getExpertDetails = async (request, response) => {
+//     const { user_id, category_id, sub_category_id, sub_level_id, sub_two_level_category_id, sub_three_level_category_id } = request.body;
+//     // Validate input parameters
+//     if (!user_id || !category_id || !sub_category_id || !sub_level_id) {
+//         return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param });
+//     }
+//     try {
+//         // SQL query to fetch expert details
+//         let query = `SELECT user_id as expert_id FROM user_master  WHERE category = ? AND sub_category = ?  AND FIND_IN_SET(?, sub_category_level) AND active_flag = 1 and delete_flag=0`;
+//         let values = [category_id, sub_category_id, sub_level_id];
+//         if (sub_two_level_category_id != 0) {
+//             query += " AND sub_two_level_category_id = ?";
+//             values.push((sub_two_level_category_id));
+//         }
+//         if (sub_three_level_category_id != 0) {
+//             query += " AND sub_three_level_category_id = ?";
+//             values.push((sub_three_level_category_id));
+//         }
+//         connection.query(query, values, async (err, result) => {
+//             if (result.length > 0) {
+//                 // Fetch user details for each expert and filter out "NA"
+//                 const expertDetails = await Promise.all(
+//                     result.map(async (expert) => {
+//                         const userDetails = await getUserDetails(expert.expert_id);
+//                         return userDetails === "NA" ? null : { ...expert, userDetails };
+//                     })
+//                 );
+//                 // Filter out null values
+//                 const filteredDetails = expertDetails.filter((expert) => expert !== null);
+
+//                 return response.status(200).json({ success: true, expertDetails: filteredDetails });
+//             } else {
+//                 return response.status(200).json({ success: true, expertDetails: 'NA' });
+//             }
+//         });
+//     } catch (error) {
+//         console.error("Error fetching expert details:", error);
+//         return response.status(200).json({ success: false, msg: languageMessage.internalServerError4, key: err.message });
+//     }
+// };
+//end
+
 const getExpertDetails = async (request, response) => {
     const { user_id, category_id, sub_category_id, sub_level_id, sub_two_level_category_id, sub_three_level_category_id } = request.body;
-    // Validate input parameters
-    if (!user_id || !category_id || !sub_category_id || !sub_level_id) {
+
+    // Validate mandatory parameters
+    if (!user_id || !category_id || !sub_category_id) {
         return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param });
     }
+
     try {
-        // SQL query to fetch expert details
-        let query = `SELECT user_id as expert_id FROM user_master  WHERE category = ? AND sub_category = ?  AND FIND_IN_SET(?, sub_category_level) AND active_flag = 1 and delete_flag=0`;
-        let values = [category_id, sub_category_id, sub_level_id];
-        if (sub_two_level_category_id != 0) {
-            query += " AND sub_two_level_category_id = ?";
-            values.push((sub_two_level_category_id));
+        // Base query
+        let query = `SELECT user_id as expert_id FROM user_master WHERE category = ? AND sub_category = ? AND active_flag = 1 AND delete_flag = 0`;
+        let values = [category_id, sub_category_id];
+
+        // Add sub_level_id condition if it's not 0
+        if (sub_level_id && sub_level_id != 0) {
+            query += ` AND FIND_IN_SET(?, sub_category_level)`;
+            values.push(sub_level_id);
         }
-        if (sub_three_level_category_id != 0) {
-            query += " AND sub_three_level_category_id = ?";
-            values.push((sub_three_level_category_id));
+
+        // Add sub_two_level_category_id condition if it's not 0
+        if (sub_two_level_category_id && sub_two_level_category_id != 0) {
+            query += ` AND sub_two_level_category_id = ?`;
+            values.push(sub_two_level_category_id);
         }
+
+        // Add sub_three_level_category_id condition if it's not 0
+        if (sub_three_level_category_id && sub_three_level_category_id != 0) {
+            query += ` AND sub_three_level_category_id = ?`;
+            values.push(sub_three_level_category_id);
+        }
+
+        // Execute query
         connection.query(query, values, async (err, result) => {
+            if (err) {
+                console.error("Database query error:", err);
+                return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
+            }
+
             if (result.length > 0) {
-                // Fetch user details for each expert and filter out "NA"
                 const expertDetails = await Promise.all(
                     result.map(async (expert) => {
                         const userDetails = await getUserDetails(expert.expert_id);
                         return userDetails === "NA" ? null : { ...expert, userDetails };
                     })
                 );
-                // Filter out null values
+
                 const filteredDetails = expertDetails.filter((expert) => expert !== null);
 
                 return response.status(200).json({ success: true, expertDetails: filteredDetails });
@@ -46,12 +106,13 @@ const getExpertDetails = async (request, response) => {
                 return response.status(200).json({ success: true, expertDetails: 'NA' });
             }
         });
+
     } catch (error) {
         console.error("Error fetching expert details:", error);
-        return response.status(200).json({ success: false, msg: languageMessage.internalServerError4, key: err.message });
+        return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: error.message });
     }
 };
-//end
+
 // Get Expert Details By Id
 const getExpertDetailsById = async (request, response) => {
     let { user_id, expert_id } = request.body;
