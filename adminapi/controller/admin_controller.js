@@ -346,6 +346,7 @@ ORDER BY
           success: true,
           msg: languageMessage.msgDataFound,
           user_arr: res,
+          
         });
       } else {
         return response
@@ -359,6 +360,8 @@ ORDER BY
       .json({ success: false, msg: languageMessage.internalServerError });
   }
 };
+
+
 //fetchuserDate
 const fetchuserDate = async (request, response) => {
   const { fromDate, toDate } = request.query;
