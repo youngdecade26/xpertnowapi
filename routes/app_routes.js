@@ -404,6 +404,7 @@ router.post('/video_voice_call_ended', async (req, res, next) => {
   await authenticateToken(req, res, next);
 }, upload.none(), VideoVoiceCallEnd);
 
+
 router.post('/video_voice_call_reject', async (req, res, next) => {
   await authenticateToken(req, res, next);
 }, upload.none(), VideoVoiceCallReject);

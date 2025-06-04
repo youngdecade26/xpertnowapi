@@ -277,8 +277,8 @@ const VideoVoiceCallEnd = async (request, response) => {
                     let expert_id = selectresult[0].other_user_id;
 
                     const minutes = Math.ceil(duration / 60);
-                    const updateQuery = `UPDATE video_call_master SET status  = 2,duration=?,price=?, admin_per= ?, admin_earning=?, updatetime=now() WHERE video_call_id = ?`;
-                    connection.query(updateQuery, [minutes, call_Charges, consultation_percentage, admin_earning, video_call_id], async (err, videoresult) => {
+                    const updateQuery = `UPDATE video_call_master SET status  = 2,duration=?,price=?, admin_per= ?, admin_earning=?, provider_earning = ?,  updatetime=now() WHERE video_call_id = ?`;
+                    connection.query(updateQuery, [minutes, call_Charges, consultation_percentage, admin_earning, expert_final_earning, video_call_id], async (err, videoresult) => {
                         if (err) {
                             return response.status(200).json({ success: false, msg: languageMessage.videocallEndUnsuccess, key: err });
                         }
@@ -359,6 +359,8 @@ const VideoVoiceCallEnd = async (request, response) => {
     }
 
 }
+
+
 //end
 //reject call
 const VideoVoiceCallReject = async (request, response) => {
