@@ -174,26 +174,28 @@ const getExpertByRating = async (request, response) => {
             }
 
             // Fetch top-rated experts
-            // const expertQuery = `
-            //     SELECT user_id as expert_id
-            //     FROM user_master 
-            //     WHERE delete_flag = 0 AND user_type = 2 AND active_flag = 1 AND profile_completed = 1 and expert_status=1`;
             const expertQuery = `
-        SELECT um.user_id AS expert_id
-        FROM user_master um
-        JOIN expert_subscription_master esm ON um.user_id = esm.expert_id
-        JOIN subscription_master sm ON esm.subscription_id = sm.subscription_id
-        WHERE 
-            um.delete_flag = 0 
-            AND um.user_type = 2 
-            AND um.active_flag = 1 
-            AND um.profile_completed = 1 
-            AND um.expert_status = 1
-            AND esm.delete_flag = 0
-            AND sm.delete_flag = 0
-            AND DATE_ADD(esm.createtime, INTERVAL sm.duration DAY) >= NOW()
-        GROUP BY um.user_id
-    `;
+                SELECT user_id as expert_id
+                FROM user_master 
+                WHERE delete_flag = 0 AND user_type = 2 AND active_flag = 1 AND profile_completed = 1 and expert_status=1`;
+
+
+            //       const expertQuery = `
+            //     SELECT um.user_id AS expert_id
+            //     FROM user_master um
+            //     JOIN expert_subscription_master esm ON um.user_id = esm.expert_id
+            //     JOIN subscription_master sm ON esm.subscription_id = sm.subscription_id
+            //     WHERE 
+            //         um.delete_flag = 0 
+            //         AND um.user_type = 2 
+            //         AND um.active_flag = 1 
+            //         AND um.profile_completed = 1 
+            //         AND um.expert_status = 1
+            //         AND esm.delete_flag = 0
+            //         AND sm.delete_flag = 0
+            //         AND DATE_ADD(esm.createtime, INTERVAL sm.duration DAY) >= NOW()
+            //     GROUP BY um.user_id
+            // `;
             const expertResults = await queryAsync(expertQuery);
             if (expertResults.length === 0) {
                 return response.status(200).json({ success: true, msg: languageMessage.dataFound, expertDetails: 'NA' });
@@ -1024,25 +1026,25 @@ const getExpertByFilter = async (request, response) => {
                 return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
             }
             // Prepare query for experts
-            // let query2 = `
-            //     SELECT user_id as expert_id 
-            //     FROM user_master 
-            //     WHERE delete_flag = 0 AND active_flag = 1 AND user_type = 2 and expert_status=1`;
             let query2 = `
-            SELECT um.user_id AS expert_id
-            FROM user_master um
-            JOIN expert_subscription_master esm ON um.user_id = esm.expert_id
-            JOIN subscription_master sm ON esm.subscription_id = sm.subscription_id
-            WHERE 
-                um.delete_flag = 0 
-                AND um.user_type = 2 
-                AND um.active_flag = 1 
-                AND um.expert_status = 1
-                AND esm.delete_flag = 0
-                AND sm.delete_flag = 0
-                AND DATE_ADD(esm.createtime, INTERVAL sm.duration DAY) >= NOW()
-            GROUP BY um.user_id
-        `;
+                SELECT user_id as expert_id 
+                FROM user_master 
+                WHERE delete_flag = 0 AND active_flag = 1 AND user_type = 2 and expert_status=1`;
+            // let query2 = `
+            // SELECT um.user_id AS expert_id
+            // FROM user_master um
+            // JOIN expert_subscription_master esm ON um.user_id = esm.expert_id
+            // JOIN subscription_master sm ON esm.subscription_id = sm.subscription_id
+            // WHERE 
+            //     um.delete_flag = 0 
+            //     AND um.user_type = 2 
+            //     AND um.active_flag = 1 
+            //     AND um.expert_status = 1
+            //     AND esm.delete_flag = 0
+            //     AND sm.delete_flag = 0
+            //     AND DATE_ADD(esm.createtime, INTERVAL sm.duration DAY) >= NOW()
+            // GROUP BY um.user_id
+            // `;
             let value2 = [];
             if (state) {
                 query2 += " AND state = ?";
@@ -2271,83 +2273,83 @@ const getExpertMyJobs = (request, response) => {
             if (result[0]?.active_flag === 0) {
                 return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
             }
-            const checkSubscription = `SELECT esm.createtime, sm.duration FROM expert_subscription_master esm JOIN subscription_master sm ON esm.subscription_id = sm.subscription_id WHERE esm.expert_id = ? AND sm.delete_flag = 0 AND esm.delete_flag = 0 ORDER BY esm.createtime DESC LIMIT 1`;
+            // const checkSubscription = `SELECT esm.createtime, sm.duration FROM expert_subscription_master esm JOIN subscription_master sm ON esm.subscription_id = sm.subscription_id WHERE esm.expert_id = ? AND sm.delete_flag = 0 AND esm.delete_flag = 0 ORDER BY esm.createtime DESC LIMIT 1`;
 
-            connection.query(checkSubscription, [user_id], async (subErr, subRes) => {
-                if (subErr) {
-                    return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: subErr.message });
-                }
+            // connection.query(checkSubscription, [user_id], async (subErr, subRes) => {
+            //     if (subErr) {
+            //         return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: subErr.message });
+            //     }
 
-                if (subRes.length > 0) {
-                    const { createtime, duration } = subRes[0];
+            //     if (subRes.length > 0) {
+            //         const { createtime, duration } = subRes[0];
 
-                    const expiryDate = new Date(createtime);
-                    expiryDate.setDate(expiryDate.getDate() + duration);
+            //         const expiryDate = new Date(createtime);
+            //         expiryDate.setDate(expiryDate.getDate() + duration);
 
-                    const now = new Date();
-                    if (now > expiryDate) {
-                        return response.status(200).json({ success: false, msg: languageMessage.SubscriptionExpired });
-                    }
-                }
+            //         const now = new Date();
+            //         if (now > expiryDate) {
+            //             return response.status(200).json({ success: false, msg: languageMessage.SubscriptionExpired });
+            //         }
+            //     }
 
-                const query2 = `
+            const query2 = `
                 SELECT job_post_id, user_id,assign_expert_id, title, category, sub_category, max_price, min_price, duration, duration_type, status, updatetime
                 ,createtime FROM job_post_master 
                 WHERE assign_expert_id = ? AND delete_flag = 0 ORDER BY createtime DESC`;
-                connection.query(query2, [user_id], async (err, jobPosts) => {
-                    if (err) {
-                        return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
-                    }
-                    if (jobPosts.length === 0) {
-                        return response.status(200).json({ success: false, msg: languageMessage.dataNotFound });
-                    }
-                    // Fetch category and subcategory names
-                    const jobPostDetails = await Promise.all(
-                        jobPosts.map(async (job) => {
-                            // Fetch subcategory name
-                            const subCategoryQuery = "SELECT sub_category_name FROM sub_categories_master WHERE sub_category_id = ? AND delete_flag = 0";
-                            const subCategory = await new Promise((resolve) => {
-                                connection.query(subCategoryQuery, [job.sub_category], (err, result) => {
-                                    resolve(err ? null : result[0]?.sub_category_name);
-                                });
+            connection.query(query2, [user_id], async (err, jobPosts) => {
+                if (err) {
+                    return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
+                }
+                if (jobPosts.length === 0) {
+                    return response.status(200).json({ success: false, msg: languageMessage.dataNotFound });
+                }
+                // Fetch category and subcategory names
+                const jobPostDetails = await Promise.all(
+                    jobPosts.map(async (job) => {
+                        // Fetch subcategory name
+                        const subCategoryQuery = "SELECT sub_category_name FROM sub_categories_master WHERE sub_category_id = ? AND delete_flag = 0";
+                        const subCategory = await new Promise((resolve) => {
+                            connection.query(subCategoryQuery, [job.sub_category], (err, result) => {
+                                resolve(err ? null : result[0]?.sub_category_name);
                             });
-                            // Fetch category name
-                            const categoryQuery = "SELECT name FROM categories_master WHERE category_id = ? AND delete_flag = 0";
-                            const category = await new Promise((resolve) => {
-                                connection.query(categoryQuery, [job.category], (err, result) => {
-                                    resolve(err ? null : result[0]?.name);
-                                });
+                        });
+                        // Fetch category name
+                        const categoryQuery = "SELECT name FROM categories_master WHERE category_id = ? AND delete_flag = 0";
+                        const category = await new Promise((resolve) => {
+                            connection.query(categoryQuery, [job.category], (err, result) => {
+                                resolve(err ? null : result[0]?.name);
                             });
-                            // Fetch user name
-                            const userNameQuery = await new Promise((resolve) => {
-                                const userQuery = `SELECT name,image FROM user_master WHERE user_id = ? AND delete_flag = 0`;
-                                connection.query(userQuery, [job.user_id], (err, result) => {
-                                    resolve(err ? null : result[0]?.name || 'NA');
-                                });
+                        });
+                        // Fetch user name
+                        const userNameQuery = await new Promise((resolve) => {
+                            const userQuery = `SELECT name,image FROM user_master WHERE user_id = ? AND delete_flag = 0`;
+                            connection.query(userQuery, [job.user_id], (err, result) => {
+                                resolve(err ? null : result[0]?.name || 'NA');
                             });
-                            // Fetch user name
-                            const userimageQuery = await new Promise((resolve) => {
-                                const imageQuery = `SELECT image FROM user_master WHERE user_id = ? AND delete_flag = 0`;
-                                connection.query(imageQuery, [job.user_id], (err, result) => {
-                                    resolve(err ? null : result[0]?.image || 'NA');
-                                });
+                        });
+                        // Fetch user name
+                        const userimageQuery = await new Promise((resolve) => {
+                            const imageQuery = `SELECT image FROM user_master WHERE user_id = ? AND delete_flag = 0`;
+                            connection.query(imageQuery, [job.user_id], (err, result) => {
+                                resolve(err ? null : result[0]?.image || 'NA');
                             });
-                            return {
-                                ...job,
-                                sub_category: subCategory,
-                                category: category,
-                                posted_time: getRelativeTime(job.createtime),
-                                status_label: '0=pending,1=hired,2=inprogress,3=completed',
-                                duration_type_label: '1=days,2=month,3=year',
-                                user_name: userNameQuery,
-                                user_image: userimageQuery,
-                            };
-                        })
-                    );
-                    return response.status(200).json({ success: true, msg: languageMessage.dataFound, jobPostDetails: jobPostDetails });
-                });
+                        });
+                        return {
+                            ...job,
+                            sub_category: subCategory,
+                            category: category,
+                            posted_time: getRelativeTime(job.createtime),
+                            status_label: '0=pending,1=hired,2=inprogress,3=completed',
+                            duration_type_label: '1=days,2=month,3=year',
+                            user_name: userNameQuery,
+                            user_image: userimageQuery,
+                        };
+                    })
+                );
+                return response.status(200).json({ success: true, msg: languageMessage.dataFound, jobPostDetails: jobPostDetails });
             });
-        })
+        });
+        // })
     } catch (err) {
         return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
     }
@@ -6082,18 +6084,19 @@ const getSubscriptionStatus = async (request, response) => {
                     return response.status(200).json({ success: true, subscription_status: 3, msg: 'No subscription found' }); // 3 = No subscription
                 }
 
-                const { createtime, duration } = subRes[0];
-                const createdAt = new Date(createtime);
-                const expiryDate = new Date(createdAt.getTime() + duration * 24 * 60 * 60 * 1000); // Add full days in milliseconds
+                // const { createtime, duration } = subRes[0];
+                // const createdAt = new Date(createtime);
+                // const expiryDate = new Date(createdAt.getTime() + duration * 24 * 60 * 60 * 1000); // Add full days in milliseconds
 
-                const now = new Date();
-                const status_label = '1 = Active, 2 = Expired';
+                // const now = new Date();
+                // const status_label = '1 = Active, 2 = Expired';
 
-                if (now < expiryDate) {
-                    return response.status(200).json({ success: true, msg: languageMessage.dataFound, subscription_status: 1, status_label }); // Active
-                } else {
-                    return response.status(200).json({ success: true, msg: languageMessage.dataFound, subscription_status: 2, status_label }); // Expired
-                }
+                // if (now < expiryDate) {
+                //     return response.status(200).json({ success: true, msg: languageMessage.dataFound, subscription_status: 1, status_label }); // Active
+                // } else {
+                //     return response.status(200).json({ success: true, msg: languageMessage.dataFound, subscription_status: 2, status_label }); // Expired
+                // }
+                return response.status(200).json({ success: true, msg: languageMessage.dataFound, subscription_status: 1, status_label })
             });
         });
     } catch (error) {
