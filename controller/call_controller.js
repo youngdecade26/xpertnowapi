@@ -95,6 +95,7 @@ const VideoVoiceCallStart = async (request, response) => {
                 const token = await generateToken(user_id);
                 var user_token = token.token;
                 var channelName = token.channelName;
+                
                 const newUserQuery = `INSERT INTO video_call_master (user_id,other_user_id,room_id,token,type,createtime,updatetime)
                 VALUES (?, ?, ?, ?,?, now(),now())`;
                 const values = [user_id, other_user_id, channelName, user_token, type]
