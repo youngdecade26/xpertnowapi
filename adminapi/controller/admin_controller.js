@@ -9897,7 +9897,7 @@ const acceptRefund = async (request, response) => {
 const rejectRefundRequest = async (request, response) => {
   const { refund_id } = request.body;
   try {
-    const sql = 'UPDATE refund_status = 2, updatetime = NOW() WHERE refund_id = ? AND delete_flag =0';
+    const sql = 'UPDATE refund_request_master SET refund_status = 2, updatetime = NOW() WHERE refund_id = ? AND delete_flag =0';
     connection.query(sql, [refund_id], async (err, res) => {
       if (err) {
         return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err.message });
