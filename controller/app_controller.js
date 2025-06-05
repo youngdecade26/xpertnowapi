@@ -6136,7 +6136,7 @@ const paymentHideShow = async (request, response) => {
 
 //  add refund request 
 const refundRequest = async (request, response) => {
-    const { user_id, name, email, request_title, description } = request.body;
+    const { user_id, name, email, request_title, description, amount } = request.body;
     try {
         if (!user_id) return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'user_id' });
 
@@ -6147,6 +6147,8 @@ const refundRequest = async (request, response) => {
         if (!description) return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'description' });
 
         if (!request_title) return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'request_title' });
+
+        if (!amount) return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'amount' });
 
         const checkUser = 'SELECT user_id, active_flag FROM user_master WHERE user_id = ? AND delete_flag = 0';
         connection.query(checkUser, [user_id], async (err, userRes) => {
@@ -6162,8 +6164,8 @@ const refundRequest = async (request, response) => {
                 }
 
                 const otp = await generateOTP(6);
-                const sql = 'INSERT INTO refund_request_master(user_id, name, email, description, title, otp, createtime, updatetime) VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())';
-                connection.query(sql, [user_id, name, email, description, request_title, otp], async (err1, res1) => {
+                const sql = 'INSERT INTO refund_request_master(user_id, name, email, description, title, otp, refund_amount, createtime, updatetime) VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW())';
+                connection.query(sql, [user_id, name, email, description, request_title, otp, amount], async (err1, res1) => {
                     try {
                         if (err1) {
                             return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err1.message });
@@ -6177,8 +6179,10 @@ const refundRequest = async (request, response) => {
                                 name,
                                 email,
                                 description,
+                                amount: amount,
                                 title: request_title,
-                                otp
+                                otp,
+
                             };
 
                             const useremail = email;
@@ -6255,7 +6259,7 @@ const refundOtpVerify = async (request, response) => {
                     description: data.description,
                     refund_status: data.refund_status,
                     status_label: '0 = pending, 1 = accepted, 2 = rejected',
-                    // refund_amount: data.refund_amount,
+                    amount: data.refund_amount,
                     otp: data.otp,
                     otp_verify: data.otp_verify
                 }
@@ -6294,6 +6298,7 @@ const refundOtpResend = async (request, response) => {
                 email: data.email,
                 title: data.title,
                 description: data.description,
+                amount: data.refund_amount,
                 refund_status: data.refund_status,
                 status_label: '0 = pending, 1 = accepted, 2 = rejected',
                 otp: otp,
@@ -6354,7 +6359,7 @@ const getRefundStatus = async (request, response) => {
             if (userRes[0].active_flag === 0) {
                 return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
             }
-            const check = 'SELECT refund_status FROM refund_request_master WHERE user_id = ? AND refund_id= ? AND delete_flag= 0';
+            const check = 'SELECT refund_status, transaction_id FROM refund_request_master WHERE user_id = ? AND refund_id= ? AND delete_flag= 0';
             connection.query(check, [user_id, refund_id], async (err1, res1) => {
                 if (err1) {
                     return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err1.message });
@@ -6366,7 +6371,7 @@ const getRefundStatus = async (request, response) => {
 
                 let refund_status = res1[0].refund_status;
                 let status_label = '0 = pending, 1 = accepted, 2 = rejected';
-                return response.status(200).json({ success: true, msg: languageMessage.dataFound, refund_status: refund_status, status_label: status_label })
+                return response.status(200).json({ success: true, msg: languageMessage.dataFound, refund_status: refund_status, status_label: status_label, transaction_id: res1[0].transaction_id })
             });
         });
     }

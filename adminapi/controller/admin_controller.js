@@ -9823,32 +9823,39 @@ const adminDetails = async (request, response) => {
 
 
 //  get all refunds request 
-// const getAllRefundRequests = async(request, response) =>{
-//   try{
-//     const sql = 'SELECT * FROM refund_request_master WHERE delete_flag = 0 AND otp_verify= 1 ORDER BY createtime DESC ';
-//     connection.query(sql, async(err, res) =>{
-//       if(err){
-//         return response.status(200).json({ success: false, msg : languageMessage.msg_empty_param, key: err.message});
-//       }
+const getAllRefundRequests = async(request, response) =>{
+  try{
+    const sql = 'SELECT * FROM refund_request_master WHERE delete_flag = 0 AND otp_verify= 1 ORDER BY createtime DESC ';
+    connection.query(sql, async(err, res) =>{
+      if(err){
+        return response.status(200).json({ success: false, msg : languageMessage.msg_empty_param, key: err.message});
+      }
 
-//       if(res.length == 0){
-//         return response.status(200).json({ success: false,  msg: languageMessage.msgDataNotFound, request_arr :[]});
-//       }
-//        let request_arr = [];
-//        for(let data of res){
-//         request_arr.push({
-//             refund_id : data.refund_id, 
-//             user_id : data.user_id, 
-//             name : data.name, 
-//             email : data.email, 
-//             title : data.title,
-//             description : data.description, 
-//             refund_status
-//         })
-//        }
-//     })
-//   }
-// }
+      if(res.length == 0){
+        return response.status(200).json({ success: false,  msg: languageMessage.msgDataNotFound, request_arr :[]});
+      }
+       let request_arr = [];
+       for(let data of res){
+        request_arr.push({
+            refund_id : data.refund_id, 
+            user_id : data.user_id, 
+            name : data.name, 
+            email : data.email, 
+            title : data.title,
+            description : data.description, 
+            refund_status : data.refund_status,
+            status : data.refund_status === 0 ? 'Pending'  : data.refund_status === 1 ? 'Accepted' : 'Rejected',
+            createtime : moment(data.createtime).format("DD-MM-YYYY hh:mm A"),
+        })
+
+        return response.status(200).json({ success: true , msg: languageMessage.msgDataFound, request_arr : request_arr });
+       }
+    })
+  }
+  catch (error) {
+    return res.status(500).json({ success: false, msg: languageMessage.internalServerError });
+  }
+}
 
 
 
@@ -10020,5 +10027,6 @@ module.exports = {
   updateAdminDetails,
   adminDetails,
   GetDetailsUpdateRequests,
-  UpdateDetailsRequestStatus
+  UpdateDetailsRequestStatus,
+  getAllRefundRequests
 };
