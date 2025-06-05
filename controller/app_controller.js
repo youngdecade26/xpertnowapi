@@ -5922,6 +5922,7 @@ const getActiveStatus = async (request, response) => {
 // payU payment integration
 const crypto = require('crypto');
 const { response } = require('express');
+const { error } = require('console');
 const key = 'JrzqFr';
 const salt = '3qjFQW3C5c2b1eZquRYJXLDgBB0qvpE4';
 const PAYU_BASE_URL = 'https://secure.payu.in/_payment';
@@ -6380,6 +6381,8 @@ const getRefundStatus = async (request, response) => {
         return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
     }
 }
+
+
 
 
 

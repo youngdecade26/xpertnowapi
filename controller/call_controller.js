@@ -216,21 +216,166 @@ const VideoVoiceCallJoin = async (request, response) => {
 }
 //end
 //end call
-const VideoVoiceCallEnd = async (request, response) => {
-    let { user_id, video_call_id, duration, type, call_Charges } = request.body;
-    if (!user_id) {
-        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'user_id' });
-    }
-    if (!video_call_id) {
-        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'video_call_id' });
-    }
-    if (!duration) {
-        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'duration' });
-    }
-    if (!call_Charges) {
-        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'call_Charges' });
-    }
+// const VideoVoiceCallEnd = async (request, response) => {
+//     let { user_id, video_call_id, duration, type, call_Charges } = request.body;
+//     if (!user_id) {
+//         return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'user_id' });
+//     }
+//     if (!video_call_id) {
+//         return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'video_call_id' });
+//     }
+//     if (!duration) {
+//         return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'duration' });
+//     }
+//     if (!call_Charges) {
+//         return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'call_Charges' });
+//     }
 
+//     try {
+//         const query1 = "SELECT mobile, active_flag,user_type FROM user_master WHERE user_id = ? AND delete_flag = 0 ";
+//         const values1 = [user_id];
+//         connection.query(query1, values1, async (err, result) => {
+//             if (err) {
+//                 return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
+//             }
+//             if (result.length === 0) {
+//                 return response.status(200).json({ success: false, msg: languageMessage.userNotFound });
+//             }
+//             if (result[0]?.active_flag === 0) {
+//                 return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
+//             }
+//             const checkConsulation = 'SELECT consultation_percentage FROM commission_master WHERE commission_id = 1 AND delete_flag = 0';
+//             connection.query(checkConsulation, async (consultErr, consultRes) => {
+//                 if (consultErr) {
+//                     return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: consultErr.message });
+//                 }
+
+//                 let consultation_percentage = consultRes[0].consultation_percentage;
+
+//                 let admin_earning = 0;
+//                 admin_earning = call_Charges * consultation_percentage / 100;
+
+//                 let expert_final_earning = 0;
+//                 expert_final_earning = call_Charges - admin_earning
+
+//                 let selectquery;
+//                 let selectvalues;
+//                 if (result[0]?.user_type == 1) {
+
+//                     selectquery = "SELECT other_user_id FROM video_call_master WHERE video_call_id = ? AND delete_flag = 0 ";
+//                     selectvalues = [video_call_id];
+//                 } else {
+//                     selectquery = "SELECT user_id FROM video_call_master WHERE video_call_id = ? AND delete_flag = 0 ";
+//                     selectvalues = [video_call_id];
+//                 }
+//                 connection.query(selectquery, selectvalues, async (err, selectresult) => {
+//                     if (err) {
+//                         return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
+//                     }
+//                     if (selectresult.length === 0) {
+//                         return response.status(200).json({ success: false, msg: languageMessage.callIdFound });
+//                     }
+//                     let expert_id = selectresult[0].other_user_id;
+
+//                     const minutes = Math.ceil(duration / 60);
+//                     const updateQuery = `UPDATE video_call_master SET status  = 2,duration=?,price=?, admin_per= ?, admin_earning=?, provider_earning = ?,  updatetime=now() WHERE video_call_id = ?`;
+//                     connection.query(updateQuery, [minutes, call_Charges, consultation_percentage, admin_earning, expert_final_earning, video_call_id], async (err, videoresult) => {
+//                         if (err) {
+//                             return response.status(200).json({ success: false, msg: languageMessage.videocallEndUnsuccess, key: err });
+//                         }
+
+//                         const updateExpertEarning = 'INSERT INTO expert_earning_master(type, user_id, expert_id, expert_earning, createtime, updatetime) VALUES(?, ?, ?, ?, NOW(), NOW())';
+
+//                         connection.query(updateExpertEarning, [1, user_id, expert_id, expert_final_earning], async (earningErr, earningRes) => {
+//                             if (earningErr) {
+//                                 return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: earningErr.message });
+//                             }
+
+//                             if (videoresult.affectedRows > 0) {
+//                                 const user_id_notification = user_id;
+//                                 let other_user_type;
+//                                 let other_user_id_notification;
+//                                 if (result[0]?.user_type == 1) {
+//                                     other_user_id_notification = selectresult[0]?.other_user_id;
+//                                     other_user_type = 2;
+//                                 } else {
+//                                     other_user_id_notification = selectresult[0]?.user_id;
+//                                     other_user_type = 1;
+//                                 }
+//                                 const action_id = video_call_id;
+//                                 let action;
+//                                 let title;
+//                                 let title_2;
+//                                 let title_3;
+//                                 let title_4;
+//                                 let messages;
+//                                 let message_2;
+//                                 let message_3;
+//                                 let message_4;
+//                                 if (type == 1) {
+//                                     action = "video_chat_ended";
+//                                     title = "Video Call Ended";
+//                                     title_2 = "Video Call Ended";
+//                                     title_3 = "Video Call Ended";
+//                                     title_4 = "Video Call Ended";
+//                                     messages = "video calling ended...";
+//                                     message_2 = "video calling ended...";
+//                                     message_3 = "video calling ended...";
+//                                     message_4 = "video calling ended...";
+//                                 } else {
+//                                     action = "voice_chat_ended";
+//                                     title = "Voice Call Ended";
+//                                     title_2 = "Voice Call Ended";
+//                                     title_3 = "Voice Call Ended";
+//                                     title_4 = "Voice Call Ended";
+//                                     messages = "Voice calling ended...";
+//                                     message_2 = "Voice calling ended...";
+//                                     message_3 = "Voice calling ended...";
+//                                     message_4 = "Voice calling ended...";
+//                                 }
+//                                 const action_data = { user_id: user_id_notification, other_user_id: other_user_id_notification, action_id: action_id, action: action, user_type: other_user_type, duration: duration, call_Charges: call_Charges };
+//                                 await getNotificationArrSingle(user_id_notification, other_user_id_notification, action, action_id, title, title_2, title_3, title_4, messages, message_2, message_3, message_4, action_data, async (notification_arr_check) => {
+//                                     let notification_arr_check_new = [notification_arr_check];
+
+//                                     if (notification_arr_check_new && notification_arr_check_new.length !== 0 && notification_arr_check_new != '') {
+//                                         const notiSendStatus = await oneSignalNotificationSendCall(notification_arr_check_new);
+
+//                                     } else {
+//                                         console.log("Notification array is empty");
+//                                     }
+
+//                                 });
+//                                 return response.status(200).json({ success: true, msg: languageMessage.videocallEndSuccess });
+
+//                             } else {
+//                                 return response.status(200).json({ success: false, msg: languageMessage.videocallEndUnsuccess, key: err.message });
+//                             }
+//                         });
+//                     });
+//                 });
+//             })
+//         })
+//     } catch (err) {
+//         return response.status(200).json({ success: false, msg: languageMessage.videocallEndUnsuccess, key: err.message });
+//     }
+
+// }
+
+const VideoVoiceCallEnd = async (request, response) => {
+    let {user_id,video_call_id,duration,type,call_Charges} = request.body;
+    if (!user_id){
+        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param,key:'user_id'});
+    }
+    if (!video_call_id){
+        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param,key:'video_call_id'});
+    }
+    if (!duration){
+        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param,key:'duration'});
+    }
+    if (!call_Charges){
+        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param,key:'call_Charges'});
+    }
+    
     try {
         const query1 = "SELECT mobile, active_flag,user_type FROM user_master WHERE user_id = ? AND delete_flag = 0 ";
         const values1 = [user_id];
@@ -242,9 +387,9 @@ const VideoVoiceCallEnd = async (request, response) => {
                 return response.status(200).json({ success: false, msg: languageMessage.userNotFound });
             }
             if (result[0]?.active_flag === 0) {
-                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
+                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated,active_status:0 });
             }
-            const checkConsulation = 'SELECT consultation_percentage FROM commission_master WHERE commission_id = 1 AND delete_flag = 0';
+                const checkConsulation = 'SELECT consultation_percentage FROM commission_master WHERE commission_id = 1 AND delete_flag = 0';
             connection.query(checkConsulation, async (consultErr, consultRes) => {
                 if (consultErr) {
                     return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: consultErr.message });
@@ -258,109 +403,127 @@ const VideoVoiceCallEnd = async (request, response) => {
                 let expert_final_earning = 0;
                 expert_final_earning = call_Charges - admin_earning
 
-                let selectquery;
-                let selectvalues;
-                if (result[0]?.user_type == 1) {
 
-                    selectquery = "SELECT other_user_id FROM video_call_master WHERE video_call_id = ? AND delete_flag = 0 ";
-                    selectvalues = [video_call_id];
-                } else {
-                    selectquery = "SELECT user_id FROM video_call_master WHERE video_call_id = ? AND delete_flag = 0 ";
-                    selectvalues = [video_call_id];
+        
+            let selectquery;
+            let selectvalues;
+            let expert_id ;
+            if(result[0]?.user_type==1){
+                selectquery = "SELECT other_user_id FROM video_call_master WHERE video_call_id = ? AND delete_flag = 0 ";
+                selectvalues = [video_call_id];
+            }else{
+                selectquery = "SELECT user_id FROM video_call_master WHERE video_call_id = ? AND delete_flag = 0 ";
+                selectvalues = [video_call_id];
+            }
+            connection.query(selectquery, selectvalues, async (err, selectresult) => {
+                if (err) {
+                    return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
                 }
-                connection.query(selectquery, selectvalues, async (err, selectresult) => {
-                    if (err) {
-                        return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
-                    }
-                    if (selectresult.length === 0) {
-                        return response.status(200).json({ success: false, msg: languageMessage.callIdFound });
-                    }
-                    let expert_id = selectresult[0].other_user_id;
+                if (selectresult.length === 0) {
+                    return response.status(200).json({ success: false, msg: languageMessage.callIdFound });
+                }
 
-                    const minutes = Math.ceil(duration / 60);
-                    const updateQuery = `UPDATE video_call_master SET status  = 2,duration=?,price=?, admin_per= ?, admin_earning=?, provider_earning = ?,  updatetime=now() WHERE video_call_id = ?`;
-                    connection.query(updateQuery, [minutes, call_Charges, consultation_percentage, admin_earning, expert_final_earning, video_call_id], async (err, videoresult) => {
+                // get expert id
+                if(result[0]?.user_type==2){
+                    expert_id = user_id;
+                }
+                else{
+                    expert_id = selectresult[0].other_user_id;
+                }
+
+                let customer_id;
+                if(result[0]?.user_type==1){
+                    customer_id = user_id
+                }
+                else{
+                    customer_id = selectresult[0].user_id;
+                }
+               
+                const minutes = Math.ceil(duration / 60);
+                const updateQuery = `UPDATE video_call_master SET status  = 2,duration=?,price=?, admin_per= ?, admin_earning=?, provider_earning=?,  updatetime=now() WHERE video_call_id = ?`;
+                    connection.query(updateQuery, [minutes, call_Charges, consultation_percentage, admin_earning,expert_final_earning, video_call_id], async (err, videoresult) => {
                         if (err) {
                             return response.status(200).json({ success: false, msg: languageMessage.videocallEndUnsuccess, key: err });
                         }
 
-                        const updateExpertEarning = 'INSERT INTO expert_earning_master(type, user_id, expert_id, expert_earning, createtime, updatetime) VALUES(?, ?, ?, ?, NOW(), NOW())';
-
-                        connection.query(updateExpertEarning, [1, user_id, expert_id, expert_final_earning], async (earningErr, earningRes) => {
-                            if (earningErr) {
-                                return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: earningErr.message });
+                const updateExpertEarning = 'INSERT INTO expert_earning_master(type, user_id, expert_id, expert_earning, createtime, updatetime) VALUES(?, ?, ?, ?, NOW(), NOW())';
+                
+                connection.query(updateExpertEarning, [1, customer_id, expert_id, expert_final_earning], async(earningErr, earningRes) => {
+                    if(earningErr){
+                        return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: earningErr.message});
+                    }
+    
+                        if (videoresult.affectedRows > 0) {
+                            const user_id_notification = user_id;
+                            let other_user_type;
+                            let other_user_id_notification;
+                            if(result[0]?.user_type==1){
+                                other_user_id_notification = selectresult[0]?.other_user_id;
+                                other_user_type=2;
+                            }else{
+                                other_user_id_notification = selectresult[0]?.user_id;
+                                other_user_type=1;
                             }
-
-                            if (videoresult.affectedRows > 0) {
-                                const user_id_notification = user_id;
-                                let other_user_type;
-                                let other_user_id_notification;
-                                if (result[0]?.user_type == 1) {
-                                    other_user_id_notification = selectresult[0]?.other_user_id;
-                                    other_user_type = 2;
-                                } else {
-                                    other_user_id_notification = selectresult[0]?.user_id;
-                                    other_user_type = 1;
-                                }
-                                const action_id = video_call_id;
-                                let action;
-                                let title;
-                                let title_2;
-                                let title_3;
-                                let title_4;
-                                let messages;
-                                let message_2;
-                                let message_3;
-                                let message_4;
-                                if (type == 1) {
-                                    action = "video_chat_ended";
-                                    title = "Video Call Ended";
-                                    title_2 = "Video Call Ended";
-                                    title_3 = "Video Call Ended";
-                                    title_4 = "Video Call Ended";
-                                    messages = "video calling ended...";
-                                    message_2 = "video calling ended...";
-                                    message_3 = "video calling ended...";
-                                    message_4 = "video calling ended...";
-                                } else {
-                                    action = "voice_chat_ended";
-                                    title = "Voice Call Ended";
-                                    title_2 = "Voice Call Ended";
-                                    title_3 = "Voice Call Ended";
-                                    title_4 = "Voice Call Ended";
-                                    messages = "Voice calling ended...";
-                                    message_2 = "Voice calling ended...";
-                                    message_3 = "Voice calling ended...";
-                                    message_4 = "Voice calling ended...";
-                                }
-                                const action_data = { user_id: user_id_notification, other_user_id: other_user_id_notification, action_id: action_id, action: action, user_type: other_user_type, duration: duration, call_Charges: call_Charges };
-                                await getNotificationArrSingle(user_id_notification, other_user_id_notification, action, action_id, title, title_2, title_3, title_4, messages, message_2, message_3, message_4, action_data, async (notification_arr_check) => {
-                                    let notification_arr_check_new = [notification_arr_check];
-
-                                    if (notification_arr_check_new && notification_arr_check_new.length !== 0 && notification_arr_check_new != '') {
-                                        const notiSendStatus = await oneSignalNotificationSendCall(notification_arr_check_new);
-
-                                    } else {
-                                        console.log("Notification array is empty");
-                                    }
-
-                                });
-                                return response.status(200).json({ success: true, msg: languageMessage.videocallEndSuccess });
-
-                            } else {
-                                return response.status(200).json({ success: false, msg: languageMessage.videocallEndUnsuccess, key: err.message });
+                            const action_id = video_call_id;
+                            let action;
+                            let title;
+                            let title_2;
+                            let title_3;
+                            let title_4;
+                            let messages;
+                            let message_2;
+                            let message_3;
+                            let message_4;
+                            if(type==1){
+                                action = "video_chat_ended";
+                                title = "Video Call Ended";
+                                title_2 = "Video Call Ended";
+                                title_3 = "Video Call Ended";
+                                title_4 = "Video Call Ended";
+                                messages = "video calling ended...";
+                                message_2 = "video calling ended...";
+                                message_3 = "video calling ended...";
+                                message_4 = "video calling ended...";
+                            }else{
+                                action = "voice_chat_ended";
+                                title = "Voice Call Ended";
+                                title_2 = "Voice Call Ended";
+                                title_3 = "Voice Call Ended";
+                                title_4 = "Voice Call Ended";
+                                messages = "Voice calling ended...";
+                                message_2 = "Voice calling ended...";
+                                message_3 = "Voice calling ended...";
+                                message_4 = "Voice calling ended...";
                             }
-                        });
+                            const action_data = {user_id: user_id_notification,other_user_id: other_user_id_notification,action_id: action_id,action: action,user_type:other_user_type,duration:duration,call_Charges:call_Charges};
+                            await getNotificationArrSingle(user_id_notification,other_user_id_notification,action,action_id,title,title_2,title_3,title_4,messages,message_2,message_3,message_4,action_data, async (notification_arr_check) => {
+                                let notification_arr_check_new = [notification_arr_check];
+                                
+                                if(notification_arr_check_new && notification_arr_check_new.length !== 0 && notification_arr_check_new!=''){
+                                    const notiSendStatus = await oneSignalNotificationSendCall(notification_arr_check_new);
+                                    
+                                }else{
+                                    console.log("Notification array is empty");
+                                }
+                            
+                            });
+                            return response.status(200).json({ success: true, msg: languageMessage.videocallEndSuccess});
+                            
+                        } else {
+                            return response.status(200).json({ success: false, msg: languageMessage.videocallEndUnsuccess, key: err.message });
+                        }
                     });
                 });
-            })
+            });
         })
-    } catch (err) {
-        return response.status(200).json({ success: false, msg: languageMessage.videocallEndUnsuccess, key: err.message });
-    }
 
-}
-
+    });
+            
+        }catch (err) {
+            return response.status(200).json({ success: false, msg: languageMessage.videocallEndUnsuccess, key: err.message });
+        }
+    
+    } 
 
 
 
