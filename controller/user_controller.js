@@ -732,12 +732,12 @@ const editProfile = async (request, response) => {
     // if (!email) {
     //     return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'email' });
     // }
-    if (!dob) {
-        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'dob' });
-    }
-    if (!gender) {
-        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'gender' });
-    }
+    // if (!dob) {
+    //     return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'dob' });
+    // }
+    // if (!gender) {
+    //     return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'gender' });
+    // }
     // if (!pan_number) {
     //     return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'pan_number' });
     // }
