@@ -796,30 +796,31 @@ const editProfile = async (request, response) => {
                 UPDATE user_master 
                 SET name = ?, email = ?, dob = ?, gender = ?, pan_number = ?, adhar_number = ?,gst_number = ?
             `;
-            let updateValues = [name, email, dob, gender, pan_number, adhar_number, gst_number];
+            let updateValues = [name, email, dob ? dob : null, gender, pan_number, adhar_number, gst_number];
             if (image) {
                 updateQuery += `, image = ?`;
-                updateValues.push(image);
+                updateValues.push(image ? image : null);
             }
             if (pancard_front_image) {
                 updateQuery += `, pancard_front_image = ?`;
-                updateValues.push(pancard_front_image);
+                updateValues.push(pancard_front_image ? pancard_front_image : null);
             }
             if (pancard_back_image) {
                 updateQuery += `, pancard_back_image = ?`;
-                updateValues.push(pancard_back_image);
+                updateValues.push(pancard_back_image ? pancard_back_image : null);
             }
             if (adharcard_front_image) {
                 updateQuery += `, adharcard_front_image = ?`;
-                updateValues.push(adharcard_front_image);
+                updateValues.push(adharcard_front_image ? adharcard_front_image : null);
             }
+
             if (adharcard_back_image) {
                 updateQuery += `, adharcard_back_image = ?`;
-                updateValues.push(adharcard_back_image);
+                updateValues.push(adharcard_back_image ? adharcard_back_image : null);
             }
             if (gst_image) {
                 updateQuery += `, gst_image = ?`;
-                updateValues.push(gst_image);
+                updateValues.push(gst_image ? gst_image : null);
             }
             updateQuery += ` WHERE user_id = ?`;
             updateValues.push(user_id);
