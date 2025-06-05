@@ -33,6 +33,7 @@ const rs = require("randomstring");
 const jwt = require("jsonwebtoken");
 const { request } = require("http");
 const { error } = require("console");
+const { responseSend } = require("../../shared functions/languageMessage");
 const FetchUser = async (request, response) => {
   try {
     const fetchDetails =
@@ -9847,7 +9848,7 @@ const getAllRefundRequests = async (request, response) => {
           description: data.description,
           refund_status: data.refund_status,
           status: data.refund_status === 0 ? 'Pending' : data.refund_status === 1 ? 'Accepted' : 'Rejected',
-          transaction_id : data.transaction_id,
+          transaction_id: data.transaction_id,
           createtime: moment(data.createtime).format("DD-MM-YYYY hh:mm A"),
         })
 
@@ -9892,7 +9893,25 @@ const acceptRefund = async (request, response) => {
 }
 
 
-
+// reject refund request 
+const rejectRefundRequest = async (request, response) => {
+  const { refund_id } = request.body;
+  try {
+    const sql = 'UPDATE refund_status = 2, updatetime = NOW() WHERE refund_id = ? AND delete_flag =0';
+    connection.query(sql, [refund_id], async (err, res) => {
+      if (err) {
+        return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err.message });
+      }
+      if (res.affectedRows == 0) {
+        return response.status(200).json({ success: false, msg: languageMessage.ErrorUpdatingdetails });
+      }
+      return response.status(200).json({ success: true, msg: languageMessage.msgDataFound })
+    })
+  }
+  catch (error) {
+    return res.status(500).json({ success: false, msg: languageMessage.internalServerError, key: error.message });
+  }
+}
 
 
 
@@ -10061,5 +10080,6 @@ module.exports = {
   GetDetailsUpdateRequests,
   UpdateDetailsRequestStatus,
   getAllRefundRequests,
-  acceptRefund
+  acceptRefund,
+  rejectRefundRequest
 };
