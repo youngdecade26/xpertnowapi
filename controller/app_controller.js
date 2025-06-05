@@ -6136,16 +6136,16 @@ const paymentHideShow = async (request, response) => {
 
 //  add refund request 
 const refundRequest = async (request, response) => {
-    const { user_id, name, email, request_title,  description } = request.body;
+    const { user_id, name, email, request_title, description } = request.body;
     try {
         if (!user_id) return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'user_id' });
-        
+
         if (!name) return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'name' });
-        
+
         if (!email) return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'email' });
-        
+
         if (!description) return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'description' });
-        
+
         if (!request_title) return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'request_title' });
 
         const checkUser = 'SELECT user_id, active_flag FROM user_master WHERE user_id = ? AND delete_flag = 0';
@@ -6177,7 +6177,7 @@ const refundRequest = async (request, response) => {
                                 name,
                                 email,
                                 description,
-                                title : request_title, 
+                                title: request_title,
                                 otp
                             };
 
@@ -6251,10 +6251,10 @@ const refundOtpVerify = async (request, response) => {
                     refund_id: data.refund_id,
                     name: data.name,
                     email: data.email,
-                    title : data.title, 
+                    title: data.title,
                     description: data.description,
                     refund_status: data.refund_status,
-                    status_label : '0 = pending, 1 = accepted, 2 = rejected',
+                    status_label: '0 = pending, 1 = accepted, 2 = rejected',
                     // refund_amount: data.refund_amount,
                     otp: data.otp,
                     otp_verify: data.otp_verify
@@ -6269,6 +6269,70 @@ const refundOtpVerify = async (request, response) => {
 
 
 
+// request otp resend 
+const refundOtpResend = async (request, response) => {
+    let { refund_id } = request.body;
+    if (!refund_id) {
+        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param });
+    }
+    try {
+        const query1 = "SELECT * FROM refund_request_master WHERE refund_id = ? AND delete_flag=0";
+        const values1 = [refund_id];
+        connection.query(query1, values1, async (err, result) => {
+            if (err) {
+                return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
+            }
+            if (result.length === 0) {
+                return response.status(200).json({ success: false, msg: languageMessage.dataNotFound });
+            }
+            let data = result[0];
+
+            const otp = await generateOTP(6);
+            let new_data = {
+                refund_id: data.refund_id,
+                name: data.name,
+                email: data.email,
+                title: data.title,
+                description: data.description,
+                refund_status: data.refund_status,
+                status_label: '0 = pending, 1 = accepted, 2 = rejected',
+                otp: otp,
+                // otp_verify: data.otp_verify
+            }
+
+            const clearOtpQuery = `UPDATE refund_request_master SET otp = ? WHERE refund_id = ?`
+            connection.query(clearOtpQuery, [otp, refund_id], async (err) => {
+                if (err) {
+                    return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
+                }
+                const useremail = data.email;
+                const fromName = data.name;
+                const message = "Your refund request otp is";
+                const subject = 'Refund Request';
+                const title = 'Refund Request';
+                const app_logo = "https://xpertnowbucket.s3.ap-south-1.amazonaws.com/uploads/1743577170167-xpertlog.png";
+                const app_name = "Xpertnow App";
+
+                await refundmailer(useremail, fromName, app_name, message, subject, title, app_logo, otp)
+                    .then((data) => {
+                        if (data.status === 'yes') {
+                            return response.status(200).json({ success: true, msg: languageMessage.otpSuccess, new_data: new_data });
+                        } else {
+                            return response.status(200).json({ success: false, msg: 'Failed to send refund OTP email.' });
+                        }
+                    })
+
+            });
+        });
+    } catch (err) {
+        return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
+    }
+}
 
 
-module.exports = { getExpertDetails, getExpertDetailsById, getExpertByRating, getMyJobs, getJobPostDetails, createJobPost, chatConsultationHistory, chatJobsHistory, callConsultationHistory, callJobsHistory, getExpertByFilter, walletRecharge, walletHistory, getExpertByName, getExpertEarning, withdrawRequest, withdrawHistory, expertCallConsultationHistory, expertCallJobsHistory, getJobPostsForExpert, getExpertEarningHistory, expertChatConsultationHistory, expertChatJobsHistory, getReviewsOfExpert, getExpertMyJobs, getBidsOfJobPost, hireTheExpert, createProjectCost, getSubscriptionPlans, buySubscription, reviewReply, rateExpert, ExpertBidJob, CustomerCallHistory, ExpertCallHistory, getExpertHomeJobs, bookMarkJob, reportOnJob, customerJobFilter, expertJobFilter, createJobCost, createJobMilestone, getJobWorkMilestone, acceptRejectMilestone, sentMilestoneRequest, checkMilestoneRequest, getExpertJobDetails, getUserProfile, downloadApp, deepLink, getExpertByFilterSubLabel, logOut, chatFileUpload, getExpertCompletedJobs, add_availability, edit_availability, get_available_slots, userBookSlot, getExpertScheduleSlot, convertIntoMilestone, updateJobMilestone, getWalletAmount, checkWalletAmount, debitWalletAmount, generateUniqueId, getTokenVariable, completeJob, getExpertEarningPdf, getWalletPdf, getExpertAllEarningPdf, getCustomerMilestoneCharge, getNdaPrice, userChatStatus, getActiveStatus, paymentFailure, initiatePayment, paymentSuccess, getSubscriptionStatus, paymentHideShow, refundRequest, refundOtpVerify };
+// get request status 
+// const getRefundStatus = async(request, response) =
+
+
+
+module.exports = { getExpertDetails, getExpertDetailsById, getExpertByRating, getMyJobs, getJobPostDetails, createJobPost, chatConsultationHistory, chatJobsHistory, callConsultationHistory, callJobsHistory, getExpertByFilter, walletRecharge, walletHistory, getExpertByName, getExpertEarning, withdrawRequest, withdrawHistory, expertCallConsultationHistory, expertCallJobsHistory, getJobPostsForExpert, getExpertEarningHistory, expertChatConsultationHistory, expertChatJobsHistory, getReviewsOfExpert, getExpertMyJobs, getBidsOfJobPost, hireTheExpert, createProjectCost, getSubscriptionPlans, buySubscription, reviewReply, rateExpert, ExpertBidJob, CustomerCallHistory, ExpertCallHistory, getExpertHomeJobs, bookMarkJob, reportOnJob, customerJobFilter, expertJobFilter, createJobCost, createJobMilestone, getJobWorkMilestone, acceptRejectMilestone, sentMilestoneRequest, checkMilestoneRequest, getExpertJobDetails, getUserProfile, downloadApp, deepLink, getExpertByFilterSubLabel, logOut, chatFileUpload, getExpertCompletedJobs, add_availability, edit_availability, get_available_slots, userBookSlot, getExpertScheduleSlot, convertIntoMilestone, updateJobMilestone, getWalletAmount, checkWalletAmount, debitWalletAmount, generateUniqueId, getTokenVariable, completeJob, getExpertEarningPdf, getWalletPdf, getExpertAllEarningPdf, getCustomerMilestoneCharge, getNdaPrice, userChatStatus, getActiveStatus, paymentFailure, initiatePayment, paymentSuccess, getSubscriptionStatus, paymentHideShow, refundRequest, refundOtpVerify, refundOtpResend };
