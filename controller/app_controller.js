@@ -9,7 +9,7 @@ const util = require("util");
 const { connect } = require('http2');
 const { request } = require('http');
 // const { multer} = require('../middleware/multer');
-const { mailer, JobcompleteMailer } = require('./MailerApi');
+const { mailer, JobcompleteMailer, refundmailer } = require('./MailerApi');
 // Get Expert Details By category
 // const getExpertDetails = async (request, response) => {
 //     const { user_id, category_id, sub_category_id, sub_level_id, sub_two_level_category_id, sub_three_level_category_id } = request.body;
@@ -6138,66 +6138,127 @@ const paymentHideShow = async (request, response) => {
 const refundRequest = async (request, response) => {
     const { user_id, name, email, description, amount } = request.body;
     try {
-        if (!user_id) {
-            return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'user_id' });
-        }
-        if (!name) {
-            return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'name' });
-        }
-        if (!email) {
-            return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'email' });
-        }
-        if (!description) {
-            return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'description' });
-        }
-        if (!amount) {
-            return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'amount' });
-        }
+        if (!user_id) return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'user_id' });
+        if (!name) return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'name' });
+        if (!email) return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'email' });
+        if (!description) return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'description' });
+        if (!amount) return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'amount' });
 
         const checkUser = 'SELECT user_id, active_flag FROM user_master WHERE user_id = ? AND delete_flag = 0';
         connection.query(checkUser, [user_id], async (err, userRes) => {
+            try {
+                if (err) {
+                    return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err.message });
+                }
+                if (userRes.length === 0) {
+                    return response.status(200).json({ success: false, msg: languageMessage.UserNotFound });
+                }
+                if (userRes[0].active_flag === 0) {
+                    return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
+                }
+
+                const otp = await generateOTP(6);
+                const sql = 'INSERT INTO refund_request_master(user_id, name, email, description, refund_amount, otp, createtime, updatetime) VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())';
+                connection.query(sql, [user_id, name, email, description, amount, otp], async (err1, res1) => {
+                    try {
+                        if (err1) {
+                            return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err1.message });
+                        }
+
+                        if (res1.affectedRows > 0) {
+                            let refund_id = res1.insertId;
+                            let refund_request_data = {
+                                refund_id,
+                                user_id,
+                                name,
+                                email,
+                                description,
+                                refund_amount: amount,
+                                otp
+                            };
+
+                            const useremail = email;
+                            const fromName = name;
+                            const message = "Your refund request otp is";
+                            const subject = 'Refund Request';
+                            const title = 'Refund Request';
+                            const app_logo = "https://xpertnowbucket.s3.ap-south-1.amazonaws.com/uploads/1743577170167-xpertlog.png";
+                            const app_name = "Xpertnow App";
+
+                            await refundmailer(useremail, fromName, app_name, message, subject, title, app_logo, otp)
+                                .then((data) => {
+                                    if (data.status === 'yes') {
+                                        return response.status(200).json({ success: true, msg: languageMessage.otpSuccess, data: refund_request_data });
+                                    } else {
+                                        return response.status(200).json({ success: false, msg: 'Failed to send refund OTP email.' });
+                                    }
+                                })
+                                .catch((mailErr) => {
+                                    return response.status(200).json({ success: false, msg: 'Error sending email.', error: mailErr.message });
+                                });
+                        } else {
+                            return response.status(200).json({ success: false, msg: languageMessage.RefundRequestNotSent });
+                        }
+                    } catch (e1) {
+                        return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: e1.message });
+                    }
+                });
+            } catch (e2) {
+                return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: e2.message });
+            }
+        });
+    } catch (error) {
+        return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: error.message });
+    }
+};
+
+
+//  refund request otp verify 
+const refundOtpVerify = async (request, response) => {
+    let { refund_id, otp } = request.body;
+    if (!refund_id) {
+        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'refund_id' });
+    }
+    if (!otp) {
+        return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param });
+    }
+    try {
+        const query1 = "SELECT mobile, active_flag, otp FROM user_master WHERE user_id = ? AND delete_flag=0";
+        const values1 = [user_id];
+        connection.query(query1, values1, async (err, result) => {
             if (err) {
-                return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err.message });
+                return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
             }
-            if (userRes.length === 0) {
-                return response.status(200).json({ success: false, msg: languageMessage.UserNotFound });
+            if (result.length === 0) {
+                return response.status(200).json({ success: false, msg: languageMessage.userNotFound });
             }
-            if (userRes[0].active_flag === 0) {
+            if (result[0]?.active_flag === 0) {
                 return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
             }
 
-            const otp = await generateOTP(6);
-            const sql = 'INSERT INTO refund_request_master(user_id, name, email, description, refund_amount, otp,  createtime, updatetime) VALUES(?, ?, ?, ?, ?, NOW(), NOW())';
-            connection.query(sql, [user_id, name, email, description, amount, otp], async (err1, res1) => {
-                if (err1) {
-                    return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err1.message });
+            const checkOtp = 'SELECT otp FROM refund_request_master WHERE user_id = ? LIMIT 1 ORDER BY createtime  '
+            const userOpt = result[0].otp;
+            if (userOpt !== otp) {
+                return response.status(200).json({ success: false, msg: languageMessage.invalidOtp });
+            }
+            const clearOtpQuery = `
+            UPDATE user_master 
+            SET otp = NULL, otp_verify = 1
+            WHERE user_id = ?
+        `;
+            connection.query(clearOtpQuery, [user_id], async (err) => {
+                if (err) {
+                    return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
                 }
+                const userDetails = await getUserDetails(user_id);
+                return response.status(200).json({ success: true, msg: languageMessage.otpVerifiedSuccess, userDataArray: userDetails });
 
-                const useremail = email;
-                const fromName = name;
-                const message = description;
-                const subject = 'Refund Request';
-                const title = 'Refund Request'
-                const app_logo = "https://xpertnowbucket.s3.ap-south-1.amazonaws.com/uploads/1743577170167-xpertlog.png";
-                const app_name = "Xpertnow App";
-                if (res1.affectedRows > 0) {
-                    await refundmailer(useremail, fromName, app_name, message, subject, title, app_logo, otp).then(async (data) => {
-                        if (data.status == 'yes') {
-                            return response.status(200).json({ success: true, msg: languageMessage.otpSuccess })
-                        }
-                    });
-                }
-                else {
-                    return response.status(200).json({ success: false, msg: languageMessage.RefundRequestNotSent })
-                }
             });
         });
-    }
-    catch (error) {
-        return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: error.message });
+    } catch (err) {
+        return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
     }
 }
-
 
 
 
