@@ -5921,6 +5921,7 @@ const getActiveStatus = async (request, response) => {
 
 // payU payment integration
 const crypto = require('crypto');
+const { response } = require('express');
 const key = 'JrzqFr';
 const salt = '3qjFQW3C5c2b1eZquRYJXLDgBB0qvpE4';
 const PAYU_BASE_URL = 'https://secure.payu.in/_payment';
@@ -6133,9 +6134,73 @@ const paymentHideShow = async (request, response) => {
 
 
 
+//  add refund request 
+const refundRequest = async (request, response) => {
+    const { user_id, name, email, description, amount } = request.body;
+    try {
+        if (!user_id) {
+            return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'user_id' });
+        }
+        if (!name) {
+            return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'name' });
+        }
+        if (!email) {
+            return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'email' });
+        }
+        if (!description) {
+            return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'description' });
+        }
+        if (!amount) {
+            return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'amount' });
+        }
+
+        const checkUser = 'SELECT user_id, active_flag FROM user_master WHERE user_id = ? AND delete_flag = 0';
+        connection.query(checkUser, [user_id], async (err, userRes) => {
+            if (err) {
+                return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err.message });
+            }
+            if (userRes.length === 0) {
+                return response.status(200).json({ success: false, msg: languageMessage.UserNotFound });
+            }
+            if (userRes[0].active_flag === 0) {
+                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
+            }
+
+            const otp = await generateOTP(6);
+            const sql = 'INSERT INTO refund_request_master(user_id, name, email, description, refund_amount, otp,  createtime, updatetime) VALUES(?, ?, ?, ?, ?, NOW(), NOW())';
+            connection.query(sql, [user_id, name, email, description, amount, otp], async (err1, res1) => {
+                if (err1) {
+                    return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err1.message });
+                }
+
+                const useremail = email;
+                const fromName = name;
+                const message = description;
+                const subject = 'Refund Request';
+                const title = 'Refund Request'
+                const app_logo = "https://xpertnowbucket.s3.ap-south-1.amazonaws.com/uploads/1743577170167-xpertlog.png";
+                const app_name = "Xpertnow App";
+                if (res1.affectedRows > 0) {
+                    await refundmailer(useremail, fromName, app_name, message, subject, title, app_logo, otp).then(async (data) => {
+                        if (data.status == 'yes') {
+                            return response.status(200).json({ success: true, msg: languageMessage.otpSuccess })
+                        }
+                    });
+                }
+                else {
+                    return response.status(200).json({ success: false, msg: languageMessage.RefundRequestNotSent })
+                }
+            });
+        });
+    }
+    catch (error) {
+        return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: error.message });
+    }
+}
 
 
 
 
 
-module.exports = { getExpertDetails, getExpertDetailsById, getExpertByRating, getMyJobs, getJobPostDetails, createJobPost, chatConsultationHistory, chatJobsHistory, callConsultationHistory, callJobsHistory, getExpertByFilter, walletRecharge, walletHistory, getExpertByName, getExpertEarning, withdrawRequest, withdrawHistory, expertCallConsultationHistory, expertCallJobsHistory, getJobPostsForExpert, getExpertEarningHistory, expertChatConsultationHistory, expertChatJobsHistory, getReviewsOfExpert, getExpertMyJobs, getBidsOfJobPost, hireTheExpert, createProjectCost, getSubscriptionPlans, buySubscription, reviewReply, rateExpert, ExpertBidJob, CustomerCallHistory, ExpertCallHistory, getExpertHomeJobs, bookMarkJob, reportOnJob, customerJobFilter, expertJobFilter, createJobCost, createJobMilestone, getJobWorkMilestone, acceptRejectMilestone, sentMilestoneRequest, checkMilestoneRequest, getExpertJobDetails, getUserProfile, downloadApp, deepLink, getExpertByFilterSubLabel, logOut, chatFileUpload, getExpertCompletedJobs, add_availability, edit_availability, get_available_slots, userBookSlot, getExpertScheduleSlot, convertIntoMilestone, updateJobMilestone, getWalletAmount, checkWalletAmount, debitWalletAmount, generateUniqueId, getTokenVariable, completeJob, getExpertEarningPdf, getWalletPdf, getExpertAllEarningPdf, getCustomerMilestoneCharge, getNdaPrice, userChatStatus, getActiveStatus, paymentFailure, initiatePayment, paymentSuccess, getSubscriptionStatus, paymentHideShow };
+
+module.exports = { getExpertDetails, getExpertDetailsById, getExpertByRating, getMyJobs, getJobPostDetails, createJobPost, chatConsultationHistory, chatJobsHistory, callConsultationHistory, callJobsHistory, getExpertByFilter, walletRecharge, walletHistory, getExpertByName, getExpertEarning, withdrawRequest, withdrawHistory, expertCallConsultationHistory, expertCallJobsHistory, getJobPostsForExpert, getExpertEarningHistory, expertChatConsultationHistory, expertChatJobsHistory, getReviewsOfExpert, getExpertMyJobs, getBidsOfJobPost, hireTheExpert, createProjectCost, getSubscriptionPlans, buySubscription, reviewReply, rateExpert, ExpertBidJob, CustomerCallHistory, ExpertCallHistory, getExpertHomeJobs, bookMarkJob, reportOnJob, customerJobFilter, expertJobFilter, createJobCost, createJobMilestone, getJobWorkMilestone, acceptRejectMilestone, sentMilestoneRequest, checkMilestoneRequest, getExpertJobDetails, getUserProfile, downloadApp, deepLink, getExpertByFilterSubLabel, logOut, chatFileUpload, getExpertCompletedJobs, add_availability, edit_availability, get_available_slots, userBookSlot, getExpertScheduleSlot, convertIntoMilestone, updateJobMilestone, getWalletAmount, checkWalletAmount, debitWalletAmount, generateUniqueId, getTokenVariable, completeJob, getExpertEarningPdf, getWalletPdf, getExpertAllEarningPdf, getCustomerMilestoneCharge, getNdaPrice, userChatStatus, getActiveStatus, paymentFailure, initiatePayment, paymentSuccess, getSubscriptionStatus, paymentHideShow, refundRequest };

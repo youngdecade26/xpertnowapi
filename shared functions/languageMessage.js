@@ -138,7 +138,9 @@ const messages = {
   MinimumWithdrawalAmount: ['Minimum withdrawal amount must be '],
   SubscriptionExpired: ['Your subscription has expired'],
   InvalidNumber: ['Invalid mobile number'],
-  WalletbalanceInvalid: ['Invalid wallet balance']
+  WalletbalanceInvalid: ['Invalid wallet balance'], 
+  RefundRequestNotSent : ['Refund request has not been sent, please try again'],
+  
 
 
 };
