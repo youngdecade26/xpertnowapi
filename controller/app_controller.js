@@ -6136,13 +6136,17 @@ const paymentHideShow = async (request, response) => {
 
 //  add refund request 
 const refundRequest = async (request, response) => {
-    const { user_id, name, email, description, amount } = request.body;
+    const { user_id, name, email, request_title,  description } = request.body;
     try {
         if (!user_id) return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'user_id' });
+        
         if (!name) return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'name' });
+        
         if (!email) return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'email' });
+        
         if (!description) return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'description' });
-        if (!amount) return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'amount' });
+        
+        if (!request_title) return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'request_title' });
 
         const checkUser = 'SELECT user_id, active_flag FROM user_master WHERE user_id = ? AND delete_flag = 0';
         connection.query(checkUser, [user_id], async (err, userRes) => {
@@ -6158,8 +6162,8 @@ const refundRequest = async (request, response) => {
                 }
 
                 const otp = await generateOTP(6);
-                const sql = 'INSERT INTO refund_request_master(user_id, name, email, description, refund_amount, otp, createtime, updatetime) VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())';
-                connection.query(sql, [user_id, name, email, description, amount, otp], async (err1, res1) => {
+                const sql = 'INSERT INTO refund_request_master(user_id, name, email, description, title, otp, createtime, updatetime) VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())';
+                connection.query(sql, [user_id, name, email, description, request_title, otp], async (err1, res1) => {
                     try {
                         if (err1) {
                             return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err1.message });
@@ -6173,7 +6177,7 @@ const refundRequest = async (request, response) => {
                                 name,
                                 email,
                                 description,
-                                refund_amount: amount,
+                                title : request_title, 
                                 otp
                             };
 
@@ -6213,6 +6217,7 @@ const refundRequest = async (request, response) => {
 };
 
 
+
 //  refund request otp verify 
 const refundOtpVerify = async (request, response) => {
     let { refund_id, otp } = request.body;
@@ -6223,35 +6228,37 @@ const refundOtpVerify = async (request, response) => {
         return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param });
     }
     try {
-        const query1 = "SELECT mobile, active_flag, otp FROM user_master WHERE user_id = ? AND delete_flag=0";
-        const values1 = [user_id];
+        const query1 = "SELECT * FROM refund_request_master WHERE refund_id = ? AND delete_flag= 0";
+        const values1 = [refund_id];
         connection.query(query1, values1, async (err, result) => {
             if (err) {
                 return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
             }
             if (result.length === 0) {
-                return response.status(200).json({ success: false, msg: languageMessage.userNotFound });
+                return response.status(200).json({ success: false, msg: languageMessage.dataNotFound });
             }
-            if (result[0]?.active_flag === 0) {
-                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
-            }
-
-            const checkOtp = 'SELECT otp FROM refund_request_master WHERE user_id = ? LIMIT 1 ORDER BY createtime  '
-            const userOpt = result[0].otp;
-            if (userOpt !== otp) {
+            let data = result[0];
+            const refundOtp = data.otp;
+            if (refundOtp !== otp) {
                 return response.status(200).json({ success: false, msg: languageMessage.invalidOtp });
             }
-            const clearOtpQuery = `
-            UPDATE user_master 
-            SET otp = NULL, otp_verify = 1
-            WHERE user_id = ?
-        `;
-            connection.query(clearOtpQuery, [user_id], async (err) => {
+            const verifyOtp = `UPDATE refund_request_master SET otp_verify = 1  WHERE refund_id = ? `;
+            connection.query(verifyOtp, [refund_id], async (err) => {
                 if (err) {
                     return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
                 }
-                const userDetails = await getUserDetails(user_id);
-                return response.status(200).json({ success: true, msg: languageMessage.otpVerifiedSuccess, userDataArray: userDetails });
+                let new_data = {
+                    refund_id: data.refund_id,
+                    name: data.name,
+                    email: data.email,
+                    title : data.title, 
+                    description: data.description,
+                    refund_status: data.refund_status,
+                    // refund_amount: data.refund_amount,
+                    otp: data.otp,
+                    otp_verify: data.otp_verify
+                }
+                return response.status(200).json({ success: true, msg: languageMessage.otpVerifiedSuccess, new_data: new_data });
 
             });
         });
@@ -6259,6 +6266,7 @@ const refundOtpVerify = async (request, response) => {
         return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
     }
 }
+
 
 
 
