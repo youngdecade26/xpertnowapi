@@ -6089,7 +6089,7 @@ const getSubscriptionStatus = async (request, response) => {
                 // const expiryDate = new Date(createdAt.getTime() + duration * 24 * 60 * 60 * 1000); // Add full days in milliseconds
 
                 // const now = new Date();
-                // const status_label = '1 = Active, 2 = Expired';
+                const status_label = '1 = Active, 2 = Expired';
 
                 // if (now < expiryDate) {
                 //     return response.status(200).json({ success: true, msg: languageMessage.dataFound, subscription_status: 1, status_label }); // Active
