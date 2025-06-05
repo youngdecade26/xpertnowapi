@@ -32,6 +32,7 @@ const { hashPassword, getUserData } = require("./function");
 const rs = require("randomstring");
 const jwt = require("jsonwebtoken");
 const { request } = require("http");
+const { error } = require("console");
 const FetchUser = async (request, response) => {
   try {
     const fetchDetails =
@@ -9858,7 +9859,35 @@ const getAllRefundRequests = async (request, response) => {
   }
 }
 
-
+// accept refund 
+const acceptRefund = async ( request, response) =>{
+  const { refund_id, transaction_id} = request.body ; 
+    try{
+      const check = 'SELECT refund_id FROM refund_request_master WHERE refund_id = ? AND delete_flag= 0';
+      connection.query(check, [refund_id], async( err, res) =>{
+        if(err){
+          return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err.message});
+        }
+        if(res.length > 0){
+          const sql = 'UPDATE refund_request_master SET refund_status = 1, transaction_id = ?, updatetime = NOW() WHERE refund_id = ? AND delete_flag = 0';
+          connection.query(sql, [transaction_id, refund_id], async(err1 , res1) =>{
+            if(err1){
+              return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err1.message});
+            }
+            if(res1.affectedRows > 0){
+              return response.status(200).json({ success: true, msg: languageMessage.msgDataFound})
+            }
+            else{
+              return response.status(200).json({ success: false, msg: languageMessage.ErrorUpdatingdetails})
+            }
+          })
+        }
+      } )
+    }
+     catch (error) {
+    return res.status(500).json({ success: false, msg: languageMessage.internalServerError });
+  }
+}
 
 
 
@@ -10029,5 +10058,6 @@ module.exports = {
   adminDetails,
   GetDetailsUpdateRequests,
   UpdateDetailsRequestStatus,
-  getAllRefundRequests
+  getAllRefundRequests, 
+  acceptRefund
 };
