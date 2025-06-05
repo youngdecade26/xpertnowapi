@@ -157,8 +157,9 @@ const {
   UpdateDetailsRequestStatus,
   getAllRefundRequests,
   acceptRefund,
-  rejectRefundRequest
-  
+  rejectRefundRequest, 
+  getrefundDetailsById
+
 } = require("../controller/admin_controller");
 router.post("/send_notification", upload.none(), send_notification);
 router.get("/get_manage_inactive_users", upload.none(), FetchInactiveUser);
@@ -354,6 +355,7 @@ router.post("/update_detail_request", upload.none(), UpdateDetailsRequestStatus)
 router.get('/get_refunds', getAllRefundRequests);
 router.post('/accept_refund', upload.none(), acceptRefund);
 router.post('/reject_refund', upload.none(), rejectRefundRequest);
+router.get('/get_refund_details_id', getrefundDetailsById);
 
 // changess
 module.exports = router;

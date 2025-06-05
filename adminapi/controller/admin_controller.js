@@ -9913,6 +9913,43 @@ const rejectRefundRequest = async (request, response) => {
   }
 }
 
+//  get refund details by id 
+const getrefundDetailsById = async (request, response) => {
+  const { refund_id } = request.query;
+
+  try {
+    const sql = 'SELECT * FROM refund_request_master WHERE refund_id = ? AND delete_flag = 0';
+    connection.query(sql, [refund_id], async (err, res) => {
+      if (err) {
+        return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err.message });
+      }
+      if (res.length == 0) {
+        return response.status(200).json({ success: false, msg: languageMessage.msgDataNotFound, request_arr: [] });
+      }
+
+      let data = res[0];
+      let request_arr = [];
+      request_arr.push({
+        refund_id: data.refund_id,
+        user_id: data.user_id,
+        name: data.name,
+        email: data.email,
+        title: data.title,
+        amount: data.refund_amount,
+        description: data.description,
+        refund_status: data.refund_status,
+        status: data.refund_status === 0 ? 'Pending' : data.refund_status === 1 ? 'Accepted' : 'Rejected',
+        transaction_id: data.transaction_id,
+        createtime: moment(data.createtime).format("DD-MM-YYYY hh:mm A"),
+      })
+      return response.status(200).json({ success: true, msg: languageMessage.msgDataFound, request_arr: request_arr })
+    })
+  }
+  catch (error) {
+    return res.status(500).json({ success: false, msg: languageMessage.internalServerError, key: error.message });
+  }
+}
+
 
 
 
@@ -10081,5 +10118,6 @@ module.exports = {
   UpdateDetailsRequestStatus,
   getAllRefundRequests,
   acceptRefund,
-  rejectRefundRequest
+  rejectRefundRequest,
+  getrefundDetailsById
 };
