@@ -796,7 +796,7 @@ const editProfile = async (request, response) => {
                 UPDATE user_master 
                 SET name = ?, email = ?, dob = ?, gender = ?, pan_number = ?, adhar_number = ?,gst_number = ?
             `;
-            let updateValues = [name, email, dob ? dob : null, gender, pan_number, adhar_number, gst_number];
+            let updateValues = [name, email, dob ? dob : null, gender, pan_number ? pan_number : null, adhar_number, gst_number ? gst_number : null];
             if (image) {
                 updateQuery += `, image = ?`;
                 updateValues.push(image ? image : null);
