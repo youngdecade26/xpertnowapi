@@ -9915,7 +9915,7 @@ const rejectRefundRequest = async (request, response) => {
 
 //  get refund details by id 
 const getrefundDetailsById = async (request, response) => {
-  const { refund_id } = request.query;
+  const { refund_id } = request.params;
 
   try {
     const sql = 'SELECT * FROM refund_request_master WHERE refund_id = ? AND delete_flag = 0';
