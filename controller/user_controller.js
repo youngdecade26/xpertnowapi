@@ -818,9 +818,11 @@ const editProfile = async (request, response) => {
                 updateQuery += `, adharcard_back_image = ?`;
                 updateValues.push(adharcard_back_image ? adharcard_back_image : null);
             }
-            if (gst_image) {
-                updateQuery += `, gst_image = ?`;
-                updateValues.push(gst_image ? gst_image : null);
+            if (gst_number) {
+                if (gst_image) {
+                    updateQuery += `, gst_image = ?`;
+                    updateValues.push(gst_image ? gst_image : null);
+                }
             }
             updateQuery += ` WHERE user_id = ?`;
             updateValues.push(user_id);
