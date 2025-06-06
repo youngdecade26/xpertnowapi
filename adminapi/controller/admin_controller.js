@@ -9951,7 +9951,35 @@ const getrefundDetailsById = async (request, response) => {
 }
 //send refund mail
 
+const sendRefundMail = async(request, response) =>{
+  const {email, refund_id, reply} = request.body;
+  try{
+    if(!refund_id){
+      return response.status(200).json({ success: false, msg : languageMessage.msg_empty_param, key:'refund_id'});
+    }
+     if(!email){
+      return response.status(200).json({ success: false, msg : languageMessage.msg_empty_param, key:'email'});
+    }
+     if(!reply){
+      return response.status(200).json({ success: false, msg : languageMessage.msg_empty_param, key:'reply'});
+    }
+    const sql = 'SELECT * FROM refund_request_master WHERE refund_id = ? AND delete_flag = 0';
+    connection.query(sql, [refund_id], async( err, res) =>{
+      if(err){
+        return response.status(200).json({ success: false, msg : languageMessage.internalServerError, error: err.message});
+      }
+      if(res.length == 0){
+        return response.status(200).json({ success: false, msg: languageMessage.msgDataNotFound});
+      }
 
+      
+    })
+
+  }
+   catch (error) {
+    return res.status(500).json({ success: false, msg: languageMessage.internalServerError, key: error.message });
+  }
+}
 
 
 

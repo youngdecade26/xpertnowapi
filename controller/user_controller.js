@@ -800,30 +800,56 @@ const editProfile = async (request, response) => {
             if (image) {
                 updateQuery += `, image = ?`;
                 updateValues.push(image ? image : null);
+            } else {
+                updateQuery += `, image = ?`;
+                updateValues.push(null);
             }
+
+
             if (pancard_front_image) {
                 updateQuery += `, pancard_front_image = ?`;
                 updateValues.push(pancard_front_image ? pancard_front_image : null);
             }
+            else {
+                updateQuery += `, pancard_front_image = ?`;
+                updateValues.push(null);
+            }
+
+
             if (pancard_back_image) {
                 updateQuery += `, pancard_back_image = ?`;
                 updateValues.push(pancard_back_image ? pancard_back_image : null);
             }
+            else {
+                updateQuery += `, pancard_back_image = ?`;
+                updateValues.push(null);
+            }
             if (adharcard_front_image) {
                 updateQuery += `, adharcard_front_image = ?`;
                 updateValues.push(adharcard_front_image ? adharcard_front_image : null);
+            }
+            else {
+                updateQuery += `, adharcard_front_image = ?`;
+                updateValues.push(null);
             }
 
             if (adharcard_back_image) {
                 updateQuery += `, adharcard_back_image = ?`;
                 updateValues.push(adharcard_back_image ? adharcard_back_image : null);
             }
-            if (gst_number) {
-                if (gst_image) {
-                    updateQuery += `, gst_image = ?`;
-                    updateValues.push(gst_image ? gst_image : null);
-                }
+            else {
+                updateQuery += `, adharcard_back_image = ?`;
+                updateValues.push(null);
             }
+
+            if (gst_image) {
+                updateQuery += `, gst_image = ?`;
+                updateValues.push(gst_image ? gst_image : null);
+            } else {
+                updateQuery += `, gst_image = ?`;
+                updateValues.push(null);
+            }
+
             updateQuery += ` WHERE user_id = ?`;
             updateValues.push(user_id);
             connection.query(updateQuery, updateValues, async (err, result) => {
