@@ -9936,6 +9936,7 @@ const getrefundDetailsById = async (request, response) => {
         name: data.name,
         email: data.email,
         title: data.title,
+        
         amount: data.refund_amount > 0 ? `₹ ${data.refund_amount}` : 'NA',
         description: data.description,
         refund_status: data.refund_status,
