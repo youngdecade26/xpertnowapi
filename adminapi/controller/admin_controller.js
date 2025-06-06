@@ -9983,7 +9983,7 @@ const sendRefundMail = async (request, response) => {
 
         const useremail = email;
         const fromName = data.name;
-        const message = `Thank you for reaching out to us regarding your refund request ${reply}`;
+        const message = `Thank you for reaching out to us regarding your refund request.<br></br> ${reply}`;
         const subject = 'Refund Request Acknowledgement';
         const title = 'Refund Request Acknowledgement';
         const app_logo = "https://xpertnowbucket.s3.ap-south-1.amazonaws.com/uploads/1743577170167-xpertlog.png";
