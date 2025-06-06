@@ -9848,7 +9848,7 @@ const getAllRefundRequests = async (request, response) => {
           amount: data.refund_amount,
           description: data.description,
           refund_status: data.refund_status,
-          status: data.refund_status === 0 ? 'Pending' : data.refund_status === 1 ? 'Accepted' : 'Rejected',
+          status: data.refund_status === 0 ? 'Pending' : data.refund_status === 1 ? 'Accepted' : data.refund_status === 2 ? 'Rejected' : 'Replied',
           transaction_id: data.transaction_id,
           createtime: moment(data.createtime).format("DD-MM-YYYY hh:mm A"),
         })
@@ -9939,7 +9939,7 @@ const getrefundDetailsById = async (request, response) => {
         amount: data.refund_amount,
         description: data.description,
         refund_status: data.refund_status,
-        status: data.refund_status === 0 ? 'Pending' : data.refund_status === 1 ? 'Accepted' : 'Rejected',
+        status: data.refund_status === 0 ? 'Pending' : data.refund_status === 1 ? 'Accepted' : data.refund_status === 2 ? 'Rejected' : 'Replied',
         transaction_id: data.transaction_id,
         createtime: moment(data.createtime).format("DD-MM-YYYY hh:mm A"),
       })
@@ -9975,7 +9975,7 @@ const sendRefundMail = async (request, response) => {
 
       let data = res[0];
 
-      const update = 'UPDATE  refund_request_master SET status = 3, reply= ? , updatetime = NOW() WHERE refund_id = ? AND delete_flag = 0'
+      const update = 'UPDATE  refund_request_master SET status = 3, reply= ?, updatetime = NOW() WHERE refund_id = ? AND delete_flag = 0'
       connection.query(update, [reply, refund_id], async (err1, res1) => {
         if (err1) {
           return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err1.message });
