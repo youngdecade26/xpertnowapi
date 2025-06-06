@@ -9975,7 +9975,7 @@ const sendRefundMail = async (request, response) => {
 
       let data = res[0];
 
-      const update = 'UPDATE  refund_request_master SET status = 3, reply= ?, updatetime = NOW() WHERE refund_id = ? AND delete_flag = 0'
+      const update = 'UPDATE  refund_request_master SET refund_status = 3, reply= ?, updatetime = NOW() WHERE refund_id = ? AND delete_flag = 0'
       connection.query(update, [reply, refund_id], async (err1, res1) => {
         if (err1) {
           return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err1.message });
