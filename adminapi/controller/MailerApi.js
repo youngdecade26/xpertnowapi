@@ -1,7 +1,7 @@
 const nodemailer = require("nodemailer");
 var moment = require("moment");
 require('dotenv').config();
-async function mailer(email,subject){
+async function mailer(email, subject) {
     // Assuming you have defined these variables somewhere
     const mailHost = process.env.MAIL_HOST;
     const mailPort = process.env.MAIL_PORT;
@@ -261,8 +261,8 @@ async function sendMail(email, subject, mailBody) {
 }
 // Function to generate email body
 function ActiveDeactiveSendMail(postData) {
-  const year = new Date().getFullYear();
-  const mailBody = `<!DOCTYPE html>
+    const year = new Date().getFullYear();
+    const mailBody = `<!DOCTYPE html>
     <head>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
@@ -329,7 +329,7 @@ function ActiveDeactiveSendMail(postData) {
         </table>
     </body>
     </html>`;
-  return mailBody;
+    return mailBody;
 }
 function mailBodyForgotPasswordData(postData) {
     const date = new Date().getFullYear();
@@ -592,7 +592,7 @@ async function ForgetPasswordMail(email, subject, mailBody) {
     }
 }
 function mailBodyForgetPassword(postData) {
-      const date = new Date().getFullYear();
+    const date = new Date().getFullYear();
     const mailBody = `
         <!DOCTYPE html>
         <html>
@@ -863,8 +863,8 @@ function mailBodyDeletePost(postData) {
     return mailBody;
 }
 function AcceptRejectSendMail(postData) {
-  const year = new Date().getFullYear();
-  const mailBody = `<!DOCTYPE html>
+    const year = new Date().getFullYear();
+    const mailBody = `<!DOCTYPE html>
     <head>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
@@ -931,11 +931,11 @@ function AcceptRejectSendMail(postData) {
         </table>
     </body>
     </html>`;
-  return mailBody;
+    return mailBody;
 }
 function mailBodyInactive(postData) {
-  const year = new Date().getFullYear();
-  const mailBody = `<!DOCTYPE html>
+    const year = new Date().getFullYear();
+    const mailBody = `<!DOCTYPE html>
     <head>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
@@ -1001,11 +1001,11 @@ function mailBodyInactive(postData) {
         </table>
     </body>
     </html>`;
-  return mailBody;
+    return mailBody;
 }
 function mailBodyAdmin(postData) {
-  const year = new Date().getFullYear();
-  const mailBody = `<!DOCTYPE html>
+    const year = new Date().getFullYear();
+    const mailBody = `<!DOCTYPE html>
     <head>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
@@ -1071,11 +1071,11 @@ function mailBodyAdmin(postData) {
         </table>
     </body>
     </html>`;
-  return mailBody;
+    return mailBody;
 }
 function mailBodySubadminData(postData) {
-  const date = new Date().getFullYear();
-  const mailBody = `
+    const date = new Date().getFullYear();
+    const mailBody = `
         <!DOCTYPE html>
         <html>
         <head>
@@ -1145,23 +1145,170 @@ function mailBodySubadminData(postData) {
         </body>
         </html>
     `;
-  return mailBody;
+    return mailBody;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+async function refundmailer(
+    email,
+    fromName,
+    app_name,
+    message,
+    subject,
+    title,
+    app_logo,
+
+    // otp
+    // subject
+) {
+
+
+    // Assuming you have defined these variables somewhere
+    const mailHost = "mail.youngdecade.org";
+    const mailPort = "465";
+    const mailUsername = "support@youngdecade.org";
+    const mailPassword = "1*)ZuWi$McmY";
+    const mailSMTPSecure = "ssl";
+    const mailFrom = "support@youngdecade.org";
+
+    // Create a SMTP transporter
+    let transporter = nodemailer.createTransport({
+        host: mailHost,
+        port: mailPort,
+        secure: mailSMTPSecure === "ssl",
+        auth: {
+            user: mailUsername,
+            pass: mailPassword,
+        },
+        tls: {
+            rejectUnauthorized: false,
+        },
+    });
+
+    // Message object
+    let mailOptions = {
+        from: "support@youngdecade.org",
+        to: email, // list of receivers
+        subject: subject, // Subject line
+        html: `<!DOCTYPE html>
+        <head>
+            <meta name="viewport" content="width=device-width, initial-scale=1" />
+            <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+            <title>Welcome to 'Xpertnow App'</title>
+        </head>
+    
+        <body style="margin: 0; padding: 0; background-color:#ECEFF1; font-size:13px; color:#444; font-family:Arial, Helvetica, sans-serif; padding-top:70px; padding-bottom:70px;">
+            <table  cellspacing="0" cellpadding="0" align="center" width="768" class="outer-tbl" style="margin:0 auto;">
+            <tr>
+                <td class="pad-l-r-b" style="background-color:#ECEFF1; padding:0 70px 40px;">
+                    <table cellpadding="0" cellspacing="0" class="full-wid">
+            
+                    </table>
+    
+                <table cellpadding="0" cellspacing="0"  style="width:100%; background-color:#ffffff; border-radius:4px;box-shadow:0 0 20px #ccc;margin-top:40px">
+            <tr>
+            <td>
+                <table border="0" style="margin:0; width:100%" cellpadding="0" cellspacing="0">
+                    <tr>
+                        <td class="logo" style="padding:25px 0 30px 0; text-align:center; border-bottom:1px solid #E1E1E1">
+                            <img src="${app_logo}" alt="" width="20%" >
+                            <h2>${title}</h2>
+                        </td>
+                    </tr>
+                    <tr><td></td></tr>  
+                    <tr>
+                        <td class="content" style="padding:40px 40px;">
+                            <p style="font-family:Arial, Helvetica, sans-serif; font-size:15px; color:#333333; margin-top:0"> Dear <b> ${fromName} </b> , </p>
+                           
+                            <p style="font-family:Arial, Helvetica, sans-serif; font-size:15px; color:#333333; margin-top:0"> ${message} </p>
+                            <br>
+                            <br>
+            
+                            <p style="font-family:Arial, Helvetica, sans-serif; font-size:15px; color:#333333; margin-top:0; font-weight:bold">
+                           Best regards,                    
+                            </p>
+                            <p style="font-family:Arial, Helvetica, sans-serif; font-size:15px; color:#333333; margin-top:0; font-weight:bold ">
+                          ${app_name}
+                            </p>
+                            
+                        </td>
+                    </tr>
+                    <tr>                
+                        <td  style="background: #19CCCC;  padding-bottom:60px;">
+                            <table style="width:100%" border="0" cellspacing="0" cellpadding="0" class="full-wid" align="center">
+                            <tr>
+                                <td>     
+                                    <div style="margin:0 auto; text-align:center; padding:0 100px" class="foot-items">
+                                        <p style="font-family:Arial, Helvetica, sans-serif; font-size:14px; color:#ffffff; margin-top:40px; line-height:20px;">
+                                        &#169; ${moment().year()}  ${app_name} |  All right Reserved
+                                        </p>
+                                        <p style="font-family:Arial, Helvetica, sans-serif; font-size:12px; color:#000000; line-height:20px; margin-bottom:40px;">
+                                        <p style="font-family:Arial, Helvetica, sans-serif; font-size:12px; color:#fff; line-height:20px;">
+                                            This email and any files transmitted with it are confidential and intended solely for the use of the individual or entity to whom they are addressed. 
+                                                                If you have received this email in error, please notify the system manager. This message contains confidential information and is intended only for the individual named. 
+                                                                If you are not the named addressee, you should not disseminate, distribute or copy this email. Please notify the sender immediately by email if you have received this email by mistake and delete this email from your system. 
+                                                                If you are not the intended recipient, you are notified that disclosing, copying, distributing or taking any action in reliance on the contents of this information is strictly prohibited.
+                                        </p>
+                                    </div>
+                                </td>
+                            </tr>
+                        
+                </table>
+                </td>
+            </tr>              
+    </table>
+    </td>
+    </tr>        
+    </table>
+    </td>
+    </tr>   
+    </table>
+    </body>
+    </html>`,
+    };
+
+    // Send mail with defined transport object
+    try {
+        let info = await transporter.sendMail(mailOptions);
+        console.log("Message sent: %s", info.messageId);
+        var data = {
+            status: "yes",
+            // otp: otp,
+        };
+        return data;
+    } catch (error) {
+        console.error("Error occurred while sending email:", error.message);
+        return "no";
+    }
+}
+
+
 module.exports = {
-  sendMail,
-  ActiveDeactiveSendMail,
-  mailBodyForgotPasswordData,
-  UserContacUs,
-  mailBodyContactUs,
-  mailBodyAdmin,
-  mailBodyInactive,
-  mailer,
-  mailBodyForgetPassword,
-  mailBodySubadminData,
-  ForgetPasswordMail,
-  mailBodyActivateDeactivate,
-  ActivateDeactivateMail,
-  mailBodyDeletePost,
-  DeletePostMail,
-  AcceptRejectSendMail,
+    sendMail,
+    ActiveDeactiveSendMail,
+    mailBodyForgotPasswordData,
+    UserContacUs,
+    mailBodyContactUs,
+    mailBodyAdmin,
+    mailBodyInactive,
+    mailer,
+    mailBodyForgetPassword,
+    mailBodySubadminData,
+    ForgetPasswordMail,
+    mailBodyActivateDeactivate,
+    ActivateDeactivateMail,
+    mailBodyDeletePost,
+    DeletePostMail,
+    AcceptRejectSendMail,
+    refundmailer
 };

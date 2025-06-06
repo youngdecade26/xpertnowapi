@@ -25,6 +25,7 @@ const {
   DeletePostMail,
   AcceptRejectSendMail,
   mailBodyInactive,
+  refundmailer
 } = require("./MailerApi");
 const resetmail = require("./ForgetMailer");
 const BroadcastMail = require("./BroadcastMail");
@@ -9951,32 +9952,55 @@ const getrefundDetailsById = async (request, response) => {
 }
 //send refund mail
 
-const sendRefundMail = async(request, response) =>{
-  const {email, refund_id, reply} = request.body;
-  try{
-    if(!refund_id){
-      return response.status(200).json({ success: false, msg : languageMessage.msg_empty_param, key:'refund_id'});
+const sendRefundMail = async (request, response) => {
+  const { email, refund_id, reply } = request.body;
+  try {
+    if (!refund_id) {
+      return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'refund_id' });
     }
-     if(!email){
-      return response.status(200).json({ success: false, msg : languageMessage.msg_empty_param, key:'email'});
+    if (!email) {
+      return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'email' });
     }
-     if(!reply){
-      return response.status(200).json({ success: false, msg : languageMessage.msg_empty_param, key:'reply'});
+    if (!reply) {
+      return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'reply' });
     }
     const sql = 'SELECT * FROM refund_request_master WHERE refund_id = ? AND delete_flag = 0';
-    connection.query(sql, [refund_id], async( err, res) =>{
-      if(err){
-        return response.status(200).json({ success: false, msg : languageMessage.internalServerError, error: err.message});
+    connection.query(sql, [refund_id], async (err, res) => {
+      if (err) {
+        return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err.message });
       }
-      if(res.length == 0){
-        return response.status(200).json({ success: false, msg: languageMessage.msgDataNotFound});
+      if (res.length == 0) {
+        return response.status(200).json({ success: false, msg: languageMessage.msgDataNotFound });
       }
 
-      
-    })
+      let data = res[0];
 
+      const update = 'UPDATE  refund_request_master SET status = 3, reply= ? , updatetime = NOW() WHERE refund_id = ? AND delete_flag = 0'
+      connection.query(update, [reply, refund_id], async (err1, res1) => {
+        if (err1) {
+          return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err1.message });
+        }
+
+        const useremail = email;
+        const fromName = data.name;
+        const message = `Thank you for reaching out to us regarding your refund request ${reply}`;
+        const subject = 'Refund Request Acknowledgement';
+        const title = 'Refund Request Acknowledgement';
+        const app_logo = "https://xpertnowbucket.s3.ap-south-1.amazonaws.com/uploads/1743577170167-xpertlog.png";
+        const app_name = "Team Xpertnow";
+
+        await refundmailer(useremail, fromName, app_name, message, subject, title, app_logo)
+          .then((data) => {
+            if (data.status === 'yes') {
+              return response.status(200).json({ success: true, msg: "email send successfully" });
+            } else {
+              return response.status(200).json({ success: false, msg: "Error sending email" })
+            }
+          });
+      });
+    });
   }
-   catch (error) {
+  catch (error) {
     return res.status(500).json({ success: false, msg: languageMessage.internalServerError, key: error.message });
   }
 }
@@ -10155,5 +10179,6 @@ module.exports = {
   getAllRefundRequests,
   acceptRefund,
   rejectRefundRequest,
-  getrefundDetailsById
+  getrefundDetailsById,
+  sendRefundMail
 };

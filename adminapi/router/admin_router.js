@@ -158,7 +158,8 @@ const {
   getAllRefundRequests,
   acceptRefund,
   rejectRefundRequest,
-  getrefundDetailsById
+  getrefundDetailsById,
+  sendRefundMail
 
 } = require("../controller/admin_controller");
 router.post("/send_notification", upload.none(), send_notification);
@@ -356,6 +357,7 @@ router.get('/get_refunds', getAllRefundRequests);
 router.post('/accept_refund', upload.none(), acceptRefund);
 router.post('/reject_refund', upload.none(), rejectRefundRequest);
 router.get('/get_refund_details_id/:refund_id', getrefundDetailsById);
+router.post('/send_refund_email', upload.none(), sendRefundMail)
 
 // changess
 module.exports = router;

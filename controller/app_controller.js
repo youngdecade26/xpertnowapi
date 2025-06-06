@@ -6192,7 +6192,7 @@ const refundRequest = async (request, response) => {
                             const subject = 'Refund Request';
                             const title = 'Refund Request';
                             const app_logo = "https://xpertnowbucket.s3.ap-south-1.amazonaws.com/uploads/1743577170167-xpertlog.png";
-                            const app_name = "Xpertnow App";
+                            const app_name = "Team Xpertnow";
 
                             await refundmailer(useremail, fromName, app_name, message, subject, title, app_logo, otp)
                                 .then((data) => {

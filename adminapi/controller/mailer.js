@@ -94,4 +94,10 @@ function mailApi({ useremail, fromName, app_name, message, subject, app_logo, ge
     });
   });
 }
+
+
+
+
+
+
 module.exports = mailApi;
