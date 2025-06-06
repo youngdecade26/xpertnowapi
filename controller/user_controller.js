@@ -800,11 +800,7 @@ const editProfile = async (request, response) => {
             if (image) {
                 updateQuery += `, image = ?`;
                 updateValues.push(image ? image : null);
-            } else {
-                updateQuery += `, image = ?`;
-                updateValues.push(null);
             }
-
 
             if (pancard_front_image) {
                 updateQuery += `, pancard_front_image = ?`;
