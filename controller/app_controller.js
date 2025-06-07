@@ -7191,21 +7191,22 @@ const refundRequest = async (request, response) => {
                         if (res1.affectedRows > 0) {
                             let refund_id = res1.insertId;
 
-                            const user_details = await getUserDetails(user_id);
+
+                            // const user_details = await getUserDetails(user_id);
 
 
-                            // let refund_request_data = {
-                            //     refund_id,
-                            //     user_id,
-                            //     name,
-                            //     email,
-                            //     mobile,
-                            //     description,
-                            //     amount: amount,
-                            //     title: request_title,
-                            //     otp,
-                            // };
-                            return response.status(200).json({ success: true, msg: languageMessage.otpSuccess, refund_id: refund_id, user_details: user_details });
+                            let refund_request_data = {
+                                refund_id,
+                                user_id,
+                                name,
+                                email,
+                                mobile,
+                                description,
+                                amount: amount,
+                                title: request_title,
+                                otp,
+                            };
+                            return response.status(200).json({ success: true, msg: languageMessage.otpSuccess, refund_id: refund_id, refund_request_data: refund_request_data });
                             // const useremail = email;
                             // const fromName = name;
                             // const message = "Your refund request otp is";
