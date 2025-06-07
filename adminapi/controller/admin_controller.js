@@ -9844,7 +9844,7 @@ const getAllRefundRequests = async (request, response) => {
           user_id: data.user_id,
           name: data.name,
           email: data.email,
-          mobile: `+91 ${data.mobile}`,
+          mobile: data.mobile ? `+91 ${data.mobile}` : "NA",
           title: data.title,
           amount: data.refund_amount,
           description: data.description,
