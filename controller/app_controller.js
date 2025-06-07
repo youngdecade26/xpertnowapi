@@ -6935,7 +6935,7 @@ const getActiveStatus = async (request, response) => {
 
 // payU payment integration
 const crypto = require('crypto');
-// const { response } = require('express');
+// const { response } = require('express');.
 const { error } = require('console');
 const key = 'JrzqFr';
 const salt = '3qjFQW3C5c2b1eZquRYJXLDgBB0qvpE4';
