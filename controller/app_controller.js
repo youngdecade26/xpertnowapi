@@ -7243,7 +7243,6 @@ const refundRequest = async (request, response) => {
 };
 
 
-
 //  refund request otp verify 
 const refundOtpVerify = async (request, response) => {
     let { refund_id, otp } = request.body;
@@ -7293,8 +7292,6 @@ const refundOtpVerify = async (request, response) => {
         return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
     }
 }
-
-
 
 // request otp resend 
 const refundOtpResend = async (request, response) => {
@@ -7369,10 +7366,6 @@ const refundOtpResend = async (request, response) => {
         return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
     }
 }
-
-
-
-
 
 // get request status 
 const getRefundStatus = async (request, response) => {
