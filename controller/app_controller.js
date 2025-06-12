@@ -7151,7 +7151,6 @@ const paymentHideShow = async (request, response) => {
 
 
 // refund request
-
 const refundRequest = async (request, response) => {
     const { user_id, name, email, mobile, request_title, description, amount } = request.body;
     try {
@@ -7424,7 +7423,91 @@ const getRefundStatus = async (request, response) => {
 }
 
 
+//  send upcoming call notifications 
+const sendUpcomingCallNotifications = async (request, response) => {
+    try {
+        const today = moment().format("YYYY-MM-DD");
+
+        const getScheduleQuery = `
+            SELECT 
+                ss.slot_schedule_id, 
+                ss.user_id, 
+                ss.expert_id, 
+                ss.slot_id, 
+                ss.type, 
+                sm.start_time,  
+                ss.date       
+            FROM slot_schedule_master ss 
+            JOIN slot_master sm ON ss.slot_id = sm.slot_id 
+            WHERE ss.date = ? AND ss.status = 0 AND ss.delete_flag = 0
+        `;
+
+        connection.query(getScheduleQuery, today, async (err, res) => {
+            if (err) {
+                return response.status(200).json({
+                    success: false,
+                    msg: languageMessage.internalServerError,
+                    error: err.message
+                });
+            }
+
+            for (let data of res) {
+                const slot_time = data.start_time;
+                const scheduledDateTime = moment(`${today} ${slot_time}`, "YYYY-MM-DD HH:mm:ss");
+                const oneHourBefore = scheduledDateTime.clone().subtract(1, 'hours').format("YYYY-MM-DD HH:mm");
+                const currentTime = moment().format("YYYY-MM-DD hh:mm");
+
+                // send notifications 
+                if (oneHourBefore === currentTime) {
+                    const user_id_notification = 1;
+                    const other_user_id_notification = data.expert_id;
+                    const action_id = data.slot_id;
+
+                    const action = data.type == 1 ? 'video_call_reminder' : 'voice_call_reminder';
+                    const title = data.type == 1 ? 'Video Call Reminder' : 'Voice Call Reminder';
+                    const messages = data.type == 1
+                        ? `You have a video call scheduled in next hour`
+                        : `You have a voice call scheduled in next hour`;
+
+                    const action_data = {
+                        user_id: user_id_notification,
+                        other_user_id: other_user_id_notification,
+                        action_id: action_id,
+                        action: action
+                    };
+
+                    await getNotificationArrSingle(
+                        user_id_notification,
+                        other_user_id_notification,
+                        action,
+                        action_id,
+                        title, title, title, title,
+                        messages, messages, messages, messages,
+                        action_data,
+                        async (notification_arr_check) => {
+                            const notification_arr_check_new = [notification_arr_check];
+                            if (notification_arr_check_new && notification_arr_check_new.length > 0) {
+                                await oneSignalNotificationSendCall(notification_arr_check_new);
+                            } else {
+                                console.log("Notification array is empty");
+                            }
+                        }
+                    );
+                }
+            }
+
+            return response.status(200).json({ success: true, msg: "Notifications processed" });
+        });
+    } catch (error) {
+        console.error("Error in sendUpcomingCallNotifications:", error);
+        return response.status(500).json({
+            success: false,
+            msg: languageMessage.internalServerError,
+            error: error.message
+        });
+    }
+};
 
 
 
-module.exports = { getExpertDetails, getExpertDetailsById, getExpertByRating, getMyJobs, getJobPostDetails, createJobPost, chatConsultationHistory, chatJobsHistory, callConsultationHistory, callJobsHistory, getExpertByFilter, walletRecharge, walletHistory, getExpertByName, getExpertEarning, withdrawRequest, withdrawHistory, expertCallConsultationHistory, expertCallJobsHistory, getJobPostsForExpert, getExpertEarningHistory, expertChatConsultationHistory, expertChatJobsHistory, getReviewsOfExpert, getExpertMyJobs, getBidsOfJobPost, hireTheExpert, createProjectCost, getSubscriptionPlans, buySubscription, reviewReply, rateExpert, ExpertBidJob, CustomerCallHistory, ExpertCallHistory, getExpertHomeJobs, bookMarkJob, reportOnJob, customerJobFilter, expertJobFilter, createJobCost, createJobMilestone, getJobWorkMilestone, acceptRejectMilestone, sentMilestoneRequest, checkMilestoneRequest, getExpertJobDetails, getUserProfile, downloadApp, deepLink, getExpertByFilterSubLabel, logOut, chatFileUpload, getExpertCompletedJobs, add_availability, edit_availability, get_available_slots, userBookSlot, getExpertScheduleSlot, convertIntoMilestone, updateJobMilestone, getWalletAmount, checkWalletAmount, debitWalletAmount, generateUniqueId, getTokenVariable, completeJob, getExpertEarningPdf, getWalletPdf, getExpertAllEarningPdf, getCustomerMilestoneCharge, getNdaPrice, userChatStatus, getActiveStatus, paymentFailure, initiatePayment, paymentSuccess, getSubscriptionStatus, paymentHideShow, refundRequest, refundOtpVerify, refundOtpResend, getRefundStatus };
+module.exports = { getExpertDetails, getExpertDetailsById, getExpertByRating, getMyJobs, getJobPostDetails, createJobPost, chatConsultationHistory, chatJobsHistory, callConsultationHistory, callJobsHistory, getExpertByFilter, walletRecharge, walletHistory, getExpertByName, getExpertEarning, withdrawRequest, withdrawHistory, expertCallConsultationHistory, expertCallJobsHistory, getJobPostsForExpert, getExpertEarningHistory, expertChatConsultationHistory, expertChatJobsHistory, getReviewsOfExpert, getExpertMyJobs, getBidsOfJobPost, hireTheExpert, createProjectCost, getSubscriptionPlans, buySubscription, reviewReply, rateExpert, ExpertBidJob, CustomerCallHistory, ExpertCallHistory, getExpertHomeJobs, bookMarkJob, reportOnJob, customerJobFilter, expertJobFilter, createJobCost, createJobMilestone, getJobWorkMilestone, acceptRejectMilestone, sentMilestoneRequest, checkMilestoneRequest, getExpertJobDetails, getUserProfile, downloadApp, deepLink, getExpertByFilterSubLabel, logOut, chatFileUpload, getExpertCompletedJobs, add_availability, edit_availability, get_available_slots, userBookSlot, getExpertScheduleSlot, convertIntoMilestone, updateJobMilestone, getWalletAmount, checkWalletAmount, debitWalletAmount, generateUniqueId, getTokenVariable, completeJob, getExpertEarningPdf, getWalletPdf, getExpertAllEarningPdf, getCustomerMilestoneCharge, getNdaPrice, userChatStatus, getActiveStatus, paymentFailure, initiatePayment, paymentSuccess, getSubscriptionStatus, paymentHideShow, refundRequest, refundOtpVerify, refundOtpResend, getRefundStatus, sendUpcomingCallNotifications };

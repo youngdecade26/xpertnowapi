@@ -5,7 +5,7 @@ const { signUp_1, signUp_2, getStates, getCities, getDegree, getCategoryDetails,
 
 const { getExpertDetails, getExpertDetailsById, createJobPost, walletRecharge, getExpertByRating, getMyJobs, getJobPostDetails, chatConsultationHistory, chatJobsHistory, callConsultationHistory, callJobsHistory, getExpertByFilter, getExpertByName, walletHistory, getExpertEarning, withdrawRequest, withdrawHistory, expertCallConsultationHistory, expertCallJobsHistory, getJobPostsForExpert, getExpertEarningHistory, expertChatConsultationHistory,
   expertChatJobsHistory, getReviewsOfExpert, getExpertMyJobs, getBidsOfJobPost, hireTheExpert, createProjectCost, getSubscriptionPlans, buySubscription,
-  reviewReply, rateExpert, CustomerCallHistory, ExpertCallHistory, ExpertBidJob, getExpertHomeJobs, bookMarkJob, reportOnJob, customerJobFilter, expertJobFilter, createJobCost, createJobMilestone, getJobWorkMilestone, updateMilestoneStatus, acceptRejectMilestone, sentMilestoneRequest, checkMilestoneRequest, getExpertJobDetails, getUserProfile, downloadApp, deepLink, getExpertByFilterSubLabel, logOut, chatFileUpload, getExpertCompletedJobs, add_availability, edit_availability, get_available_slots, userBookSlot, getExpertScheduleSlot, convertIntoMilestone, updateJobMilestone, getWalletAmount, checkWalletAmount, debitWalletAmount, generateUniqueId, getTokenVariable, completeJob, getExpertEarningPdf, getWalletPdf, getExpertAllEarningPdf, getCustomerMilestoneCharge, getNdaPrice, userChatStatus, getActiveStatus, paymentFailure, paymentSuccess, initiatePayment, getSubscriptionStatus, paymentHideShow, refundRequest, refundOtpVerify, refundOtpResend, getRefundStatus } = require("../controller/app_controller");
+  reviewReply, rateExpert, CustomerCallHistory, ExpertCallHistory, ExpertBidJob, getExpertHomeJobs, bookMarkJob, reportOnJob, customerJobFilter, expertJobFilter, createJobCost, createJobMilestone, getJobWorkMilestone, updateMilestoneStatus, acceptRejectMilestone, sentMilestoneRequest, checkMilestoneRequest, getExpertJobDetails, getUserProfile, downloadApp, deepLink, getExpertByFilterSubLabel, logOut, chatFileUpload, getExpertCompletedJobs, add_availability, edit_availability, get_available_slots, userBookSlot, getExpertScheduleSlot, convertIntoMilestone, updateJobMilestone, getWalletAmount, checkWalletAmount, debitWalletAmount, generateUniqueId, getTokenVariable, completeJob, getExpertEarningPdf, getWalletPdf, getExpertAllEarningPdf, getCustomerMilestoneCharge, getNdaPrice, userChatStatus, getActiveStatus, paymentFailure, paymentSuccess, initiatePayment, getSubscriptionStatus, paymentHideShow, refundRequest, refundOtpVerify, refundOtpResend, getRefundStatus, sendUpcomingCallNotifications } = require("../controller/app_controller");
 
 const { generateVideocallToken, VideoVoiceCallStart, VideoVoiceCallJoin, generateTokenByChannelName, VideoVoiceCallEnd, VideoVoiceCallReject, generatecallResourceId, startRecording, endRecording, getRecordingDetails, checkRecordingStatus, createSubscription, createPayuPlan } = require('../controller/call_controller');
 const router = express.Router();
@@ -519,6 +519,8 @@ router.post('/refund_otp_resend', upload.none(), refundOtpResend);
 
 router.get('/get_refund_status', getRefundStatus);
 
+
+router.get('/send_upcoming_notifications', sendUpcomingCallNotifications)
 
 
 
