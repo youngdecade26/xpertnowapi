@@ -6997,7 +6997,7 @@ const initiatePayment = (req, res) => {
           <input type="hidden" name="furl" value="${furl}" />
           <input type="hidden" name="hash" value="${hash}" />
           <input type="hidden" name="service_provider" value="payu_paisa" />
-          <input type="hidden" name="enforce_paymethod" value="UPI" />
+         
           <p>Redirecting to PayU...</p>
         </form>
       </body>
