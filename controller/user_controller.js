@@ -2613,7 +2613,4 @@ const getRequestStatus = async (request, response) => {
 
 
 
-
-
-
 module.exports = { signUp_2, signUp_1, getStates, getCities, getDegree, getCategoryDetails, getExpertLanguages, updateBankDetails, getSubCategoryDetails, getSubCategoryLevelDetails, otpVerify, resendOtp, getContent, getAllContentUrl, managePrivacy, deleteAccount, editProfile, getUserNotification, getCustomerSupport, editCallCharge, editExpertiseAndExperience, editProfessionalDetails, editDocNumber, editProfileDetails, getExpertEye, deleteExpertAccount, deleteSingleNotification, deleteAllNotification, usersignUp_1, userOtpVerify, userResendOtp, usersignUp_2, getExpertiseCategory, getSubExpertiseCategory, getSubExpertiseCategoryLevel, getExpertNotification, getExpertByCatSubCat, getSubLevelTwoCategory, getSubLevelThreeCategory, onlineOffline, editProfileRequest, getRequestStatus }

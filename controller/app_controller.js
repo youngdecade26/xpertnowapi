@@ -7180,8 +7180,9 @@ const refundRequest = async (request, response) => {
                 }
 
                 const otp = await generateOTP(6);
-                const sql = 'INSERT INTO refund_request_master(user_id, name, email,mobile, description, title, otp, refund_amount, createtime, updatetime) VALUES (?, ?, ?, ?,?, ?, ?, ?, NOW(), NOW())';
-                connection.query(sql, [user_id, name, email, mobile, description, request_title, otp, amount], async (err1, res1) => {
+                const now = new Date();
+                const sql = 'INSERT INTO refund_request_master(user_id, name, email,mobile, description, title, otp, refund_amount, createtime, updatetime) VALUES (?, ?, ?, ?,?, ?, ?, ?, ?, ?)';
+                connection.query(sql, [user_id, name, email, mobile, description, request_title, otp, amount, now, now], async (err1, res1) => {
                     try {
                         if (err1) {
                             return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err1.message });
@@ -7190,8 +7191,8 @@ const refundRequest = async (request, response) => {
                         if (res1.affectedRows > 0) {
                             let refund_id = res1.insertId;
 
-
                             // const user_details = await getUserDetails(user_id);
+
 
 
                             let refund_request_data = {
@@ -7240,9 +7241,6 @@ const refundRequest = async (request, response) => {
         return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: error.message });
     }
 };
-
-
-
 
 
 
@@ -7378,15 +7376,15 @@ const refundOtpResend = async (request, response) => {
 
 // get request status 
 const getRefundStatus = async (request, response) => {
-    const { user_id, refund_id } = request.query;
+    const { user_id } = request.query;
     try {
         if (!user_id) {
             return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'user_id' });
         }
 
-        if (!refund_id) {
-            return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'refund_id' })
-        }
+        // if (!refund_id) {
+        //     return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'refund_id' })
+        // }
 
         const checkUser = 'SELECT user_id, active_flag FROM user_master WHERE user_id = ? AND delete_flag = 0';
         connection.query(checkUser, [user_id], async (err, userRes) => {
@@ -7400,8 +7398,8 @@ const getRefundStatus = async (request, response) => {
             if (userRes[0].active_flag === 0) {
                 return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
             }
-            const check = 'SELECT refund_status, transaction_id FROM refund_request_master WHERE user_id = ? AND refund_id= ? AND delete_flag= 0';
-            connection.query(check, [user_id, refund_id], async (err1, res1) => {
+            const check = 'SELECT refund_id, title, description, refund_status, transaction_id , refund_amount, createtime FROM refund_request_master WHERE user_id = ? AND delete_flag= 0 AND otp_verify= 1 ORDER BY createtime DESC';
+            connection.query(check, [user_id], async (err1, res1) => {
                 if (err1) {
                     return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err1.message });
                 }
@@ -7410,9 +7408,23 @@ const getRefundStatus = async (request, response) => {
                     return response.status(200).json({ success: false, msg: languageMessage.dataNotFound });
                 }
 
-                let refund_status = res1[0].refund_status;
-                let status_label = '0 = pending, 1 = accepted, 2 = rejected';
-                return response.status(200).json({ success: true, msg: languageMessage.dataFound, refund_status: refund_status, status_label: status_label, transaction_id: res1[0].transaction_id })
+                // let refund_status = res1[0].refund_status;
+
+                // let status_label = '0 = pending, 1 = accepted, 2 = rejected';
+                let status_arr = [];
+                for (let data of res1) {
+                    status_arr.push({
+                        refund_id: data.refund_id,
+                        title: data.title,
+                        description: data.description,
+                        amount: data.refund_amount,
+                        refund_status: data.refund_status,
+                        status_label: '0 = pending, 1 = accepted, 2 = rejected',
+                        transaction_id: data.transaction_id ? data.transaction_id : 'NA',
+                        createtime: moment(data.createtime).format("MMM DD YYYY hh:mm A")
+                    })
+                }
+                return response.status(200).json({ success: true, msg: languageMessage.dataFound, status_arr: status_arr, })
             });
         });
     }
@@ -7421,7 +7433,6 @@ const getRefundStatus = async (request, response) => {
         return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
     }
 }
-
 
 //  send upcoming call notifications 
 const sendUpcomingCallNotifications = async (request, response) => {
