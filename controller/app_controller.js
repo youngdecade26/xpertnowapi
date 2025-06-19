@@ -7455,7 +7455,7 @@ const sendUpcomingCallNotifications = async (request, response) => {
             for (let data of res) {
                 const slot_time = data.start_time;
                 const scheduledDateTime = moment(`${today} ${slot_time}`, "YYYY-MM-DD HH:mm:ss");
-                const oneHourBefore = scheduledDateTime.clone().subtract(1, 'hours').format("YYYY-MM-DD HH:mm");
+                const oneHourBefore = scheduledDateTime.clone().subtract(1, 'hours').format("YYYY-MM-DD hh:mm");
 
 
                 const indianTime = new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" });
