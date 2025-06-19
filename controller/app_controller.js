@@ -7456,7 +7456,11 @@ const sendUpcomingCallNotifications = async (request, response) => {
                 const slot_time = data.start_time;
                 const scheduledDateTime = moment(`${today} ${slot_time}`, "YYYY-MM-DD HH:mm:ss");
                 const oneHourBefore = scheduledDateTime.clone().subtract(1, 'hours').format("YYYY-MM-DD HH:mm");
-                const currentTime = moment().format("YYYY-MM-DD hh:mm");
+
+
+                const indianTime = new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" });
+                const currentTime = moment(indianTime).format("YYYY-MM-DD hh:mm");
+
 
                 // send notifications 
                 if (oneHourBefore === currentTime) {
