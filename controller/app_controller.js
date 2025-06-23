@@ -4550,6 +4550,10 @@ const getExpertScheduleSlot = (request, response) => {
                 if (slots.length === 0) {
                     return response.status(200).json({ success: true, msg: languageMessage.dataFound, schedule_slot: 'NA' });
                 }
+                slots.map(item => {
+                    item.start_time = moment(item.start_time, "HH:mm:ss").format("hh:mm A");
+                    item.end_time = moment(item.end_time, "HH:mm:ss").format("hh:mm A");
+                })
                 return response.status(200).json({ success: true, msg: languageMessage.dataFound, schedule_slot: slots });
             });
         });
