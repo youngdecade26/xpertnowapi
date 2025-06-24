@@ -4192,23 +4192,89 @@ const add_availability = (req, res) => {
             });
     });
 };
+// function insertSlots(availabilityId, body, day, resolve, reject) {
+//     const startTimes = body[`start_time_${day}`]?.split(",") || [];
+//     const endTimes = body[`end_time_${day}`]?.split(",") || [];
+//     const slotQueries = startTimes.map((start_time, index) => {
+//         const end_time = endTimes[index];
+//         if (start_time && end_time) {
+//             const slotInsertQuery = `INSERT INTO slot_master(availability_id, start_time, end_time, updatetime,createtime) VALUES (?, ?, ?, NOW(),NOW())`;
+//             return new Promise((slotResolve, slotReject) => {
+//                 connection.query(slotInsertQuery, [availabilityId, start_time.trim(), end_time.trim()], (err) => {
+//                     if (err) return slotReject(err);
+//                     slotResolve();
+//                 });
+//             });
+//         }
+//     });
+//     Promise.all(slotQueries).then(resolve).catch(reject);
+// }
+
+
+
+
+
+
+
+
+//  new code updated
 function insertSlots(availabilityId, body, day, resolve, reject) {
     const startTimes = body[`start_time_${day}`]?.split(",") || [];
     const endTimes = body[`end_time_${day}`]?.split(",") || [];
+
     const slotQueries = startTimes.map((start_time, index) => {
         const end_time = endTimes[index];
+
         if (start_time && end_time) {
-            const slotInsertQuery = `INSERT INTO slot_master(availability_id, start_time, end_time, updatetime,createtime) VALUES (?, ?, ?, NOW(),NOW())`;
+            // Convert AM/PM to 24-hour format
+            const convertTo24Hour = (timeStr) => {
+                timeStr = timeStr.trim().toUpperCase();
+
+                // Handle cases like "9:00AM" or "9:00 AM"
+                timeStr = timeStr.replace(/(\d)(AM|PM)/i, '$1 $2');
+
+                // Parse the time
+                const [time, period] = timeStr.split(' ');
+                let [hours, minutes] = time.split(':');
+
+                hours = parseInt(hours, 10);
+                minutes = minutes ? parseInt(minutes, 10) : 0;
+
+                if (period === 'PM' && hours !== 12) {
+                    hours += 12;
+                } else if (period === 'AM' && hours === 12) {
+                    hours = 0;
+                }
+
+                // Format as HH:MM:SS
+                return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:00`;
+            };
+
+            const start24 = convertTo24Hour(start_time);
+            const end24 = convertTo24Hour(end_time);
+
+            const slotInsertQuery = `INSERT INTO slot_master(availability_id, start_time, end_time, updatetime, createtime) 
+                                   VALUES (?, ?, ?, NOW(), NOW())`;
+
             return new Promise((slotResolve, slotReject) => {
-                connection.query(slotInsertQuery, [availabilityId, start_time.trim(), end_time.trim()], (err) => {
-                    if (err) return slotReject(err);
-                    slotResolve();
-                });
+                connection.query(slotInsertQuery,
+                    [availabilityId, start24, end24],
+                    (err) => {
+                        if (err) return slotReject(err);
+                        slotResolve();
+                    });
             });
         }
+        return Promise.resolve();
     });
+
     Promise.all(slotQueries).then(resolve).catch(reject);
 }
+
+
+
+
+
 
 // EDIT Availability
 const edit_availability = (req, res) => {
@@ -4318,6 +4384,131 @@ function clearSlots(availabilityId) {
         });
     });
 }
+
+
+
+// get available slots
+// const get_available_slots = (request, response) => {
+//     const { user_id } = request.query;
+//     try {
+//         if (!user_id) {
+//             return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: "user_id" });
+//         }
+//         const query1 = "SELECT mobile, active_flag FROM user_master WHERE user_id = ? AND delete_flag = 0 AND user_type=2";
+//         const values1 = [user_id];
+//         connection.query(query1, values1, async (err, result) => {
+//             if (err) {
+//                 return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
+//             }
+//             if (result.length === 0) {
+//                 return response.status(200).json({ success: false, msg: languageMessage.userNotFound });
+//             }
+//             if (result[0]?.active_flag === 0) {
+//                 return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
+//             }
+//             const getAvailableSlotsQuery = `SELECT a.availability_id,a.day, a.status,s.slot_id, s.start_time, s.end_time FROM availability_master AS a LEFT JOIN slot_master AS s ON s.availability_id = a.availability_id WHERE a.user_id = ? AND a.delete_flag = 0`;
+//             connection.query(getAvailableSlotsQuery, [user_id], (err, slots) => {
+//                 if (err) {
+//                     return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err.message });
+//                 }
+//                 if (slots.length === 0) {
+//                     const dateList = [
+//                         {
+//                             "id": 0,
+//                             "day": "Mo",
+//                             "addtime": [],
+//                             "status": "1",
+//                         },
+//                         {
+//                             "id": 1,
+//                             "day": "Tu",
+//                             "addtime": [],
+//                             "status": "1",
+//                         },
+//                         {
+//                             "id": 2,
+//                             "day": "We",
+//                             "addtime": [],
+//                             "status": "1",
+//                         },
+//                         {
+//                             "id": 3,
+//                             "day": "Th",
+//                             "addtime": [],
+//                             "status": "1",
+//                         },
+//                         {
+//                             "id": 4,
+//                             "day": "Fr",
+//                             "addtime": [],
+//                             "status": "1",
+//                         },
+//                         {
+//                             "id": 5,
+//                             "day": "Sa",
+//                             "addtime": [],
+//                             "status": "1",
+//                         },
+//                         {
+//                             "id": 6,
+//                             "day": "Su",
+//                             "addtime": [],
+//                             "status": "1",
+//                         },
+//                     ];
+//                     return response.status(200).json({ success: true, msg: languageMessage.dataFound, available_slots: dateList });
+//                 }
+//                 // Format the response to group slots by day
+//                 const available_slots = slots.reduce((acc, slot) => {
+//                     const { availability_id, day, status, slot_id, start_time, end_time } = slot;
+//                     let dayEntry = acc.find(item => item.id === day);
+
+//                     const dayMap = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
+//                     const dayAbbreviation = dayMap[day];
+
+//                     // Function to get the next occurrence of a specific weekday (0 = Monday, ..., 6 = Sunday)
+//                     const getNextDate = (targetDay) => {
+//                         const today = new Date();
+//                         let currentDay = today.getDay(); // JS: Sunday = 0, Monday = 1, ..., Saturday = 6
+
+//                         // Convert JavaScript's day format to match your format (0 = Monday, ..., 6 = Sunday)
+//                         currentDay = (currentDay + 6) % 7; // Shifts Sunday (0) to (6), Monday (1) to (0), etc.
+
+//                         let daysToAdd = targetDay - currentDay;
+//                         if (daysToAdd < 0) daysToAdd += 7; // If day has passed, move to next week's occurrence
+
+//                         const nextDate = new Date();
+//                         nextDate.setDate(today.getDate() + daysToAdd);
+//                         return nextDate.toISOString().split('T')[0]; // Format: YYYY-MM-DD
+//                     };
+
+//                     const date = getNextDate(day);
+
+//                     if (!dayEntry) {
+//                         dayEntry = { availability_id: availability_id, id: day, day: dayAbbreviation, date, addtime: [], status: status.toString() };
+//                         acc.push(dayEntry);
+//                     }
+
+//                     if (status === 0 && start_time && end_time) {
+//                         dayEntry.addtime.push({ slot_id, start_time, end_time });
+//                     }
+
+//                     return acc;
+//                 }, []);
+
+
+//                 return response.status(200).json({ success: true, msg: languageMessage.dataFound, available_slots });
+//             });
+//         });
+//     } catch (error) {
+//         return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: error.message });
+//     }
+// };
+
+
+
+
+//  new get available slots api
 const get_available_slots = (request, response) => {
     const { user_id } = request.query;
     try {
@@ -4349,45 +4540,11 @@ const get_available_slots = (request, response) => {
                             "addtime": [],
                             "status": "1",
                         },
-                        {
-                            "id": 1,
-                            "day": "Tu",
-                            "addtime": [],
-                            "status": "1",
-                        },
-                        {
-                            "id": 2,
-                            "day": "We",
-                            "addtime": [],
-                            "status": "1",
-                        },
-                        {
-                            "id": 3,
-                            "day": "Th",
-                            "addtime": [],
-                            "status": "1",
-                        },
-                        {
-                            "id": 4,
-                            "day": "Fr",
-                            "addtime": [],
-                            "status": "1",
-                        },
-                        {
-                            "id": 5,
-                            "day": "Sa",
-                            "addtime": [],
-                            "status": "1",
-                        },
-                        {
-                            "id": 6,
-                            "day": "Su",
-                            "addtime": [],
-                            "status": "1",
-                        },
+                        // ... (rest of the default date list)
                     ];
                     return response.status(200).json({ success: true, msg: languageMessage.dataFound, available_slots: dateList });
                 }
+
                 // Format the response to group slots by day
                 const available_slots = slots.reduce((acc, slot) => {
                     const { availability_id, day, status, slot_id, start_time, end_time } = slot;
@@ -4396,44 +4553,93 @@ const get_available_slots = (request, response) => {
                     const dayMap = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
                     const dayAbbreviation = dayMap[day];
 
-                    // Function to get the next occurrence of a specific weekday (0 = Monday, ..., 6 = Sunday)
+                    // Function to get the next occurrence of a specific weekday
                     const getNextDate = (targetDay) => {
                         const today = new Date();
-                        let currentDay = today.getDay(); // JS: Sunday = 0, Monday = 1, ..., Saturday = 6
-
-                        // Convert JavaScript's day format to match your format (0 = Monday, ..., 6 = Sunday)
-                        currentDay = (currentDay + 6) % 7; // Shifts Sunday (0) to (6), Monday (1) to (0), etc.
-
+                        let currentDay = today.getDay();
+                        currentDay = (currentDay + 6) % 7;
                         let daysToAdd = targetDay - currentDay;
-                        if (daysToAdd < 0) daysToAdd += 7; // If day has passed, move to next week's occurrence
-
+                        if (daysToAdd < 0) daysToAdd += 7;
                         const nextDate = new Date();
                         nextDate.setDate(today.getDate() + daysToAdd);
-                        return nextDate.toISOString().split('T')[0]; // Format: YYYY-MM-DD
+                        return nextDate.toISOString().split('T')[0];
                     };
 
                     const date = getNextDate(day);
 
                     if (!dayEntry) {
-                        dayEntry = { availability_id: availability_id, id: day, day: dayAbbreviation, date, addtime: [], status: status.toString() };
+                        dayEntry = {
+                            availability_id: availability_id,
+                            id: day,
+                            day: dayAbbreviation,
+                            date,
+                            addtime: [],
+                            status: status.toString()
+                        };
                         acc.push(dayEntry);
                     }
 
+                    // Convert 24-hour format to AM/PM
+                    const formatTimeToAMPM = (time24) => {
+                        if (!time24) return '';
+
+                        // Handle cases where time might be a full datetime string
+                        const timeStr = typeof time24 === 'string' ? time24 : time24.toISOString();
+
+                        // Extract just the time part (HH:MM:SS)
+                        const timePart = timeStr.includes(' ')
+                            ? timeStr.split(' ')[1]
+                            : timeStr.includes('T')
+                                ? timeStr.split('T')[1]
+                                : timeStr;
+
+                        const [hours, minutes] = timePart.split(':');
+                        const hourInt = parseInt(hours, 10);
+
+                        const period = hourInt >= 12 ? 'PM' : 'AM';
+                        const hour12 = hourInt % 12 || 12; // Convert 0 to 12 for 12 AM
+
+                        return `${hour12}:${minutes} ${period}`;
+                    };
+
                     if (status === 0 && start_time && end_time) {
-                        dayEntry.addtime.push({ slot_id, start_time, end_time });
+                        dayEntry.addtime.push({
+                            slot_id,
+                            start_time: formatTimeToAMPM(start_time),
+                            end_time: formatTimeToAMPM(end_time)
+                        });
                     }
 
                     return acc;
                 }, []);
 
+                // Ensure all 7 days are present in the response
+                const dayMap = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
+                const completeAvailableSlots = Array.from({ length: 7 }, (_, i) => {
+                    const existingDay = available_slots.find(day => day.id === i);
+                    return existingDay || {
+                        id: i,
+                        day: dayMap[i],
+                        addtime: [],
+                        status: "1"
+                    };
+                });
 
-                return response.status(200).json({ success: true, msg: languageMessage.dataFound, available_slots });
+                return response.status(200).json({
+                    success: true,
+                    msg: languageMessage.dataFound,
+                    available_slots: completeAvailableSlots
+                });
             });
         });
     } catch (error) {
         return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: error.message });
     }
 };
+
+
+
+
 
 //book slot
 const userBookSlot = async (request, response) => {
