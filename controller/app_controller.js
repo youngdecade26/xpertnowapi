@@ -5148,10 +5148,12 @@ const debitWalletAmount = async (request, response) => {
                     // Entry exists, update amount
                     const existingId = checkResult[0].transition_id;
                     const newAmount = parseFloat(checkResult[0].amount) + parseFloat(amount);
-                    const updateQuery = `UPDATE wallet_master SET amount = ?, updatetime = ? WHERE id = ?`;
+                    const updateQuery = `UPDATE wallet_master SET amount = ?, updatetime = ? WHERE transition_id = ?`;
                     connection.query(updateQuery, [newAmount, now, existingId], (err, updateResult) => {
-                        if (err) return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
-                        return response.status(200).json({ success: true, msg: languageMessage.walletDebitUpdate, type: 'updated' });
+                        if (err) {
+                            return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
+                        }
+                        return response.status(200).json({ success: true, msg: languageMessage.walletDebitUpdate, });
                     });
                 } else {
                     // No existing entry, insert new
@@ -5160,7 +5162,7 @@ const debitWalletAmount = async (request, response) => {
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
                     connection.query(insertQuery, [user_id, expert_id, amount, 1, 3, call_id, now, now], (err, insertResult) => {
                         if (err) return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
-                        return response.status(200).json({ success: true, msg: languageMessage.walletDebitUpdate, type: 'inserted' });
+                        return response.status(200).json({ success: true, msg: languageMessage.walletDebitUpdate, });
                     });
                 }
             });
