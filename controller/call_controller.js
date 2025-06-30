@@ -96,7 +96,7 @@ const VideoVoiceCallStart = async (request, response) => {
                 var user_token = token.token;
                 var channelName = token.channelName;
 
-                const newUserQuery = `INSERT INTO video_call_master (user_id,other_user_id,room_id,token,type,createtime,updatetime)
+                const newUserQuery = `INSERT INTO video_call_master(user_id,other_user_id,room_id,token,type,createtime,updatetime)
                 VALUES (?, ?, ?, ?,?, now(),now())`;
                 const values = [user_id, other_user_id, channelName, user_token, type]
                 connection.query(newUserQuery, values, async (err, result) => {
@@ -446,9 +446,9 @@ const VideoVoiceCallEnd = async (request, response) => {
                             return response.status(200).json({ success: false, msg: languageMessage.videocallEndUnsuccess, key: err });
                         }
 
-                        const updateExpertEarning = 'INSERT INTO expert_earning_master(type, user_id, expert_id, expert_earning, createtime, updatetime) VALUES(?, ?, ?, ?, NOW(), NOW())';
+                        const updateExpertEarning = 'INSERT INTO expert_earning_master(type, user_id, expert_id, expert_earning,admin_commission_amount, createtime, updatetime) VALUES(?, ?, ?, ?, ?, NOW(), NOW())';
 
-                        connection.query(updateExpertEarning, [1, customer_id, expert_id, expert_final_earning], async (earningErr, earningRes) => {
+                        connection.query(updateExpertEarning, [1, customer_id, expert_id, expert_final_earning, admin_earning], async (earningErr, earningRes) => {
                             if (earningErr) {
                                 return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: earningErr.message });
                             }
