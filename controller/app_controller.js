@@ -583,9 +583,10 @@ const createJobPost = async (request, response) => {
                             console.error("Error inserting files:", error);
                         }
                     }
+                    const now = new Date();
                     if (nda_status == 1) {
-                        const debitWallet = 'INSERT INTO wallet_master (user_id, amount, status, type, createtime, updatetime) VALUES(?, ?, 1,2,NOW(),NOW())';
-                        connection.query(debitWallet, [user_id, nda_price], async (walletErr, walletRes) => {
+                        const debitWallet = 'INSERT INTO wallet_master (user_id, amount, status, type, createtime, updatetime) VALUES(?, ?, 1,2,?,?)';
+                        connection.query(debitWallet, [user_id, nda_price, now, now], async (walletErr, walletRes) => {
                             if (walletErr) {
                                 return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: walletErr.message });
                             }
@@ -1256,11 +1257,13 @@ const walletRecharge = async (request, response) => {
             else if (type == 1) {
                 finalWallet = parseFloat(result[0].wallet_balance) - parseFloat(recharge_amount);
             }
+
+            const now = new Date();
             const newUserQuery = `
             INSERT INTO wallet_master (user_id,type,amount,wallet_balance,createtime,status,payment_transaction_id)
-            VALUES (?, ?, ?, ?, NOW(),?,?)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
         `;
-            const values = [user_id, type, recharge_amount, finalWallet, status, transaction_id]
+            const values = [user_id, type, recharge_amount, finalWallet, now, status, transaction_id]
             connection.query(newUserQuery, values, async (err, result) => {
                 if (err) {
                     return response.status(200).json({ success: false, msg: languageMessage.walletUpdateError, key: err });
@@ -5099,8 +5102,9 @@ const debitWalletAmount = async (request, response) => {
             }
             const status = 1;
             const type = 3;
-            const fileInsertQuery = `INSERT INTO wallet_master(user_id, expert_id, amount,status,type, createtime,updatetime) VALUES (?,?,?,?,?,NOW(),NOW())`;
-            connection.query(fileInsertQuery, [user_id, expert_id, amount, status, type], (err, result1) => {
+            const now = new Date();
+            const fileInsertQuery = `INSERT INTO wallet_master(user_id, expert_id, amount,status,type, createtime,updatetime) VALUES (?,?,?,?,?,?,?)`;
+            connection.query(fileInsertQuery, [user_id, expert_id, amount, status, type, now, now], (err, result1) => {
                 if (err) {
                     return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
                 }
@@ -5240,14 +5244,14 @@ async function getExpertEarningg(milestone_id, user_id) {
                     tcs_amount = parseFloat((net_amount * tcs / 100).toFixed(2));
 
                     grand_total_earning = parseFloat((platform_fee_amount + platform_fee_gst_amount - (tds_amount + tcs_amount)).toFixed(2));
-
+                    const now = new Date();
                     const sqlQuery = `
                   INSERT INTO expert_earning_master 
                   (type, user_id, expert_id, milestone_id, total_amount, commission_percentage, admin_commission_amount, expert_earning, expert_type, gst_per, gst_amt, net_expert_earning, tds_per, tds_amt, tcs_per, tcs_amt, platform_fees, platform_fees_gst_amt, grand_total_expert_earning, createtime, updatetime) 
-                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
               `;
 
-                    connection.query(sqlQuery, [0, user_id, expert_id, milestone_id, received_amount, commission_percentage, admin_commission_amount, grand_total_earning, 1, gst, gst_amount, net_amount, tds, tds_amount, tcs, tcs_amount, platform_fee_amount, platform_fee_gst_amount, grand_total_earning], (insertErr, insertRes) => {
+                    connection.query(sqlQuery, [0, user_id, expert_id, milestone_id, received_amount, commission_percentage, admin_commission_amount, grand_total_earning, 1, gst, gst_amount, net_amount, tds, tds_amount, tcs, tcs_amount, platform_fee_amount, platform_fee_gst_amount, grand_total_earning, now, now], (insertErr, insertRes) => {
                         if (insertErr) {
                             reject(insertErr);
                         }
@@ -5267,14 +5271,14 @@ async function getExpertEarningg(milestone_id, user_id) {
                     let apply_gst_amount = parseFloat((platform_fee_amount * gst / 100).toFixed(2));
                     let net_apply_gst_amount = apply_gst_amount / 2;
                     grand_total_earning = parseFloat((platform_fee_amount - net_apply_gst_amount).toFixed(2));
-
+                    const now = new Date();
                     const insert = `
                   INSERT INTO expert_earning_master 
                   (type, user_id, expert_id, milestone_id, total_amount, commission_percentage, admin_commission_amount, expert_earning, expert_type, gst_per, gst_amt, net_expert_earning, tds_per, tds_amt, tcs_per, tcs_amt, platform_fees, platform_fees_gst_amt, grand_total_expert_earning, createtime, updatetime) 
-                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
               `;
 
-                    connection.query(insert, [0, user_id, expert_id, milestone_id, received_amount, commission_percentage, admin_commission_amount, grand_total_earning, 0, gst, net_apply_gst_amount, net_amount, 0, 0, 0, 0, platform_fee_amount, platform_fee_amount, grand_total_earning], (err3, res3) => {
+                    connection.query(insert, [0, user_id, expert_id, milestone_id, received_amount, commission_percentage, admin_commission_amount, grand_total_earning, 0, gst, net_apply_gst_amount, net_amount, 0, 0, 0, 0, platform_fee_amount, platform_fee_amount, grand_total_earning, now, now], (err3, res3) => {
                         if (err3) {
                             reject(err3);
                         }
