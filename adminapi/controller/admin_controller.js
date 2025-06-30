@@ -9033,18 +9033,31 @@ ON
           .status(200)
           .json({ success: false, msg: languageMessage.msgUserNotFound });
       }
-      if (res.length > 0) {
-        const expertId = res[0].expert_id;
-        return response.status(200).json({
-          success: true,
-          msg: languageMessage.msgDataFound,
-          user_arr: res,
-        });
-      } else {
-        return response
-          .status(200)
-          .json({ success: false, msg: languageMessage.msgUserNotFound });
-      }
+      // if (res.length > 0) {
+      //   const expertId = res[0].expert_id;
+      //   return response.status(200).json({
+      //     success: true,
+      //     msg: languageMessage.msgDataFound,
+      //     user_arr: res,
+      //   });
+      // } else {
+      //   return response
+      //     .status(200)
+      //     .json({ success: false, msg: languageMessage.msgUserNotFound });
+      // }
+      // });
+
+      const user_arr = result.map((item) => ({
+        ...item,
+        createtime: moment(item.createtime).format("DD/MM/YYYY hh:mm A"),
+        updatetime: moment(item.updatetime).format("DD/MM/YYYY hh:mm A"),
+      }));
+
+      return response.status(200).json({
+        success: true,
+        msg: languageMessage.msgDataFound,
+        user_arr: user_arr,
+      });
     });
   } catch (error) {
     return response
