@@ -1650,25 +1650,25 @@ const withdrawRequest = async (request, response) => {
                         const total_expert_earning = parseInt(partialEarning - withdraws);
                         // return response.status(200).json({ success: false, msg: languageMessage.internalServerError, partialEarning,  withdraws, total_expert_earning, });
 
-                        if (total_expert_earning >= 10000) {
-                            if (withdraw_amount == minimum_amount) {
-                                const newUserQuery = `INSERT INTO expert_withdraw_master (expert_id,withdraw_amount,withdraw_message,createtime,updatetime)VALUES (?,?,?,NOW(),NOW())`;
-                                const values = [user_id, withdraw_amount, withdraw_message]
-                                connection.query(newUserQuery, values, async (err, requestresult) => {
-                                    if (err) {
-                                        return response.status(200).json({ success: false, msg: languageMessage.withdrawSendError, key: err });
-                                    }
-                                    const userDetails = await getUserDetails(user_id);
-                                    return response.status(200).json({ success: true, msg: languageMessage.withdrawSend, userDetails: userDetails });
-                                });
-                            }
-                            else {
-                                return response.status(200).json({ success: false, msg: [`You cannot withdraw amount. The minimum amount must be ₹${minimum_amount}`] });
-                            }
+                        // if (total_expert_earning >= 10000) {
+                        if (withdraw_amount == minimum_amount) {
+                            const newUserQuery = `INSERT INTO expert_withdraw_master (expert_id,withdraw_amount,withdraw_message,createtime,updatetime)VALUES (?,?,?,NOW(),NOW())`;
+                            const values = [user_id, withdraw_amount, withdraw_message]
+                            connection.query(newUserQuery, values, async (err, requestresult) => {
+                                if (err) {
+                                    return response.status(200).json({ success: false, msg: languageMessage.withdrawSendError, key: err });
+                                }
+                                const userDetails = await getUserDetails(user_id);
+                                return response.status(200).json({ success: true, msg: languageMessage.withdrawSend, userDetails: userDetails });
+                            });
                         }
                         else {
-                            return response.status(200).json({ success: false, msg: languageMessage.CannotWithdraw })
+                            return response.status(200).json({ success: false, msg: [`${languageMessage.MinimumWithdrawalAmount} ₹ ${minimum_amount}`] });
                         }
+                        // }
+                        // else {
+                        //     return response.status(200).json({ success: false, msg: languageMessage.CannotWithdraw })
+                        // }
                     });
                 })
             })
