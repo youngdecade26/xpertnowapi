@@ -1663,7 +1663,7 @@ const withdrawRequest = async (request, response) => {
                                 });
                             }
                             else {
-                                return response.status(200).json({ success: false, msg: [`You cannot withdraw amount. The minimum amount must be ₹ ${minimum_amount}`] });
+                                return response.status(200).json({ success: false, msg: [`You cannot withdraw amount. The minimum amount must be ₹${minimum_amount}`] });
                             }
                         }
                         else {
