@@ -9033,23 +9033,14 @@ ON
           .status(200)
           .json({ success: false, msg: languageMessage.msgUserNotFound });
       }
-      // if (res.length > 0) {
-      //   const expertId = res[0].expert_id;
-      //   return response.status(200).json({
-      //     success: true,
-      //     msg: languageMessage.msgDataFound,
-      //     user_arr: res,
-      //   });
-      // }
-
       if (res.length > 0) {
-        const user_arr = res.map(user => ({
-          ...user,
-          createtime: user.createtime.format('MM/DD/YYYY hh:mm A')
-        }));
-        return response.status(200).json(user_arr);
-      }
-      else {
+        const expertId = res[0].expert_id;
+        return response.status(200).json({
+          success: true,
+          msg: languageMessage.msgDataFound,
+          user_arr: res,
+        });
+      } else {
         return response
           .status(200)
           .json({ success: false, msg: languageMessage.msgUserNotFound });
