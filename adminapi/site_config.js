@@ -9,4 +9,5 @@ module.exports = {
   base_admin_url: "https://youngdecade.org/2024/xpert/admin/",
   timezone: "America/New_York",
   currentTime: moment.tz("America/New_York").format("YYYY-MM-DD HH:mm:ss"),
+  
 };

@@ -5135,7 +5135,7 @@ const debitWalletAmount = async (request, response) => {
             if (result[0]?.active_flag === 0)
                 return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
 
-            const now = new Date();
+            const now = moment().tz("Asia/Kolkata").format("YYYY-MM-DD HH:mm:ss");
 
             // Check if wallet entry already exists for this call
             const checkQuery = `SELECT transition_id, amount FROM wallet_master WHERE user_id = ? AND call_id = ? AND delete_flag = 0 LIMIT 1`;
