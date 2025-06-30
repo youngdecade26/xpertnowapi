@@ -1255,10 +1255,12 @@ const getStates = async (request, response) => {
 //end
 //Expert Get Degree for Expert
 const getDegree = async (request, response) => {
-    let { user_id } = request.query;
+    let { user_id,  } = request.query;
+
     if (!user_id) {
         return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param });
     }
+
     try {
         const query1 = "SELECT mobile, active_flag FROM user_master WHERE user_id = ? AND delete_flag=0";
         const values1 = [user_id];
@@ -1279,6 +1281,7 @@ const getDegree = async (request, response) => {
                 }
                 const updatedResult = result.map(degree => ({
                     ...degree,
+                    
                     status: false
                 }));
                 return response.status(200).json({ success: true, msg: languageMessage.dataFound, degreeDataArray: updatedResult });

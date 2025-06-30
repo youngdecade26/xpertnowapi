@@ -1258,7 +1258,8 @@ const walletRecharge = async (request, response) => {
                 finalWallet = parseFloat(result[0].wallet_balance) - parseFloat(recharge_amount);
             }
 
-            const now = new Date();
+            const now = moment().tz("Asia/Kolkata").format("YYYY-MM-DD HH:mm:ss");
+
             const newUserQuery = `
             INSERT INTO wallet_master (user_id,type,amount,wallet_balance,createtime,status,payment_transaction_id)
             VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -5301,7 +5302,8 @@ async function getExpertEarningg(milestone_id, user_id) {
                     tcs_amount = parseFloat((net_amount * tcs / 100).toFixed(2));
 
                     grand_total_earning = parseFloat((platform_fee_amount + platform_fee_gst_amount - (tds_amount + tcs_amount)).toFixed(2));
-                    const now = new Date();
+                    const now = moment().tz("Asia/Kolkata").format("YYYY-MM-DD HH:mm:ss");
+
                     const sqlQuery = `
                   INSERT INTO expert_earning_master 
                   (type, user_id, expert_id, milestone_id, total_amount, commission_percentage, admin_commission_amount, expert_earning, expert_type, gst_per, gst_amt, net_expert_earning, tds_per, tds_amt, tcs_per, tcs_amt, platform_fees, platform_fees_gst_amt, grand_total_expert_earning, createtime, updatetime) 
@@ -5328,7 +5330,8 @@ async function getExpertEarningg(milestone_id, user_id) {
                     let apply_gst_amount = parseFloat((platform_fee_amount * gst / 100).toFixed(2));
                     let net_apply_gst_amount = apply_gst_amount / 2;
                     grand_total_earning = parseFloat((platform_fee_amount - net_apply_gst_amount).toFixed(2));
-                    const now = new Date();
+                    const now = moment().tz("Asia/Kolkata").format("YYYY-MM-DD HH:mm:ss");
+
                     const insert = `
                   INSERT INTO expert_earning_master 
                   (type, user_id, expert_id, milestone_id, total_amount, commission_percentage, admin_commission_amount, expert_earning, expert_type, gst_per, gst_amt, net_expert_earning, tds_per, tds_amt, tcs_per, tcs_amt, platform_fees, platform_fees_gst_amt, grand_total_expert_earning, createtime, updatetime) 
@@ -7522,7 +7525,8 @@ const refundRequest = async (request, response) => {
                 }
 
                 const otp = await generateOTP(6);
-                const now = new Date();
+                const now = moment().tz("Asia/Kolkata").format("YYYY-MM-DD HH:mm:ss");
+
                 const sql = 'INSERT INTO refund_request_master(user_id, name, email,mobile, description, title, otp, refund_amount, createtime, updatetime) VALUES (?, ?, ?, ?,?, ?, ?, ?, ?, ?)';
                 connection.query(sql, [user_id, name, email, mobile, description, request_title, otp, amount, now, now], async (err1, res1) => {
                     try {
