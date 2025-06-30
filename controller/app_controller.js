@@ -5079,8 +5079,46 @@ const checkWalletAmount = async (request, response) => {
 };
 //end
 //debitWalletAmount
+// const debitWalletAmount = async (request, response) => {
+//     const { user_id, amount, expert_id } = request.body;
+//     if (!user_id) {
+//         return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'user_id' });
+//     }
+//     if (!amount) {
+//         return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'amount' });
+//     }
+//     try {
+//         const query1 = "SELECT mobile, active_flag FROM user_master WHERE user_id = ? AND delete_flag = 0";
+//         const values1 = [user_id];
+//         connection.query(query1, values1, async (err, result) => {
+//             if (err) {
+//                 return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
+//             }
+//             if (result.length === 0) {
+//                 return response.status(200).json({ success: false, msg: languageMessage.userNotFound });
+//             }
+//             if (result[0]?.active_flag === 0) {
+//                 return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
+//             }
+//             const status = 1;
+//             const type = 3;
+//             const now = new Date();
+//             const fileInsertQuery = `INSERT INTO wallet_master(user_id, expert_id, amount,status,type, createtime,updatetime) VALUES (?,?,?,?,?,?,?)`;
+//             connection.query(fileInsertQuery, [user_id, expert_id, amount, status, type, now, now], (err, result1) => {
+//                 if (err) {
+//                     return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
+//                 }
+//                 return response.status(200).json({ success: true, msg: languageMessage.walletDebitUpdate });
+//             });
+//         });
+//     } catch (err) {
+//         return response.status(500).json({ success: false, msg: languageMessage.fileUploadedError, key: err.message });
+//     }
+// };
+
 const debitWalletAmount = async (request, response) => {
-    const { user_id, amount, expert_id } = request.body;
+    const { user_id, amount, expert_id, call_id } = request.body;
+
     if (!user_id) {
         return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: 'user_id' });
     }
@@ -5089,32 +5127,49 @@ const debitWalletAmount = async (request, response) => {
     }
     try {
         const query1 = "SELECT mobile, active_flag FROM user_master WHERE user_id = ? AND delete_flag = 0";
-        const values1 = [user_id];
-        connection.query(query1, values1, async (err, result) => {
-            if (err) {
-                return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
-            }
-            if (result.length === 0) {
-                return response.status(200).json({ success: false, msg: languageMessage.userNotFound });
-            }
-            if (result[0]?.active_flag === 0) {
+        connection.query(query1, [user_id], async (err, result) => {
+            if (err) return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
+
+            if (result.length === 0) return response.status(200).json({ success: false, msg: languageMessage.userNotFound });
+
+            if (result[0]?.active_flag === 0)
                 return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
-            }
-            const status = 1;
-            const type = 3;
+
             const now = new Date();
-            const fileInsertQuery = `INSERT INTO wallet_master(user_id, expert_id, amount,status,type, createtime,updatetime) VALUES (?,?,?,?,?,?,?)`;
-            connection.query(fileInsertQuery, [user_id, expert_id, amount, status, type, now, now], (err, result1) => {
+
+            // Check if wallet entry already exists for this call
+            const checkQuery = `SELECT transition_id, amount FROM wallet_master WHERE user_id = ? AND call_id = ? AND delete_flag = 0 LIMIT 1`;
+            connection.query(checkQuery, [user_id, call_id], (err, checkResult) => {
                 if (err) {
                     return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
                 }
-                return response.status(200).json({ success: true, msg: languageMessage.walletDebitUpdate });
+
+                if (checkResult.length > 0) {
+                    // Entry exists, update amount
+                    const existingId = checkResult[0].transition_id;
+                    const newAmount = parseFloat(checkResult[0].amount) + parseFloat(amount);
+                    const updateQuery = `UPDATE wallet_master SET amount = ?, updatetime = ? WHERE id = ?`;
+                    connection.query(updateQuery, [newAmount, now, existingId], (err, updateResult) => {
+                        if (err) return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
+                        return response.status(200).json({ success: true, msg: languageMessage.walletDebitUpdate, type: 'updated' });
+                    });
+                } else {
+                    // No existing entry, insert new
+                    const insertQuery = `
+                        INSERT INTO wallet_master(user_id, expert_id, amount, status, type, call_id, createtime, updatetime) 
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
+                    connection.query(insertQuery, [user_id, expert_id, amount, 1, 3, call_id, now, now], (err, insertResult) => {
+                        if (err) return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
+                        return response.status(200).json({ success: true, msg: languageMessage.walletDebitUpdate, type: 'inserted' });
+                    });
+                }
             });
         });
     } catch (err) {
         return response.status(500).json({ success: false, msg: languageMessage.fileUploadedError, key: err.message });
     }
 };
+
 //end
 
 // Generate unique id
