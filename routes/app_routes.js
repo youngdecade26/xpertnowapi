@@ -344,7 +344,6 @@ router.get('/get_job_work_milestone', async (req, res, next) => {
   await authenticateToken(req, res, next);
 }, upload.none(), getJobWorkMilestone);
 
-
 router.post('/accept_reject_milestone', async (req, res, next) => {
   await authenticateToken(req, res, next);
 }, upload.none(), acceptRejectMilestone);

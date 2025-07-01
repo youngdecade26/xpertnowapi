@@ -1349,10 +1349,13 @@ const walletHistory = async (request, response) => {
                             });
                         });
                     }
+
                     return {
                         ...Item,
-                        posted_time: moment(Item.createtime).format("MMM DD YYYY hh:mm A"),
-                        time: moment(Item.createtime).format("hh:mm A"),
+                        // posted_time: moment(Item.createtime).format("MMM DD YYYY hh:mm A"),
+                        // time: moment(Item.createtime).format("hh:mm A"),
+                        posted_time: moment(Item.createtime).add(5, 'hours').add(30, 'minutes').format("MMM DD YYYY hh:mm A"),
+                        time: moment(Item.createtime).add(5, 'hours').add(30, 'minutes').format("hh:mm A"),
                         status_label: Item.status === 0 ? 'credit' : 'debit',
                         type_label: Item.type === 1 ? 'recharge' : Item.type === 2 ? 'job' : Item.type === 3 ? 'consultation' : 'unknown',
                         user_name: userDetails.name,
@@ -2745,7 +2748,11 @@ const ExpertCallHistory = async (request, response) => {
                                 return response.status(500).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
                             }
                             const categoryName = categoryResult.length > 0 ? categoryResult[0].name : 'NA';
-                            const formattedTime = moment(record.createtime).format("MMM DD YYYY hh:mm A");
+                            const formattedTime = moment(record.createtime)
+                                .add(5, 'hours')
+                                .add(30, 'minutes')
+                                .format("MMM DD YYYY hh:mm A");
+
                             call_history.push({
                                 ...record,
                                 createtime: formattedTime,
@@ -5136,7 +5143,7 @@ const debitWalletAmount = async (request, response) => {
             if (result[0]?.active_flag === 0)
                 return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
 
-            const now = moment().tz("Asia/Kolkata").format("YYYY-MM-DD HH:mm:ss");
+            const now = new Date()
 
             // Check if wallet entry already exists for this call
             const checkQuery = `SELECT transition_id, amount FROM wallet_master WHERE user_id = ? AND call_id = ? AND delete_flag = 0 LIMIT 1`;
