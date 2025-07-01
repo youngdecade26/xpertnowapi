@@ -1996,8 +1996,10 @@ const getExpertEarningHistory = async (request, response) => {
                             });
                             return {
                                 ...Item,
-                                posted_time: moment(Item.createtime).format("MMM DD YYYY hh:mm A"),
-                                time: moment(Item.createtime).format("hh:mm A"),
+                                // posted_time: moment(Item.createtime).format("MMM DD YYYY hh:mm A"),
+                                // time: moment(Item.createtime).format("hh:mm A"),
+                                posted_time: moment(Item.createtime).add(5, 'hours').add(30, 'minutes').format("MMM DD YYYY hh:mm A"),
+                                time: moment(Item.createtime).add(5, 'hours').add(30, 'minutes').format("hh:mm A"),
                                 type_label: "0=milestone,1=consultant,2=subscription",
                                 user_name: userDetails.name,
                                 user_image: userDetails.image,
