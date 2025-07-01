@@ -2667,7 +2667,11 @@ const CustomerCallHistory = async (request, response) => {
                                 return response.status(500).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
                             }
                             const categoryName = categoryResult.length > 0 ? categoryResult[0].name : 'NA';
-                            const formattedTime = moment(record.createtime).format("MMM DD YYYY hh:mm A");
+                            // const formattedTime = moment(record.createtime).format("MMM DD YYYY hh:mm A");
+                            const formattedTime = moment(record.createtime)
+                                .add(5, 'hours')
+                                .add(30, 'minutes')
+                                .format("MMM DD YYYY hh:mm A");
                             call_history.push({
                                 ...record,
                                 createtime: formattedTime,
