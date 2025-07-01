@@ -140,9 +140,7 @@ router.get('/get_expert_by_name', async (req, res, next) => {
   await authenticateToken(req, res, next);
 }, upload.none(), getExpertByName);
 
-router.get('/get_wallet_history', async (req, res, next) => {
-  await authenticateToken(req, res, next);
-}, upload.none(), walletHistory);
+router.get('/get_wallet_history', walletHistory);
 
 router.get('/get_bids_of_jobs', async (req, res, next) => {
   await authenticateToken(req, res, next);
