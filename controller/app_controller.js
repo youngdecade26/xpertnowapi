@@ -7771,7 +7771,6 @@ const getRefundStatus = async (request, response) => {
                         transaction_id: data.transaction_id ? data.transaction_id : 'NA',
                         // createtime: moment(data.createtime).format("MMM DD YYYY hh:mm A")
                         createtime: moment(data.createtime).add(5, 'hours').add(30, 'minutes').format("MMM DD YYYY hh:mm A")
-
                     })
                 }
                 return response.status(200).json({ success: true, msg: languageMessage.dataFound, status_arr: status_arr, })
