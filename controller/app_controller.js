@@ -7534,10 +7534,10 @@ const refundRequest = async (request, response) => {
                 }
 
                 const otp = await generateOTP(6);
-                const now = moment().tz("Asia/Kolkata").format("YYYY-MM-DD HH:mm:ss");
 
-                const sql = 'INSERT INTO refund_request_master(user_id, name, email,mobile, description, title, otp, refund_amount, createtime, updatetime) VALUES (?, ?, ?, ?,?, ?, ?, ?, ?, ?)';
-                connection.query(sql, [user_id, name, email, mobile, description, request_title, otp, amount, now, now], async (err1, res1) => {
+
+                const sql = 'INSERT INTO refund_request_master(user_id, name, email,mobile, description, title, otp, refund_amount, createtime, updatetime) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())';
+                connection.query(sql, [user_id, name, email, mobile, description, request_title, otp, amount], async (err1, res1) => {
                     try {
                         if (err1) {
                             return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err1.message });
@@ -7769,7 +7769,9 @@ const getRefundStatus = async (request, response) => {
                         refund_status: data.refund_status,
                         status_label: '0 = pending, 1 = accepted, 2 = rejected',
                         transaction_id: data.transaction_id ? data.transaction_id : 'NA',
-                        createtime: moment(data.createtime).format("MMM DD YYYY hh:mm A")
+                        // createtime: moment(data.createtime).format("MMM DD YYYY hh:mm A")
+                        createtime: moment(data.createtime).add(5, 'hours').add(30, 'minutes').format("MMM DD YYYY hh:mm A")
+
                     })
                 }
                 return response.status(200).json({ success: true, msg: languageMessage.dataFound, status_arr: status_arr, })
