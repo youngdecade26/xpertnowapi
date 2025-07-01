@@ -231,9 +231,7 @@ router.get('/get_expert_jobpost', async (req, res, next) => {
   await authenticateToken(req, res, next);
 }, upload.none(), getJobPostsForExpert);
 
-router.get('/get_expert_earning_history', async (req, res, next) => {
-  await authenticateToken(req, res, next);
-}, upload.none(), getExpertEarningHistory);
+router.get('/get_expert_earning_history', getExpertEarningHistory);
 
 router.get('/get_expert_chat_consult_history', async (req, res, next) => {
   await authenticateToken(req, res, next);
