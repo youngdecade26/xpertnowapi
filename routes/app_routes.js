@@ -265,9 +265,7 @@ router.get('/customer_call_history', async (req, res, next) => {
   await authenticateToken(req, res, next);
 }, upload.none(), CustomerCallHistory);
 
-router.get('/expert_call_history', async (req, res, next) => {
-  await authenticateToken(req, res, next);
-}, upload.none(), ExpertCallHistory);
+router.get('/expert_call_history', ExpertCallHistory);
 
 router.post('/hire_expert', async (req, res, next) => {
   await authenticateToken(req, res, next);
