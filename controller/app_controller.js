@@ -4346,7 +4346,8 @@ const edit_availability = (req, res) => {
                                 clearSlots(availabilityId).then(resolve).catch(reject);
                             }
                         });
-                    } else {
+                    }
+                    else {
                         // Insert new availability
                         const insertQuery = `INSERT INTO availability_master (user_id, day, status, createtime,updatetime) VALUES (?, ?, ?,NOW(),NOW())`;
                         connection.query(insertQuery, [user_id, day, currentStatus], (insertErr, insertResult) => {
@@ -4370,6 +4371,8 @@ const edit_availability = (req, res) => {
             });
     });
 };
+
+
 // function clearAndInsertSlots(availabilityId, body, day) {
 //     return new Promise((resolve, reject) => {
 //         clearSlots(availabilityId)
