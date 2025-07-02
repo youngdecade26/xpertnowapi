@@ -1714,8 +1714,10 @@ const withdrawHistory = async (request, response) => {
                 const finalBidResult = await Promise.all(withdrawlresult.map(async (Item) => {
                     return {
                         ...Item,
-                        posted_time: moment(Item.createtime).format("MMM DD YYYY"),
-                        time: moment(Item.createtime).format("hh:mm A"),
+                        // posted_time: moment(Item.createtime).format("MMM DD YYYY"),
+                        // time: moment(Item.createtime).format("hh:mm A"),
+                        posted_time: moment(Item.createtime).add(5, 'hours').add(30, 'minutes').format("MMM DD YYYY"),
+                        time: moment(Item.createtime).add(5, 'hours').add(30, 'minutes').format("hh:mm A"),
                         status_label: '	0=pending 1=approved 2=reject',
                     };
                 }));

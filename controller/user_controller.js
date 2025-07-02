@@ -1255,7 +1255,7 @@ const getStates = async (request, response) => {
 //end
 //Expert Get Degree for Expert
 const getDegree = async (request, response) => {
-    let { user_id,  } = request.query;
+    let { user_id, } = request.query;
 
     if (!user_id) {
         return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param });
@@ -1281,7 +1281,7 @@ const getDegree = async (request, response) => {
                 }
                 const updatedResult = result.map(degree => ({
                     ...degree,
-                    
+
                     status: false
                 }));
                 return response.status(200).json({ success: true, msg: languageMessage.dataFound, degreeDataArray: updatedResult });
@@ -2040,8 +2040,10 @@ const getExpertNotification = async (request, response) => {
                 const finalBidResult = await Promise.all(notificationresult.map(async (Item) => {
                     return {
                         ...Item,
-                        notification_date: moment(Item.createtime).format("MMM DD YYYY"),
-                        notification_time: moment(Item.createtime).format("hh:mm A"),
+                        // notification_date: moment(Item.createtime).format("MMM DD YYYY"),
+                        // notification_time: moment(Item.createtime).format("hh:mm A"),
+                        notification_date: moment(Item.createtime).add(5, 'hours').add(30, 'minutes').format("MMM DD YYYY"),
+                        notification_time: moment(Item.createtime).add(5, 'hours').add(30, 'minutes').format("hh:mm A"),
                     };
                 }));
                 if (finalBidResult.length === 0) {
