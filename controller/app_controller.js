@@ -4340,7 +4340,7 @@ const edit_availability = (req, res) => {
                         connection.query(updateQuery, [currentStatus, availabilityId], (updateErr) => {
                             if (updateErr) return reject(updateErr);
                             // If status is 0, update slots; otherwise, clear them
-                            if (currentStatus === 0) {
+                            if (currentStatus === 1) {
                                 clearAndInsertSlots(availabilityId, req.body, day).then(resolve).catch(reject);
                             } else {
                                 clearSlots(availabilityId).then(resolve).catch(reject);
@@ -4789,11 +4789,9 @@ const userBookSlot = async (request, response) => {
                         const user_id_notification = user_id;
                         const other_user_id_notification = expert_id;
                         const action_id = slot_id;
-
                         const action = "Call Schedule";
                         const title = "Call Schedule";
                         const messages = `${user_name} has scheduled a ${type_label} call`;
-
                         const title_2 = title;
                         const title_3 = title;
                         const title_4 = title;
