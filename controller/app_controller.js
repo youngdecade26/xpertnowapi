@@ -4340,7 +4340,7 @@ const edit_availability = (req, res) => {
                         connection.query(updateQuery, [currentStatus, availabilityId], (updateErr) => {
                             if (updateErr) return reject(updateErr);
                             // If status is 0, update slots; otherwise, clear them
-                            if (currentStatus === 1) {
+                            if (currentStatus === 0) {
                                 clearAndInsertSlots(availabilityId, req.body, day).then(resolve).catch(reject);
                             } else {
                                 clearSlots(availabilityId).then(resolve).catch(reject);
