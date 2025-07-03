@@ -8996,6 +8996,7 @@ const sendReplyController = (req, res) => {
     });
   }
 };
+
 const getUserWalletDetailsId = async (request, response) => {
   let { user_id } = request.query;
   if (!user_id) {
@@ -9024,7 +9025,7 @@ ON
     wm.delete_flag = 0 AND wm.user_id = ?
   ORDER BY 
     wm.transition_id DESC`;
-    connection.query(fetchDetails, [user_id], (err, res) => {
+    connection.query(fetchDetails, [user_id], async (err, res) => {
       if (err) {
         return response
           .status(200)
@@ -9036,13 +9037,32 @@ ON
           .json({ success: false, msg: languageMessage.msgUserNotFound });
       }
       if (res.length > 0) {
+        //   const user_balance = await getUserTotalWallet(user_id);
+        //   const expertId = res[0].expert_id;
+        //   return response.status(200).json({
+        //     success: true,
+        //     msg: languageMessage.msgDataFound,
+        //     res.wallet_balance = user_balance,
+        //     user_arr: res,
+        //   });
+        // } if (res.length > 0) {
+        const user_balance = await getUserTotalWallet(user_id);
         const expertId = res[0].expert_id;
+
+        // Add wallet_amount to each object in res
+        const updatedRes = res.map(item => ({
+          ...item,
+          wallet_amount: user_balance,
+        }));
+
         return response.status(200).json({
           success: true,
           msg: languageMessage.msgDataFound,
-          user_arr: res,
+          user_arr: updatedRes,
         });
-      } else {
+      }
+
+      else {
         return response
           .status(200)
           .json({ success: false, msg: languageMessage.msgUserNotFound });
@@ -9067,6 +9087,36 @@ ON
       .json({ success: false, msg: languageMessage.internalServerError });
   }
 };
+
+
+async function getUserTotalWallet(user_id) {
+  return new Promise((resolve, reject) => {
+    connection.query(
+      `SELECT SUM(CASE WHEN status = 0 THEN amount ELSE 0 END) AS credit_amount,
+                SUM(CASE WHEN status = 1 THEN amount ELSE 0 END) AS debit_amount
+            FROM wallet_master
+            WHERE user_id = ? AND delete_flag = 0
+            `,
+      [user_id],
+      (error, rows) => {
+        if (error) {
+          console.log("Database error while fetching user wallet details");
+          reject(error); // Reject the promise with the error
+        } else {
+          if (rows.length > 0) {
+            const creditAmount = rows[0].credit_amount || 0;
+            const debitAmount = rows[0].debit_amount || 0;
+            // Calculate the wallet balance
+            const walletBalance = creditAmount - debitAmount;
+            resolve(parseFloat(walletBalance.toFixed(2))); // Resolve with the calculated wallet balance
+          } else {
+            resolve(0); // Resolve with "NA" if no rows are returned
+          }
+        }
+      }
+    );
+  });
+}
 const MarkAsResolved = (req, res) => {
   const { milestone_id } = req.body;
   if (!milestone_id) {
