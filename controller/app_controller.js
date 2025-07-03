@@ -4271,19 +4271,187 @@ function insertSlots(availabilityId, body, day, resolve, reject) {
 
 
 // EDIT Availability
+// const edit_availability = (req, res) => {
+//     const { user_id, day, status } = req.body;
+//     // Validate required fields
+//     if (!user_id) {
+//         return res.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: "user_id" });
+//     }
+
+//     if (!day) {
+//         return res.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: "day" });
+//     }
+//     if (!status) {
+//         return res.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: "status" });
+//     }
+//     // Check if influencer exists and is active
+//     const query1 = "SELECT mobile, active_flag FROM user_master WHERE user_id = ? AND delete_flag = 0 AND user_type=2";
+//     const values1 = [user_id];
+//     connection.query(query1, values1, async (err, result) => {
+//         if (err) {
+//             return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
+//         }
+//         if (result.length === 0) {
+//             return response.status(200).json({ success: false, msg: languageMessage.userNotFound });
+//         }
+//         if (result[0]?.active_flag === 0) {
+//             return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
+//         }
+//         // Parse days and statuses
+//         const days = day.split(',').map(Number);
+
+//         const statuses = status.split(',').map(Number);
+//         const createtime = new Date();
+//         // Collect promises for all DB operations
+//         const updatePromises = days.map((day, index) => {
+//             const currentStatus = statuses[index];
+//             return new Promise((resolve, reject) => {
+//                 // Check if availability already exists
+//                 const checkQuery = `SELECT availability_id FROM availability_master WHERE user_id = ? AND day = ?`;
+//                 connection.query(checkQuery, [user_id, day], (err, results) => {
+//                     if (err) return reject(err);
+//                     if (results.length > 0) {
+//                         // Update existing availability
+//                         const availabilityId = results[0].availability_id;
+//                         const updateQuery = `UPDATE availability_master SET status = ?, updatetime = NOW() WHERE availability_id = ?`;
+//                         connection.query(updateQuery, [currentStatus, availabilityId], (updateErr) => {
+//                             if (updateErr) return reject(updateErr);
+//                             // If status is 0, update slots; otherwise, clear them
+//                             // if (currentStatus === 0) {
+//                             //     clearAndInsertSlots(availabilityId, req.body, day).then(resolve).catch(reject);
+//                             // }
+//                             // else {
+//                             //     clearSlots(availabilityId).then(resolve).catch(reject);
+//                             // }
+//                             if (currentStatus === 0) {
+//                                 clearAndInsertSlots(availabilityId, req.body, day).then(resolve).catch(reject);
+//                             } else {
+//                                 clearSlots(availabilityId).then(resolve).catch(reject);
+//                             }
+//                         });
+//                     }
+//                     else {
+//                         // Insert new availability
+//                         const insertQuery = `INSERT INTO availability_master(user_id, day, status, createtime,updatetime) VALUES (?, ?, ?,NOW(),NOW())`;
+//                         connection.query(insertQuery, [user_id, day, currentStatus], (insertErr, insertResult) => {
+//                             if (insertErr) return reject(insertErr);
+//                             if (currentStatus === 0) {
+//                                 clearAndInsertSlots(insertResult.insertId, req.body, day).then(resolve).catch(reject);
+//                             } else {
+//                                 resolve();
+//                             }
+//                         });
+//                     }
+//                 });
+//             });
+//         });
+//         // Wait for all queries to complete
+//         Promise.all(updatePromises)
+//             .then(() => res.status(200).json({ success: true, msg: languageMessage.availabilityUpdated }))
+//             .catch((error) => {
+//                 console.error("Error updating availability:", error);
+//                 res.status(200).json({ success: false, msg: languageMessage.internalServerError, error: error.message });
+//             });
+//     });
+// };
+
+// function clearSlots(availabilityId) {
+//     return new Promise((resolve, reject) => {
+//         const deleteSlotsQuery = `DELETE FROM slot_master WHERE slot_id = ?`;
+//         connection.query(deleteSlotsQuery, [availabilityId], (err) => {
+//             if (err) return reject(err);
+//             resolve();
+//         });
+//     });
+// }
+// // new functions for clear and insert slots for 24 hour format ....
+// function clearAndInsertSlots(availabilityId, body, day) {
+//     return new Promise((resolve, reject) => {
+//         clearSlots(availabilityId)
+//             .then(() => {
+//                 const startTimes = body[`start_time_${day}`]?.split(",") || [];
+//                 const endTimes = body[`end_time_${day}`]?.split(",") || [];
+
+//                 const insertPromises = startTimes.map((start_time, index) => {
+//                     const end_time = endTimes[index];
+
+//                     if (start_time && end_time) {
+//                         return new Promise((slotResolve, slotReject) => {
+//                             // Convert AM/PM to 24-hour format
+//                             const convertTo24Hour = (timeStr) => {
+//                                 timeStr = timeStr.trim().toUpperCase();
+
+//                                 // Handle cases like "9:00AM" or "9:00 AM"
+//                                 timeStr = timeStr.replace(/(\d)(AM|PM)/i, '$1 $2');
+
+//                                 // Parse the time
+//                                 const [time, period] = timeStr.split(' ');
+//                                 let [hours, minutes] = time.split(':');
+
+//                                 hours = parseInt(hours, 10);
+//                                 minutes = minutes ? parseInt(minutes, 10) : 0;
+
+//                                 if (period === 'PM' && hours !== 12) {
+//                                     hours += 12;
+//                                 } else if (period === 'AM' && hours === 12) {
+//                                     hours = 0;
+//                                 }
+
+//                                 // Format as HH:MM
+//                                 return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+//                             };
+
+//                             try {
+//                                 const start24 = convertTo24Hour(start_time);
+//                                 const end24 = convertTo24Hour(end_time);
+
+//                                 const insertSlotQuery = `INSERT INTO slot_master 
+//                                     (availability_id, start_time, end_time, createtime, updatetime) 
+//                                     VALUES (?, ?, ?, NOW(), NOW())`;
+//                                 connection.query(insertSlotQuery,
+//                                     [availabilityId, start24, end24],
+//                                     (err) => {
+//                                         if (err) return slotReject(err);
+//                                         slotResolve();
+//                                     }
+//                                 );
+//                             } catch (err) {
+//                                 slotReject(err);
+//                             }
+//                         });
+//                     }
+//                     return Promise.resolve();
+//                 });
+
+//                 Promise.all(insertPromises)
+//                     .then(resolve)
+//                     .catch(reject);
+//             })
+//             .catch(reject);
+//     });
+// }
+
+
+
+
+
+
+
+
+//  new edit availability api 
 const edit_availability = (req, res) => {
     const { user_id, day, status } = req.body;
     // Validate required fields
     if (!user_id) {
         return res.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: "user_id" });
     }
-
     if (!day) {
         return res.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: "day" });
     }
     if (!status) {
         return res.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: "status" });
     }
+
     // Check if influencer exists and is active
     const query1 = "SELECT mobile, active_flag FROM user_master WHERE user_id = ? AND delete_flag = 0 AND user_type=2";
     const values1 = [user_id];
@@ -4297,9 +4465,9 @@ const edit_availability = (req, res) => {
         if (result[0]?.active_flag === 0) {
             return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
         }
+
         // Parse days and statuses
         const days = day.split(',').map(Number);
-
         const statuses = status.split(',').map(Number);
         const createtime = new Date();
         // Collect promises for all DB operations
@@ -4316,23 +4484,16 @@ const edit_availability = (req, res) => {
                         const updateQuery = `UPDATE availability_master SET status = ?, updatetime = NOW() WHERE availability_id = ?`;
                         connection.query(updateQuery, [currentStatus, availabilityId], (updateErr) => {
                             if (updateErr) return reject(updateErr);
-                            // If status is 0, update slots; otherwise, clear them
-                            // if (currentStatus === 0) {
-                            //     clearAndInsertSlots(availabilityId, req.body, day).then(resolve).catch(reject);
-                            // }
-                            // else {
-                            //     clearSlots(availabilityId).then(resolve).catch(reject);
-                            // }
+                            // If status is 0, update  ; otherwise, clear them
                             if (currentStatus === 0) {
                                 clearAndInsertSlots(availabilityId, req.body, day).then(resolve).catch(reject);
                             } else {
                                 clearSlots(availabilityId).then(resolve).catch(reject);
                             }
                         });
-                    }
-                    else {
+                    } else {
                         // Insert new availability
-                        const insertQuery = `INSERT INTO availability_master(user_id, day, status, createtime,updatetime) VALUES (?, ?, ?,NOW(),NOW())`;
+                        const insertQuery = `INSERT INTO availability_master (user_id, day, status, createtime,updatetime) VALUES (?, ?, ?,NOW(),NOW())`;
                         connection.query(insertQuery, [user_id, day, currentStatus], (insertErr, insertResult) => {
                             if (insertErr) return reject(insertErr);
                             if (currentStatus === 0) {
@@ -4350,10 +4511,14 @@ const edit_availability = (req, res) => {
             .then(() => res.status(200).json({ success: true, msg: languageMessage.availabilityUpdated }))
             .catch((error) => {
                 console.error("Error updating availability:", error);
-                res.status(200).json({ success: false, msg: languageMessage.internalServerError, error: error.message });
+                res.status(200).json({ success: false, msg: languageMessage.internalServerError });
             });
     });
 };
+
+
+
+
 
 
 
@@ -4370,153 +4535,85 @@ function clearSlots(availabilityId) {
 }
 
 
-// new functions for clear and insert slots for 24 hour format ....
 
+// // // new functions for clear and insert slots for 24 hour format ....
 function clearAndInsertSlots(availabilityId, body, day) {
     return new Promise((resolve, reject) => {
-        clearSlots(availabilityId)
-            .then(() => {
-                const startTimes = body[`start_time_${day}`]?.split(",") || [];
-                const endTimes = body[`end_time_${day}`]?.split(",") || [];
+        // Parse input
+        let startRaw = body[`start_time_${day}`];
+        let endRaw = body[`end_time_${day}`];
 
-                const insertPromises = startTimes.map((start_time, index) => {
-                    const end_time = endTimes[index];
+        const startTimes = Array.isArray(startRaw)
+            ? startRaw
+            : typeof startRaw === 'string'
+                ? startRaw.split(',').map(s => s.trim())
+                : [];
 
-                    if (start_time && end_time) {
-                        return new Promise((slotResolve, slotReject) => {
-                            // Convert AM/PM to 24-hour format
-                            const convertTo24Hour = (timeStr) => {
-                                timeStr = timeStr.trim().toUpperCase();
+        const endTimes = Array.isArray(endRaw)
+            ? endRaw
+            : typeof endRaw === 'string'
+                ? endRaw.split(',').map(s => s.trim())
+                : [];
 
-                                // Handle cases like "9:00AM" or "9:00 AM"
-                                timeStr = timeStr.replace(/(\d)(AM|PM)/i, '$1 $2');
+        const insertPromises = startTimes.map((start_time, index) => {
+            const end_time = endTimes[index];
 
-                                // Parse the time
-                                const [time, period] = timeStr.split(' ');
-                                let [hours, minutes] = time.split(':');
+            if (start_time && end_time) {
+                return new Promise((slotResolve, slotReject) => {
+                    // Convert AM/PM to 24-hour format
+                    const convertTo24Hour = (timeStr) => {
+                        timeStr = timeStr.trim().toUpperCase().replace(/(\d)(AM|PM)/i, '$1 $2');
+                        const [time, period] = timeStr.split(' ');
+                        let [hours, minutes] = time.split(':');
+                        hours = parseInt(hours, 10);
+                        minutes = minutes ? parseInt(minutes, 10) : 0;
 
-                                hours = parseInt(hours, 10);
-                                minutes = minutes ? parseInt(minutes, 10) : 0;
+                        if (period === 'PM' && hours !== 12) hours += 12;
+                        else if (period === 'AM' && hours === 12) hours = 0;
 
-                                if (period === 'PM' && hours !== 12) {
-                                    hours += 12;
-                                } else if (period === 'AM' && hours === 12) {
-                                    hours = 0;
-                                }
+                        return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+                    };
 
-                                // Format as HH:MM
-                                return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
-                            };
+                    try {
+                        const start24 = convertTo24Hour(start_time);
+                        const end24 = convertTo24Hour(end_time);
 
-                            try {
-                                const start24 = convertTo24Hour(start_time);
-                                const end24 = convertTo24Hour(end_time);
+                        // Optional: Check if slot already exists before inserting
+                        const checkQuery = `
+                            SELECT slot_id FROM slot_master 
+                            WHERE availability_id = ? AND start_time = ? AND end_time = ?
+                        `;
+                        connection.query(checkQuery, [availabilityId, start24, end24], (checkErr, results) => {
+                            if (checkErr) return slotReject(checkErr);
 
-                                const insertSlotQuery = `INSERT INTO slot_master 
-                                    (availability_id, start_time, end_time, createtime, updatetime) 
-                                    VALUES (?, ?, ?, NOW(), NOW())`;
-                                connection.query(insertSlotQuery,
-                                    [availabilityId, start24, end24],
-                                    (err) => {
-                                        if (err) return slotReject(err);
-                                        slotResolve();
-                                    }
-                                );
-                            } catch (err) {
-                                slotReject(err);
+                            if (results.length === 0) {
+                                // Insert only if slot doesn't exist
+                                const insertSlotQuery = `
+                                    INSERT INTO slot_master (availability_id, start_time, end_time, createtime, updatetime) 
+                                    VALUES (?, ?, ?, NOW(), NOW())
+                                `;
+                                connection.query(insertSlotQuery, [availabilityId, start24, end24], (err) => {
+                                    if (err) return slotReject(err);
+                                    slotResolve();
+                                });
+                            } else {
+                                // Slot already exists — skip
+                                slotResolve();
                             }
                         });
+                    } catch (err) {
+                        slotReject(err);
                     }
-                    return Promise.resolve();
                 });
+            }
+            return Promise.resolve(); // skip if empty start or end time
+        });
 
-                Promise.all(insertPromises)
-                    .then(resolve)
-                    .catch(reject);
-            })
+        Promise.all(insertPromises)
+            .then(resolve)
             .catch(reject);
     });
 }
-
-
-
-
-
-
-
-// new
-// function clearAndInsertSlots(availabilityId, body, day) {
-//     return new Promise((resolve, reject) => {
-//         const startTimes = body[`start_time_${day}`]?.split(",") || [];
-//         const endTimes = body[`end_time_${day}`]?.split(",") || [];
-
-//         const insertPromises = startTimes.map((start_time, index) => {
-//             const end_time = endTimes[index];
-
-//             if (start_time && end_time) {
-//                 return new Promise((slotResolve, slotReject) => {
-//                     // Convert AM/PM to 24-hour format
-//                     const convertTo24Hour = (timeStr) => {
-//                         timeStr = timeStr.trim().toUpperCase();
-
-//                         // Handle cases like "9:00AM" or "9:00 AM"
-//                         timeStr = timeStr.replace(/(\d)(AM|PM)/i, '$1 $2');
-
-//                         // Parse the time
-//                         const [time, period] = timeStr.split(' ');
-//                         let [hours, minutes] = time.split(':');
-
-//                         hours = parseInt(hours, 10);
-//                         minutes = minutes ? parseInt(minutes, 10) : 0;
-
-//                         if (period === 'PM' && hours !== 12) {
-//                             hours += 12;
-//                         } else if (period === 'AM' && hours === 12) {
-//                             hours = 0;
-//                         }
-
-//                         // Format as HH:MM
-//                         return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
-//                     };
-
-//                     try {
-//                         const start24 = convertTo24Hour(start_time);
-//                         const end24 = convertTo24Hour(end_time);
-
-//                         const insertSlotQuery = `INSERT INTO slot_master 
-//                             (availability_id, start_time, end_time, createtime, updatetime) 
-//                             VALUES (?, ?, ?, NOW(), NOW())`;
-//                         connection.query(insertSlotQuery,
-//                             [availabilityId, start24, end24],
-//                             (err) => {
-//                                 if (err) return slotReject(err);
-//                                 slotResolve();
-//                             }
-//                         );
-//                     } catch (err) {
-//                         slotReject(err);
-//                     }
-//                 });
-//             }
-//             return Promise.resolve();
-//         });
-
-//         Promise.all(insertPromises)
-//             .then(resolve)
-//             .catch(reject);
-//     });
-// }
-
-
-
-
-
-
-
-
-
-
-
 
 
 
