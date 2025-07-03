@@ -5229,7 +5229,7 @@ const debitWalletAmount = async (request, response) => {
 
             // Check if wallet entry already exists for this call
             const checkQuery = `SELECT transition_id, amount FROM wallet_master WHERE user_id = ? AND call_id = ? AND delete_flag = 0 LIMIT 1`;
-            connection.query(checkQuery, [user_id, call_id], (err, checkResult) => {
+            connection.query(checkQuery, [user_id, call_id], async (err, checkResult) => {
                 if (err) {
                     return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
                 }
@@ -5237,6 +5237,7 @@ const debitWalletAmount = async (request, response) => {
                 if (checkResult.length > 0) {
                     // Entry exists, update amount
                     const existingId = checkResult[0].transition_id;
+
                     const newAmount = parseFloat(checkResult[0].amount) + parseFloat(amount);
                     const updateQuery = `UPDATE wallet_master SET amount = ?, updatetime = ? WHERE transition_id = ?`;
                     connection.query(updateQuery, [newAmount, now, existingId], (err, updateResult) => {
@@ -5250,10 +5251,19 @@ const debitWalletAmount = async (request, response) => {
                     const insertQuery = `
                         INSERT INTO wallet_master(user_id, expert_id, amount, status, type, call_id, createtime, updatetime) 
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
-                    connection.query(insertQuery, [user_id, expert_id, amount, 1, 3, call_id, now, now], (err, insertResult) => {
+                    connection.query(insertQuery, [user_id, expert_id, amount, 1, 3, call_id, now, now], async (err, insertResult) => {
                         if (err) return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
-                        return response.status(200).json({ success: true, msg: languageMessage.walletDebitUpdate, });
-                    });
+                        let transition_id = insertResult.insertId;
+                        const userWalletbalance = await getUserTotalWallet(user_id);
+                        const updatebalance = 'UPDATE wallet_master SET wallet_balance = ?, updatetime = NOW() WHERE transition_id = ? AND delete_flag = 0';
+                        connection.query(updatebalance, [userWalletbalance, transition_id], async (updateErr, updateRes) => {
+                            if (updateErr) {
+                                return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: updateErr.message });
+                            }
+
+                            return response.status(200).json({ success: true, msg: languageMessage.walletDebitUpdate, });
+                        });
+                    })
                 }
             });
         });
