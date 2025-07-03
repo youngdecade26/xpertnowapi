@@ -4211,6 +4211,8 @@ const add_availability = (req, res) => {
             });
     });
 };
+
+
 // function insertSlots(availabilityId, body, day, resolve, reject) {
 //     const startTimes = body[`start_time_${day}`]?.split(",") || [];
 //     const endTimes = body[`end_time_${day}`]?.split(",") || [];
@@ -4236,7 +4238,7 @@ const add_availability = (req, res) => {
 
 
 
-//  new code updated
+// new code updated
 function insertSlots(availabilityId, body, day, resolve, reject) {
     const startTimes = body[`start_time_${day}`]?.split(",") || [];
     const endTimes = body[`end_time_${day}`]?.split(",") || [];
@@ -4473,6 +4475,7 @@ function clearAndInsertSlots(availabilityId, body, day) {
             .catch(reject);
     });
 }
+
 
 
 
