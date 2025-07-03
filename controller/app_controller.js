@@ -4341,7 +4341,7 @@ const edit_availability = (req, res) => {
                             if (updateErr) return reject(updateErr);
                             // If status is 0, update slots; otherwise, clear them
                             if (currentStatus === 0) {
-                                clearAndInsertSlotss(availabilityId, req.body, day).then(resolve).catch(reject);
+                                clearAndInsertSlots(availabilityId, req.body, day).then(resolve).catch(reject);
                             } else {
                                 clearSlots(availabilityId).then(resolve).catch(reject);
                             }
