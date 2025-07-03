@@ -9037,29 +9037,15 @@ ON
           .json({ success: false, msg: languageMessage.msgUserNotFound });
       }
       if (res.length > 0) {
-        //   const user_balance = await getUserTotalWallet(user_id);
-        //   const expertId = res[0].expert_id;
-        //   return response.status(200).json({
-        //     success: true,
-        //     msg: languageMessage.msgDataFound,
-        //     res.wallet_balance = user_balance,
-        //     user_arr: res,
-        //   });
-        // } if (res.length > 0) {
-        const user_balance = await getUserTotalWallet(user_id);
+
         const expertId = res[0].expert_id;
-
-        // Add wallet_amount to each object in res
-        const updatedRes = res.map(item => ({
-          ...item,
-          wallet_balance: user_balance,
-        }));
-
         return response.status(200).json({
           success: true,
           msg: languageMessage.msgDataFound,
-          user_arr: updatedRes,
+          // res.wallet_balance = user_balance,
+          user_arr: res,
         });
+
       }
 
       else {
