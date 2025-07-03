@@ -9052,7 +9052,7 @@ ON
         // Add wallet_amount to each object in res
         const updatedRes = res.map(item => ({
           ...item,
-          wallet_amount: user_balance,
+          wallet_balance: user_balance,
         }));
 
         return response.status(200).json({
