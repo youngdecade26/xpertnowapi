@@ -4339,7 +4339,7 @@ const edit_availability = (req, res) => {
                             if (updateErr) return reject(updateErr);
                             // If status is 0, update slots; otherwise, clear them
                             if (currentStatus === 0) {
-                                clearAndInsertSlots(availabilityId, req.body, day).then(resolve).catch(reject);
+                                clearAndInsertSlotss(availabilityId, req.body, day).then(resolve).catch(reject);
                             } else {
                                 clearSlots(availabilityId).then(resolve).catch(reject);
                             }
@@ -4476,71 +4476,82 @@ function clearAndInsertSlots(availabilityId, body, day) {
 
 
 
-function updateSlots(availabilityId, body, day, slot_id) {
+
+
+
+
+function clearAndInsertSlotss(availabilityId, body, day) {
     return new Promise((resolve, reject) => {
-        clearSlots(availabilityId)
-            .then(() => {
-                const startTimes = body[`start_time_${day}`]?.split(",") || [];
-                const endTimes = body[`end_time_${day}`]?.split(",") || [];
+        const startTimes = body[`start_time_${day}`]?.split(",") || [];
+        const endTimes = body[`end_time_${day}`]?.split(",") || [];
+        const slotIds = body["slot_id"]?.split(",") || []; // ✅ fixed to use only "slot_id"
 
-                const insertPromises = startTimes.map((start_time, index) => {
-                    const end_time = endTimes[index];
+        const convertTo24Hour = (timeStr) => {
+            timeStr = timeStr.trim().toUpperCase().replace(/(\d)(AM|PM)/i, '$1 $2');
+            const [time, period] = timeStr.split(' ');
+            let [hours, minutes] = time.split(':');
+            hours = parseInt(hours, 10);
+            minutes = minutes ? parseInt(minutes, 10) : 0;
 
-                    if (start_time && end_time) {
-                        return new Promise((slotResolve, slotReject) => {
-                            // Convert AM/PM to 24-hour format
-                            const convertTo24Hour = (timeStr) => {
-                                timeStr = timeStr.trim().toUpperCase();
+            if (period === 'PM' && hours !== 12) hours += 12;
+            if (period === 'AM' && hours === 12) hours = 0;
 
-                                // Handle cases like "9:00AM" or "9:00 AM"
-                                timeStr = timeStr.replace(/(\d)(AM|PM)/i, '$1 $2');
+            return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+        };
 
-                                // Parse the time
-                                const [time, period] = timeStr.split(' ');
-                                let [hours, minutes] = time.split(':');
+        const slotPromises = startTimes.map((start_time, index) => {
+            const end_time = endTimes[index];
+            const slotId = slotIds[index]; // Can be "0" or undefined
 
-                                hours = parseInt(hours, 10);
-                                minutes = minutes ? parseInt(minutes, 10) : 0;
+            if (start_time && end_time) {
+                return new Promise((slotResolve, slotReject) => {
+                    try {
+                        const start24 = convertTo24Hour(start_time);
+                        const end24 = convertTo24Hour(end_time);
 
-                                if (period === 'PM' && hours !== 12) {
-                                    hours += 12;
-                                } else if (period === 'AM' && hours === 12) {
-                                    hours = 0;
-                                }
-
-                                // Format as HH:MM
-                                return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
-                            };
-
-                            try {
-                                const start24 = convertTo24Hour(start_time);
-                                const end24 = convertTo24Hour(end_time);
-
-                                const insertSlotQuery = ` UPDATE slot_master 
-                                SET start_time = ?, end_time = ?, updatetime = NOW() 
-                                WHERE slot_id = ? AND availability_id = ?`;
-                                connection.query(insertSlotQuery,
-                                    [availabilityId, start24, end24, slot_id, availability_id],
-                                    (err) => {
-                                        if (err) return slotReject(err);
-                                        slotResolve();
-                                    }
-                                );
-                            } catch (err) {
-                                slotReject(err);
-                            }
-                        });
+                        if (slotId && slotId !== "0") {
+                            // ✅ Update existing slot
+                            const updateSlotQuery = `
+                                UPDATE slot_master
+                                SET start_time = ?, end_time = ?, updatetime = NOW()
+                                WHERE slot_id = ? AND availability_id = ?
+                            `;
+                            connection.query(updateSlotQuery, [start24, end24, slotId, availabilityId], (err) => {
+                                if (err) return slotReject(err);
+                                slotResolve();
+                            });
+                        } else {
+                            // ✅ Insert new slot
+                            const insertSlotQuery = `
+                                INSERT INTO slot_master (availability_id, start_time, end_time, createtime, updatetime)
+                                VALUES (?, ?, ?, NOW(), NOW())
+                            `;
+                            connection.query(insertSlotQuery, [availabilityId, start24, end24], (err) => {
+                                if (err) return slotReject(err);
+                                slotResolve();
+                            });
+                        }
+                    } catch (err) {
+                        slotReject(err);
                     }
-                    return Promise.resolve();
                 });
+            }
 
-                Promise.all(insertPromises)
-                    .then(resolve)
-                    .catch(reject);
-            })
+            return Promise.resolve();
+        });
+
+        Promise.all(slotPromises)
+            .then(resolve)
             .catch(reject);
     });
 }
+
+
+
+
+
+
+
 
 
 
