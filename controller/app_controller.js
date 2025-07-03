@@ -4213,31 +4213,6 @@ const add_availability = (req, res) => {
 };
 
 
-// function insertSlots(availabilityId, body, day, resolve, reject) {
-//     const startTimes = body[`start_time_${day}`]?.split(",") || [];
-//     const endTimes = body[`end_time_${day}`]?.split(",") || [];
-//     const slotQueries = startTimes.map((start_time, index) => {
-//         const end_time = endTimes[index];
-//         if (start_time && end_time) {
-//             const slotInsertQuery = `INSERT INTO slot_master(availability_id, start_time, end_time, updatetime,createtime) VALUES (?, ?, ?, NOW(),NOW())`;
-//             return new Promise((slotResolve, slotReject) => {
-//                 connection.query(slotInsertQuery, [availabilityId, start_time.trim(), end_time.trim()], (err) => {
-//                     if (err) return slotReject(err);
-//                     slotResolve();
-//                 });
-//             });
-//         }
-//     });
-//     Promise.all(slotQueries).then(resolve).catch(reject);
-// }
-
-
-
-
-
-
-
-
 // new code updated
 function insertSlots(availabilityId, body, day, resolve, reject) {
     const startTimes = body[`start_time_${day}`]?.split(",") || [];
@@ -4342,14 +4317,15 @@ const edit_availability = (req, res) => {
                             // If status is 0, update slots; otherwise, clear them
                             if (currentStatus === 0) {
                                 clearAndInsertSlots(availabilityId, req.body, day).then(resolve).catch(reject);
-                            } else {
+                            }
+                            else {
                                 clearSlots(availabilityId).then(resolve).catch(reject);
                             }
                         });
                     }
                     else {
                         // Insert new availability
-                        const insertQuery = `INSERT INTO availability_master (user_id, day, status, createtime,updatetime) VALUES (?, ?, ?,NOW(),NOW())`;
+                        const insertQuery = `INSERT INTO availability_master(user_id, day, status, createtime,updatetime) VALUES (?, ?, ?,NOW(),NOW())`;
                         connection.query(insertQuery, [user_id, day, currentStatus], (insertErr, insertResult) => {
                             if (insertErr) return reject(insertErr);
                             if (currentStatus === 0) {
@@ -4373,30 +4349,6 @@ const edit_availability = (req, res) => {
 };
 
 
-// function clearAndInsertSlots(availabilityId, body, day) {
-//     return new Promise((resolve, reject) => {
-//         clearSlots(availabilityId)
-//             .then(() => {
-//                 const startTimes = body[`start_time_${day}`]?.split(",") || [];
-//                 const endTimes = body[`end_time_${day}`]?.split(",") || [];
-//                 const createtime = new Date();
-//                 const insertPromises = startTimes.map((start_time, index) => {
-//                     const end_time = endTimes[index];
-//                     if (start_time && end_time) {
-//                         return new Promise((slotResolve, slotReject) => {
-//                             const insertSlotQuery = `INSERT INTO slot_master (availability_id, start_time, end_time, createtime,updatetime) VALUES (?, ?, ?, NOW(),NOW())`;
-//                             connection.query(insertSlotQuery, [availabilityId, start_time.trim(), end_time.trim()], (err) => {
-//                                 if (err) return slotReject(err);
-//                                 slotResolve();
-//                             });
-//                         });
-//                     }
-//                 });
-//                 Promise.all(insertPromises).then(resolve).catch(reject);
-//             })
-//             .catch(reject);
-//     });
-// }
 
 function clearSlots(availabilityId) {
     return new Promise((resolve, reject) => {
@@ -4479,7 +4431,8 @@ function clearSlots(availabilityId) {
 
 
 
-//  new functioin for not rmeoving other slots 
+
+
 function clearAndInsertSlots(availabilityId, body, day) {
     return new Promise((resolve, reject) => {
         const startTimes = body[`start_time_${day}`]?.split(",") || [];
