@@ -8030,7 +8030,46 @@ const sendUpcomingCallNotifications = async (request, response) => {
 };
 
 
+// get customer slot schedule 
+const getCustomerScheduleSlot = (request, response) => {
+    const { user_id } = request.query;
+    try {
+        if (!user_id) {
+            return response.status(200).json({ success: false, msg: languageMessage.msg_empty_param, key: "user_id" });
+        }
+        const current_date = new Date().toISOString().split('T')[0];
+        const query1 = "SELECT mobile, active_flag FROM user_master WHERE user_id = ? AND delete_flag = 0 AND user_type=2";
+        const values1 = [user_id];
+        connection.query(query1, values1, async (err, result) => {
+            if (err) {
+                return response.status(200).json({ success: false, msg: languageMessage.internalServerError, key: err.message });
+            }
+            if (result.length === 0) {
+                return response.status(200).json({ success: false, msg: languageMessage.userNotFound });
+            }
+            if (result[0]?.active_flag === 0) {
+                return response.status(200).json({ success: false, msg: languageMessage.accountdeactivated, active_status: 0 });
+            }
 
+            const getAvailableSlotsQuery = `SELECT s.slot_schedule_id,s.availability_id,s.user_id,s.expert_id,s.slot_id,s.day,DATE_FORMAT(s.date, '%Y-%m-%d') AS date,s.type,s.status,u.name,COALESCE(u.image, 'NA') AS image,u.mobile,sm.start_time,sm.end_time FROM slot_schedule_master s LEFT JOIN user_master u ON s.expert_id = u.user_id LEFT JOIN slot_master sm ON s.slot_id = sm.slot_id WHERE s.delete_flag = 0 AND s.date >= ? AND s.user_id = ? order by s.date asc`;
+            connection.query(getAvailableSlotsQuery, [current_date, user_id], (err, slots) => {
+                if (err) {
+                    return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: err.message });
+                }
+                if (slots.length === 0) {
+                    return response.status(200).json({ success: true, msg: languageMessage.dataFound, schedule_slot: 'NA' });
+                }
+                slots.map(item => {
+                    item.start_time = moment(item.start_time, "HH:mm:ss").format("hh:mm A");
+                    item.end_time = moment(item.end_time, "HH:mm:ss").format("hh:mm A");
+                })
+                return response.status(200).json({ success: true, msg: languageMessage.dataFound, schedule_slot: slots });
+            });
+        });
+    } catch (error) {
+        return response.status(200).json({ success: false, msg: languageMessage.internalServerError, error: error.message });
+    }
+};
 
 
 
